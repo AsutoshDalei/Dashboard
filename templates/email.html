@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Sender - Asutosh's Portfolio</title>
+    <link rel="stylesheet" href="/static/zenith.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-brand">Asutosh's Portfolio</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-link">
+                    <span class="nav-icon">◉</span>
+                    Dashboard
+                </a>
+                <a href="/tools/email" class="nav-link active">
+                    <span class="nav-icon">📧</span>
+                    Email Tool
+                </a>
+                <a href="/tools/cover-letter" class="nav-link">
+                    <span class="nav-icon">📄</span>
+                    Cover Letter Generator
+                </a>
+                <a href="/tools/clipboard" class="nav-link">
+                    <span class="nav-icon">📋</span>
+                    Clipboard
+                </a>
+                <a href="/tools/tracker" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    Job Tracker
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="topbar-actions">
+                <a href="/logout" class="topbar-btn" title="Logout" aria-label="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </a>
+            </div>
+        </header>
+        <div class="sidebar-backdrop" aria-hidden="true"></div>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper">
+                <!-- Page Header -->
+                <header class="page-header">
+                    <h1 class="page-title">Email Sender</h1>
+                    <p class="page-subtitle">Send personalized job application emails with your resume attached.</p>
+                </header>
+                
+                <!-- Email Form Card -->
+                <div class="email-form-card">
+                    <div class="email-form-header">
+                        <h2 class="email-form-title">Send Application</h2>
+                        <p class="email-form-subtitle">Fill in the details below to send a bespoke job application.</p>
+                    </div>
+                    
+                    <form id="emailForm">
+                        <div class="form-group">
+                            <label class="form-label" for="senderKey">Sender Account</label>
+                            <select id="senderKey" name="senderKey" class="form-select" required>
+                                <option value="university" selected>University Gmail (Default)</option>
+                                <option value="personal">Personal Gmail</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="personName">Recipient's Name</label>
+                            <input 
+                                type="text" 
+                                id="personName" 
+                                name="personName" 
+                                class="form-input" 
+                                placeholder="e.g. John Smith"
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="companyName">Target Company</label>
+                            <input 
+                                type="text" 
+                                id="companyName" 
+                                name="companyName" 
+                                class="form-input" 
+                                placeholder="e.g. Google"
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="emailAddress">Recipient's Email</label>
+                            <input 
+                                type="email" 
+                                id="emailAddress" 
+                                name="emailAddress" 
+                                class="form-input" 
+                                placeholder="e.g. john@company.com"
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+                        
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-full">
+                            <span class="btn-text">Send Application</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                    </form>
+                    
+                    <div id="statusMessage" class="status-message"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        document.getElementById('emailForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            const name = document.getElementById('personName').value;
+            const company = document.getElementById('companyName').value;
+            const email = document.getElementById('emailAddress').value;
+            const senderKey = document.getElementById('senderKey').value;
+            
+            // Loading state
+            btn.classList.add('loading');
+            statusMessage.classList.remove('show', 'success', 'error');
+            
+            try {
+                const response = await fetch('/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, company, email, sender_key: senderKey })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusMessage.textContent = 'Email sent successfully!';
+                    statusMessage.classList.add('show', 'success');
+                    document.getElementById('emailForm').reset();
+                } else {
+                    statusMessage.textContent = 'Error: ' + result.error;
+                    statusMessage.classList.add('show', 'error');
+                }
+            } catch (error) {
+                statusMessage.textContent = 'Failed to connect to the server.';
+                statusMessage.classList.add('show', 'error');
+            } finally {
+                btn.classList.remove('loading');
+            }
+        });
+    </script>
+    <script src="/static/sidebar.js" defer></script>
+</body>
+</html>

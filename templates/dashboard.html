@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Asutosh's Portfolio</title>
+    <link rel="stylesheet" href="/static/zenith.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-brand">Asutosh's Portfolio</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-link active">
+                    <span class="nav-icon">◉</span>
+                    Dashboard
+                </a>
+                <a href="/tools/email" class="nav-link">
+                    <span class="nav-icon">📧</span>
+                    Email Tool
+                </a>
+                <a href="/tools/cover-letter" class="nav-link">
+                    <span class="nav-icon">📄</span>
+                    Cover Letter Generator
+                </a>
+                <a href="/tools/clipboard" class="nav-link">
+                    <span class="nav-icon">📋</span>
+                    Clipboard
+                </a>
+                <a href="/tools/tracker" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    Job Tracker
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="topbar-actions">
+                <a href="/logout" class="topbar-btn" title="Logout" aria-label="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </a>
+            </div>
+        </header>
+        <div class="sidebar-backdrop" aria-hidden="true"></div>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper">
+                <!-- Page Header -->
+                <header class="page-header">
+                    <h1 class="page-title">Dashboard</h1>
+                    <p class="page-subtitle">Welcome back. Manage your development workflow and productivity tools.</p>
+                </header>
+                
+                <!-- Tools Grid -->
+                <div class="tools-grid">
+                    <!-- Email Sender Card -->
+                    <div class="card">
+                        <div class="card-icon">📧</div>
+                        <h3 class="card-title">Email Sender</h3>
+                        <p class="card-description">A simple tool to send personalized emails with custom templates.</p>
+                        <a href="/tools/email" class="btn btn-light">
+                            <span class="btn-text">Open Tool</span>
+                            <span class="btn-icon">→</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Cover Letter Generator Card -->
+                    <div class="card">
+                        <div class="card-icon">📝</div>
+                        <h3 class="card-title">Cover Letter Gen</h3>
+                        <p class="card-description">Generate professional cover letters in seconds using AI assistance.</p>
+                        <a href="/tools/cover-letter" class="btn btn-light">
+                            <span class="btn-text">Open Tool</span>
+                            <span class="btn-icon">→</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Clipboard Card -->
+                    <div class="card">
+                        <div class="card-icon">📋</div>
+                        <h3 class="card-title">Clipboard</h3>
+                        <p class="card-description">Save and copy text, links, and snippets with one click.</p>
+                        <a href="/tools/clipboard" class="btn btn-light">
+                            <span class="btn-text">Open Tool</span>
+                            <span class="btn-icon">→</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Job Tracker Card -->
+                    <div class="card">
+                        <div class="card-icon">📊</div>
+                        <h3 class="card-title">Job Tracker</h3>
+                        <p class="card-description">Log applications, look up companies, and visualize your job-hunt over time.</p>
+                        <a href="/tools/tracker" class="btn btn-light">
+                            <span class="btn-text">Open Tool</span>
+                            <span class="btn-icon">→</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/static/sidebar.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cover Letter Generator - Asutosh's Portfolio</title>
+    <link rel="stylesheet" href="/static/zenith.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-brand">Asutosh's Portfolio</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-link">
+                    <span class="nav-icon">◉</span>
+                    Dashboard
+                </a>
+                <a href="/tools/email" class="nav-link">
+                    <span class="nav-icon">📧</span>
+                    Email Tool
+                </a>
+                <a href="/tools/cover-letter" class="nav-link active">
+                    <span class="nav-icon">📄</span>
+                    Cover Letter Generator
+                </a>
+                <a href="/tools/clipboard" class="nav-link">
+                    <span class="nav-icon">📋</span>
+                    Clipboard
+                </a>
+                <a href="/tools/tracker" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    Job Tracker
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="topbar-actions">
+                <a href="/logout" class="topbar-btn" title="Logout" aria-label="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </a>
+            </div>
+        </header>
+        <div class="sidebar-backdrop" aria-hidden="true"></div>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper">
+                <!-- Page Header -->
+                <header class="page-header">
+                    <h1 class="page-title">Cover Letter Generator</h1>
+                    <p class="page-subtitle">Generate a personalized cover letter PDF for your job applications.</p>
+                </header>
+                
+                <!-- Cover Letter Form Card -->
+                <div class="email-form-card">
+                    <div class="email-form-header">
+                        <h2 class="email-form-title">Generate PDF</h2>
+                        <p class="email-form-subtitle">Enter the company name to generate a customized cover letter.</p>
+                    </div>
+                    
+                    <form id="coverLetterForm">
+                        <div class="form-group">
+                            <label class="form-label" for="companyName">Company Name</label>
+                            <input 
+                                type="text" 
+                                id="companyName" 
+                                name="companyName" 
+                                class="form-input" 
+                                placeholder="e.g. Google, OpenAI, Stripe"
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+                        
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-full">
+                            <span class="btn-text">Generate Cover Letter</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                    </form>
+                    
+                    <div id="statusMessage" class="status-message"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        document.getElementById('coverLetterForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            const companyName = document.getElementById('companyName').value.trim();
+            
+            if (!companyName) {
+                statusMessage.textContent = 'Please enter a company name.';
+                statusMessage.classList.add('show', 'error');
+                return;
+            }
+            
+            btn.classList.add('loading');
+            statusMessage.classList.remove('show', 'success', 'error');
+            
+            try {
+                const response = await fetch('/generate-cover-letter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ company: companyName })
+                });
+                
+                if (response.ok) {
+                    const contentType = response.headers.get('Content-Type');
+                    
+                    if (contentType && contentType.includes('application/pdf')) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `CoverLetter_${companyName.replace(/\s+/g, '_')}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        a.remove();
+                        
+                        statusMessage.textContent = 'Cover letter downloaded successfully!';
+                        statusMessage.classList.add('show', 'success');
+                    } else {
+                        const result = await response.json();
+                        statusMessage.textContent = 'Error: ' + (result.error || 'Unknown error');
+                        statusMessage.classList.add('show', 'error');
+                    }
+                } else {
+                    const result = await response.json();
+                    statusMessage.textContent = 'Error: ' + (result.error || 'Failed to generate PDF');
+                    statusMessage.classList.add('show', 'error');
+                }
+            } catch (error) {
+                statusMessage.textContent = 'Failed to connect to the server.';
+                statusMessage.classList.add('show', 'error');
+            } finally {
+                btn.classList.remove('loading');
+            }
+        });
+    </script>
+    <script src="/static/sidebar.js" defer></script>
+</body>
+</html>
