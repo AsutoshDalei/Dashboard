@@ -298,7 +298,7 @@ SELECT
 	a.organization,
 	a.count,
 	CASE
-		WHEN a.applied_dates ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN SUBSTRING(a.applied_dates FROM 1 FOR 10)::date
+		WHEN CAST(a.applied_dates AS text) ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN SUBSTRING(CAST(a.applied_dates AS text) FROM 1 FOR 10)::date
 		ELSE CURRENT_DATE
 	END,
 	'created_backfill'
@@ -661,12 +661,6 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
-		log.Printf("tracker stats bootstrap error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
-		return
-	}
-
 	rows, err := fetchAllApplications(r.Context())
 	if err != nil {
 		log.Printf("tracker stats error: %v", err)
@@ -674,11 +668,13 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	activityRows, err := fetchAllActivityLogs(r.Context())
-	if err != nil {
-		log.Printf("tracker stats activity error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
-		return
+	activityRows := make([]ActivityLog, 0)
+	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
+		log.Printf("tracker stats bootstrap warning: %v", err)
+	} else if fetched, err := fetchAllActivityLogs(r.Context()); err != nil {
+		log.Printf("tracker stats activity warning: %v", err)
+	} else {
+		activityRows = fetched
 	}
 
 	stats := computeStats(rows, activityRows)
@@ -766,20 +762,16 @@ func handleApplicationsTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	activityRows := make([]ActivityLog, 0)
 	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
-		log.Printf("tracker timeline bootstrap error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
-		return
+		log.Printf("tracker timeline bootstrap warning: %v", err)
+	} else if fetched, err := fetchAllActivityLogs(r.Context()); err != nil {
+		log.Printf("tracker timeline activity warning: %v", err)
+	} else {
+		activityRows = fetched
 	}
 
-	rows, err := fetchAllActivityLogs(r.Context())
-	if err != nil {
-		log.Printf("tracker timeline error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
-		return
-	}
-
-	buckets := bucketTimeline(rows, freq)
+	buckets := bucketTimeline(activityRows, freq)
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -853,20 +845,16 @@ func handleApplicationsContribution(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	activityRows := make([]ActivityLog, 0)
 	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
-		log.Printf("tracker contribution bootstrap error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
-		return
+		log.Printf("tracker contribution bootstrap warning: %v", err)
+	} else if fetched, err := fetchAllActivityLogs(r.Context()); err != nil {
+		log.Printf("tracker contribution activity warning: %v", err)
+	} else {
+		activityRows = fetched
 	}
 
-	rows, err := fetchAllActivityLogs(r.Context())
-	if err != nil {
-		log.Printf("tracker contribution error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
-		return
-	}
-
-	counts := aggregateApplicationsByLocalDay(rows)
+	counts := aggregateApplicationsByLocalDay(activityRows)
 	months := contributionMonthsList(counts)
 
 	y, m, _ := monthStart.Date()
