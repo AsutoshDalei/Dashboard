@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -268,6 +269,50 @@ VALUES ($1, $2, $3, $4)`
 	return err
 }
 
+var (
+	activityBootstrapMu   sync.Mutex
+	activityBootstrapDone bool
+)
+
+func ensureActivityLogBootstrap(ctx context.Context) error {
+	activityBootstrapMu.Lock()
+	defer activityBootstrapMu.Unlock()
+
+	if activityBootstrapDone {
+		return nil
+	}
+	if err := ensureApplicationActivityLogs(ctx); err != nil {
+		return err
+	}
+	if err := backfillLegacyActivityLogs(ctx); err != nil {
+		return err
+	}
+	activityBootstrapDone = true
+	return nil
+}
+
+func backfillLegacyActivityLogs(ctx context.Context) error {
+	const backfill = `
+INSERT INTO application_activity_logs (organization, delta_count, activity_date, action)
+SELECT
+	a.organization,
+	a.count,
+	CASE
+		WHEN a.applied_dates ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN SUBSTRING(a.applied_dates FROM 1 FOR 10)::date
+		ELSE CURRENT_DATE
+	END,
+	'created_backfill'
+FROM applications a
+WHERE a.count > 0
+  AND NOT EXISTS (
+		SELECT 1
+		FROM application_activity_logs l
+		WHERE LOWER(TRIM(l.organization)) = LOWER(TRIM(a.organization))
+	)`
+	_, err := dbPool.Exec(ctx, backfill)
+	return err
+}
+
 func handleApplicationsUpsert(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -481,7 +526,36 @@ type StatsResponse struct {
 	CategoryBreakdown   map[string]int `json:"category_breakdown"`
 }
 
-func computeStats(rows []Application) StatsResponse {
+type ActivityLog struct {
+	Organization string
+	DeltaCount   int
+	ActivityDate time.Time
+}
+
+func fetchAllActivityLogs(ctx context.Context) ([]ActivityLog, error) {
+	const query = `
+SELECT organization, delta_count, activity_date
+FROM application_activity_logs
+WHERE delta_count > 0
+LIMIT 200000`
+	rows, err := dbPool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]ActivityLog, 0)
+	for rows.Next() {
+		var item ActivityLog
+		if err := rows.Scan(&item.Organization, &item.DeltaCount, &item.ActivityDate); err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func computeStats(rows []Application, activityRows []ActivityLog) StatsResponse {
 	stats := StatsResponse{
 		StatusBreakdown:   map[string]int{},
 		CategoryBreakdown: map[string]int{},
@@ -492,11 +566,13 @@ func computeStats(rows []Application) StatsResponse {
 	loc := now.Location()
 	nowLocal := now.In(loc)
 	todayStart := time.Date(nowLocal.Year(), nowLocal.Month(), nowLocal.Day(), 0, 0, 0, 0, loc)
+	tomorrowStart := todayStart.AddDate(0, 0, 1)
 	weekday := int(nowLocal.Weekday())
 	if weekday == 0 {
 		weekday = 7
 	}
 	weekStart := todayStart.AddDate(0, 0, -(weekday - 1))
+	weekEnd := weekStart.AddDate(0, 0, 7)
 	cutoff := now.AddDate(0, 0, -30)
 	var lastDate time.Time
 
@@ -543,19 +619,32 @@ func computeStats(rows []Application) StatsResponse {
 					stats.Last30DaysCompanies++
 					stats.Last30DaysApps += r.Count
 				}
-				localApplied := t.In(loc)
-				appliedDay := time.Date(localApplied.Year(), localApplied.Month(), localApplied.Day(), 0, 0, 0, 0, loc)
-				if !appliedDay.Before(todayStart) {
-					stats.TodayCompanies++
-					stats.TodayApplications += r.Count
-				}
-				if !appliedDay.Before(weekStart) {
-					stats.WeekCompanies++
-					stats.WeekApplications += r.Count
-				}
 			}
 		}
 	}
+
+	todayCompanies := map[string]struct{}{}
+	weekCompanies := map[string]struct{}{}
+	for _, a := range activityRows {
+		localActivity := a.ActivityDate.In(loc)
+		activityDay := time.Date(localActivity.Year(), localActivity.Month(), localActivity.Day(), 0, 0, 0, 0, loc)
+		orgKey := strings.ToLower(strings.TrimSpace(a.Organization))
+
+		if !activityDay.Before(todayStart) && activityDay.Before(tomorrowStart) {
+			stats.TodayApplications += a.DeltaCount
+			if orgKey != "" {
+				todayCompanies[orgKey] = struct{}{}
+			}
+		}
+		if !activityDay.Before(weekStart) && activityDay.Before(weekEnd) {
+			stats.WeekApplications += a.DeltaCount
+			if orgKey != "" {
+				weekCompanies[orgKey] = struct{}{}
+			}
+		}
+	}
+	stats.TodayCompanies = len(todayCompanies)
+	stats.WeekCompanies = len(weekCompanies)
 
 	if stats.Companies > 0 {
 		stats.AppliedPct = float64(stats.Applied) / float64(stats.Companies) * 100
@@ -572,6 +661,12 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
+		log.Printf("tracker stats bootstrap error: %v", err)
+		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		return
+	}
+
 	rows, err := fetchAllApplications(r.Context())
 	if err != nil {
 		log.Printf("tracker stats error: %v", err)
@@ -579,7 +674,14 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats := computeStats(rows)
+	activityRows, err := fetchAllActivityLogs(r.Context())
+	if err != nil {
+		log.Printf("tracker stats activity error: %v", err)
+		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		return
+	}
+
+	stats := computeStats(rows, activityRows)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
@@ -593,21 +695,17 @@ type TimelineBucket struct {
 	Applications int    `json:"applications"`
 }
 
-func bucketTimeline(rows []Application, freq string) []TimelineBucket {
+func bucketTimeline(activityRows []ActivityLog, freq string) []TimelineBucket {
 	type counter struct {
 		applications int
 		companiesSet map[string]struct{}
 	}
 	bucketMap := map[string]*counter{}
+	loc := time.Now().Location()
 
-	for _, r := range rows {
-		if r.AppliedDates == nil {
-			continue
-		}
-		t, ok := parseAppliedDate(*r.AppliedDates)
-		if !ok {
-			continue
-		}
+	for _, r := range activityRows {
+		localDate := r.ActivityDate.In(loc)
+		t := time.Date(localDate.Year(), localDate.Month(), localDate.Day(), 0, 0, 0, 0, loc)
 
 		var key string
 		switch freq {
@@ -633,7 +731,7 @@ func bucketTimeline(rows []Application, freq string) []TimelineBucket {
 		if orgKey != "" {
 			c.companiesSet[orgKey] = struct{}{}
 		}
-		c.applications += r.Count
+		c.applications += r.DeltaCount
 	}
 
 	keys := make([]string, 0, len(bucketMap))
@@ -668,7 +766,13 @@ func handleApplicationsTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := fetchAllApplications(r.Context())
+	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
+		log.Printf("tracker timeline bootstrap error: %v", err)
+		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		return
+	}
+
+	rows, err := fetchAllActivityLogs(r.Context())
 	if err != nil {
 		log.Printf("tracker timeline error: %v", err)
 		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
@@ -691,20 +795,13 @@ type ContributionDay struct {
 	Applications int    `json:"applications"`
 }
 
-func aggregateApplicationsByLocalDay(rows []Application) map[string]int {
+func aggregateApplicationsByLocalDay(rows []ActivityLog) map[string]int {
 	loc := time.Now().Location()
 	out := make(map[string]int)
 	for _, r := range rows {
-		if r.AppliedDates == nil {
-			continue
-		}
-		t, ok := parseAppliedDate(*r.AppliedDates)
-		if !ok {
-			continue
-		}
-		lt := t.In(loc)
+		lt := r.ActivityDate.In(loc)
 		key := time.Date(lt.Year(), lt.Month(), lt.Day(), 0, 0, 0, 0, loc).Format("2006-01-02")
-		out[key] += r.Count
+		out[key] += r.DeltaCount
 	}
 	return out
 }
@@ -756,7 +853,13 @@ func handleApplicationsContribution(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := fetchAllApplications(r.Context())
+	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
+		log.Printf("tracker contribution bootstrap error: %v", err)
+		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		return
+	}
+
+	rows, err := fetchAllActivityLogs(r.Context())
 	if err != nil {
 		log.Printf("tracker contribution error: %v", err)
 		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")

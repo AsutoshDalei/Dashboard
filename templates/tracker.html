@@ -644,7 +644,7 @@
                     <div class="timeline-header">
                         <div>
                             <h2 style="margin-bottom:4px;">Timeline</h2>
-                            <p class="sub" style="margin:0;">Applications and companies over time.</p>
+                            <p class="sub" style="margin:0;">Application activity and active companies over time.</p>
                         </div>
                         <div class="timeline-controls">
                             <div class="freq-tabs" id="freqTabs">
@@ -669,7 +669,7 @@
 
                 <section class="tracker-card">
                     <h2>Applications by day</h2>
-                    <p class="sub">Contribution-style heatmap for one calendar month. Weeks start on Sunday (GitHub-style).</p>
+                    <p class="sub">Contribution-style activity heatmap for one calendar month. Weeks start on Sunday (GitHub-style).</p>
                     <div class="contribution-toolbar">
                         <label for="contributionMonth">Month</label>
                         <select id="contributionMonth" class="form-select" aria-label="Select month"></select>
@@ -951,7 +951,7 @@
             if (!lastOrgCheck.exists) return;
             const add = parseInt(countInput.value, 10) || 0;
             upsertHint.classList.add('exists');
-            const statusDateNote = ' Existing status and first applied date stay unchanged for existing companies.';
+            const statusDateNote = ' Existing status and first applied date stay unchanged, but additions still count in daily/weekly activity.';
             upsertHint.textContent =
                 `${lastOrgCheck.name} already exists with ${lastOrgCheck.count} application(s). `
                 + `Submitting will set total to ${lastOrgCheck.count} + ${add} = ${lastOrgCheck.count + add}.${statusDateNote}`;
