@@ -104,7 +104,8 @@
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         }
         
-        .item-actions {
+        .item-actions-left,
+        .item-actions-right {
             display: flex;
             align-items: center;
             gap: var(--space-sm);
@@ -364,11 +365,16 @@
             
             listEl.innerHTML = items.map((item, index) => `
                 <div class="clipboard-item" data-id="${item.id}">
+                    <div class="item-actions-left">
+                        <button class="btn-icon-only btn-copy" onclick="copyItem('${item.id}')" title="Copy to clipboard" aria-label="Copy to clipboard">
+                            📋
+                        </button>
+                    </div>
                     <div class="item-info">
                         <p class="item-label">${escapeHtml(item.label || truncate(item.content, 50))}</p>
                         <p class="item-content">${escapeHtml(truncate(item.content, 100))}</p>
                     </div>
-                    <div class="item-actions">
+                    <div class="item-actions-right">
                         <button class="btn-icon-only btn-move" onclick="moveItem('${item.id}','up')" title="Move up" aria-label="Move up" ${index === 0 ? 'disabled' : ''}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <polyline points="18 15 12 9 6 15"/>
@@ -379,10 +385,7 @@
                                 <polyline points="6 9 12 15 18 9"/>
                             </svg>
                         </button>
-                        <button class="btn-icon-only btn-copy" onclick="copyItem('${item.id}')" title="Copy to clipboard">
-                            📋
-                        </button>
-                        <button class="btn-icon-only btn-delete" onclick="deleteItem('${item.id}')" title="Delete">
+                        <button class="btn-icon-only btn-delete" onclick="deleteItem('${item.id}')" title="Delete" aria-label="Delete">
                             🗑
                         </button>
                     </div>
