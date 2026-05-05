@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"golang.ngrok.com/ngrok/v2"
 )
 
 //go:embed templates/*
@@ -108,6 +109,8 @@ func main() {
 		}
 	}
 
+	log.Println("pi_portfolio starting...")
+
 	if _, err := GetConfig("university"); err != nil {
 		log.Printf("Warning: failed to load university config: %v", err)
 	}
@@ -122,13 +125,16 @@ func main() {
 		log.Fatal("DATABASE_URL is required")
 	}
 	var err error
+	log.Println("Opening database pool...")
 	dbPool, err = pgxpool.New(context.Background(), databaseURL)
 	if err != nil {
 		log.Fatalf("Failed to create database pool: %v", err)
 	}
+	log.Println("Pinging database (this can take a few seconds on slow networks)...")
 	if pingErr := dbPool.Ping(context.Background()); pingErr != nil {
 		log.Fatalf("Failed to connect to database: %v", pingErr)
 	}
+	log.Println("Database connection OK")
 	defer dbPool.Close()
 
 	staticFS, err := fs.Sub(staticFiles, "static")
@@ -161,10 +167,48 @@ func main() {
 	http.HandleFunc("/api/applications/query", requireAuth(handleApplicationsQuery))
 	http.HandleFunc("/send-email", requireAuth(handleSendEmail))
 
+	log.Println("HTTP routes registered.")
+
 	port := "5001"
-	log.Printf("Starting server on http://0.0.0.0:%s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("ENABLE_NGROK"))) {
+	case "1", "true", "yes":
+		token := strings.TrimSpace(os.Getenv("NGROK_AUTHTOKEN"))
+		if token == "" {
+			log.Fatal("ENABLE_NGROK is set but NGROK_AUTHTOKEN is empty; add your authtoken to the environment or .env")
+		}
+
+		// Serve HTTP on the ngrok-provided listener (same as ngrok quickstart). Avoids Forward + edge routing
+		// that can show the dashboard "Cloud Endpoint" default page instead of this app.
+		// DefaultAgent is initialized before godotenv runs, so we build an Agent with the token from .env here.
+		agent, err := ngrok.NewAgent(ngrok.WithAuthtoken(token))
+		if err != nil {
+			log.Fatalf("ngrok NewAgent: %v", err)
+		}
+		listenOpts := []ngrok.EndpointOption{ngrok.WithPoolingEnabled(true)}
+		if internalURL := strings.TrimSpace(os.Getenv("NGROK_INTERNAL_ENDPOINT_URL")); internalURL != "" {
+			listenOpts = append(listenOpts, ngrok.WithURL(internalURL))
+			log.Printf("ngrok internal endpoint URL (use this in Cloud Endpoint traffic policy forward-internal): %s", internalURL)
+		}
+
+		log.Println("Connecting to ngrok (embedded listener)...")
+		ln, err := agent.Listen(context.Background(), listenOpts...)
+		if err != nil {
+			log.Fatalf("ngrok Listen failed: %v (check token, network, and https://status.ngrok.com)", err)
+		}
+		log.Printf("ngrok listener URL: %s", ln.URL())
+		if os.Getenv("NGROK_INTERNAL_ENDPOINT_URL") != "" {
+			log.Println("If your browser uses a Cloud Endpoint hostname (*.ngrok-free.dev), its traffic policy must forward-internal to NGROK_INTERNAL_ENDPOINT_URL only — remove the custom-response action.")
+		} else {
+			log.Printf("Open the URL above in your browser (ngrok mode does not use local port %s).", port)
+		}
+		if err := http.Serve(ln, nil); err != nil {
+			log.Fatalf("Server failed: %v", err)
+		}
+	default:
+		log.Printf("Starting server on http://127.0.0.1:%s (and http://0.0.0.0:%s)", port, port)
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
+			log.Fatalf("Server failed to start: %v", err)
+		}
 	}
 }
 
