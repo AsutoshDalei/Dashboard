@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -21,6 +22,22 @@ import (
 	"github.com/joho/godotenv"
 	"golang.ngrok.com/ngrok/v2"
 )
+
+func logDatabaseConnectionTarget(rawURL string) {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		log.Printf("Database: could not parse DATABASE_URL host (using your connection as configured)")
+		return
+	}
+	dbName := strings.TrimPrefix(u.Path, "/")
+	if i := strings.Index(dbName, "?"); i >= 0 {
+		dbName = dbName[:i]
+	}
+	if dbName == "" {
+		dbName = "(default)"
+	}
+	log.Printf("Database: host=%s db=%s", u.Host, dbName)
+}
 
 //go:embed templates/*
 var templateFiles embed.FS
@@ -148,6 +165,7 @@ func main() {
 	if pingErr := dbPool.Ping(context.Background()); pingErr != nil {
 		log.Fatalf("Failed to connect to database: %v", pingErr)
 	}
+	logDatabaseConnectionTarget(databaseURL)
 	defer dbPool.Close()
 
 	staticFS, err := fs.Sub(staticFiles, "static")

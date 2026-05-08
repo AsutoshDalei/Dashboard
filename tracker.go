@@ -577,6 +577,45 @@ func loadActivityLogsForHandlers(ctx context.Context) ([]ActivityLog, error) {
 	return fetchAllActivityLogs(ctx)
 }
 
+// fetchTodayWeekActivityTotals loads today / this-week application sums and distinct company counts
+// directly from Postgres so DATE comparisons match stored activity_date (no client-side drift).
+func fetchTodayWeekActivityTotals(ctx context.Context, loc *time.Location) (todayCompanies, todayApps, weekCompanies, weekApps int, err error) {
+	now := time.Now().In(loc)
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	weekday := int(todayStart.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	weekStart := todayStart.AddDate(0, 0, -(weekday - 1))
+	weekEndExcl := weekStart.AddDate(0, 0, 7)
+
+	dToday := todayStart.Format("2006-01-02")
+	dWeekStart := weekStart.Format("2006-01-02")
+	dWeekEndExcl := weekEndExcl.Format("2006-01-02")
+
+	const qToday = `
+SELECT
+	COALESCE(SUM(delta_count), 0)::bigint,
+	COALESCE(COUNT(DISTINCT NULLIF(LOWER(TRIM(organization)), '')), 0)::bigint
+FROM application_activity_logs
+WHERE delta_count > 0 AND activity_date = $1::date`
+	const qWeek = `
+SELECT
+	COALESCE(SUM(delta_count), 0)::bigint,
+	COALESCE(COUNT(DISTINCT NULLIF(LOWER(TRIM(organization)), '')), 0)::bigint
+FROM application_activity_logs
+WHERE delta_count > 0 AND activity_date >= $1::date AND activity_date < $2::date`
+
+	var ta, tc, wa, wc int64
+	if err = dbPool.QueryRow(ctx, qToday, dToday).Scan(&ta, &tc); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	if err = dbPool.QueryRow(ctx, qWeek, dWeekStart, dWeekEndExcl).Scan(&wa, &wc); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	return int(tc), int(ta), int(wc), int(wa), nil
+}
+
 func computeStats(rows []Application, activityRows []ActivityLog) StatsResponse {
 	stats := StatsResponse{
 		StatusBreakdown:   map[string]int{},
@@ -689,15 +728,31 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	activityRows, actErr := loadActivityLogsForHandlers(r.Context())
+	stats := computeStats(rows, nil)
+
+	var actErr error
+	if actErr = ensureActivityLogBootstrap(r.Context()); actErr != nil {
+		log.Printf("tracker stats activity bootstrap: %v", actErr)
+	} else {
+		tc, ta, wc, wa, qerr := fetchTodayWeekActivityTotals(r.Context(), time.Now().Location())
+		if qerr != nil {
+			actErr = qerr
+			log.Printf("tracker stats today/week query: %v", qerr)
+		} else {
+			stats.TodayCompanies = tc
+			stats.TodayApplications = ta
+			stats.WeekCompanies = wc
+			stats.WeekApplications = wa
+		}
+	}
+
 	payload := map[string]interface{}{
 		"success":             true,
-		"stats":               computeStats(rows, activityRows),
+		"stats":               stats,
 		"activity_logs_ok":    actErr == nil,
 		"activity_logs_error": "",
 	}
 	if actErr != nil {
-		log.Printf("tracker stats activity: %v", actErr)
 		payload["activity_logs_error"] = actErr.Error()
 	}
 	w.Header().Set("Content-Type", "application/json")
