@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"sort"
@@ -366,6 +367,12 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 			return
 		}
 
+		if err := logApplicationActivity(r.Context(), req.Organization, req.Count, parseOptionalDate(req.AppliedDates), "created"); err != nil {
+			log.Printf("tracker activity log (create) error: %v", err)
+			respondJSON(w, http.StatusBadGateway, false, "Failed to record activity: "+err.Error(), "")
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -376,9 +383,6 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 			"added":          req.Count,
 			"new_count":      req.Count,
 		})
-		if err := logApplicationActivity(r.Context(), req.Organization, req.Count, parseOptionalDate(req.AppliedDates), "created"); err != nil {
-			log.Printf("tracker activity log (create) error: %v", err)
-		}
 		return
 	}
 	if req.Count < 0 {
@@ -426,6 +430,14 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 		return
 	}
 
+	if isAddFlow {
+		if err := logApplicationActivity(r.Context(), existing.Organization, req.Count, activityDate, "added"); err != nil {
+			log.Printf("tracker activity log (update) error: %v", err)
+			respondJSON(w, http.StatusBadGateway, false, "Failed to record activity: "+err.Error(), "")
+			return
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":        true,
@@ -435,11 +447,6 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 		"added":          req.Count,
 		"new_count":      existing.Count + req.Count,
 	})
-	if isAddFlow {
-		if err := logApplicationActivity(r.Context(), existing.Organization, req.Count, activityDate, "added"); err != nil {
-			log.Printf("tracker activity log (update) error: %v", err)
-		}
-	}
 }
 
 func nullIfEmpty(value string) interface{} {
@@ -534,7 +541,7 @@ type ActivityLog struct {
 
 func fetchAllActivityLogs(ctx context.Context) ([]ActivityLog, error) {
 	const query = `
-SELECT organization, delta_count, activity_date
+SELECT organization, delta_count, activity_date::text
 FROM application_activity_logs
 WHERE delta_count > 0
 LIMIT 200000`
@@ -544,15 +551,30 @@ LIMIT 200000`
 	}
 	defer rows.Close()
 
+	loc := time.Now().Location()
 	out := make([]ActivityLog, 0)
 	for rows.Next() {
 		var item ActivityLog
-		if err := rows.Scan(&item.Organization, &item.DeltaCount, &item.ActivityDate); err != nil {
+		var dateStr string
+		if err := rows.Scan(&item.Organization, &item.DeltaCount, &dateStr); err != nil {
 			return nil, err
 		}
+		dateStr = strings.TrimSpace(dateStr)
+		t, err := time.ParseInLocation("2006-01-02", dateStr, loc)
+		if err != nil {
+			return nil, fmt.Errorf("activity log invalid activity_date %q: %w", dateStr, err)
+		}
+		item.ActivityDate = t
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+func loadActivityLogsForHandlers(ctx context.Context) ([]ActivityLog, error) {
+	if err := ensureActivityLogBootstrap(ctx); err != nil {
+		return nil, err
+	}
+	return fetchAllActivityLogs(ctx)
 }
 
 func computeStats(rows []Application, activityRows []ActivityLog) StatsResponse {
@@ -626,8 +648,7 @@ func computeStats(rows []Application, activityRows []ActivityLog) StatsResponse 
 	todayCompanies := map[string]struct{}{}
 	weekCompanies := map[string]struct{}{}
 	for _, a := range activityRows {
-		localActivity := a.ActivityDate.In(loc)
-		activityDay := time.Date(localActivity.Year(), localActivity.Month(), localActivity.Day(), 0, 0, 0, 0, loc)
+		activityDay := time.Date(a.ActivityDate.Year(), a.ActivityDate.Month(), a.ActivityDate.Day(), 0, 0, 0, 0, loc)
 		orgKey := strings.ToLower(strings.TrimSpace(a.Organization))
 
 		if !activityDay.Before(todayStart) && activityDay.Before(tomorrowStart) {
@@ -668,21 +689,19 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	activityRows := make([]ActivityLog, 0)
-	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
-		log.Printf("tracker stats bootstrap warning: %v", err)
-	} else if fetched, err := fetchAllActivityLogs(r.Context()); err != nil {
-		log.Printf("tracker stats activity warning: %v", err)
-	} else {
-		activityRows = fetched
+	activityRows, actErr := loadActivityLogsForHandlers(r.Context())
+	payload := map[string]interface{}{
+		"success":             true,
+		"stats":               computeStats(rows, activityRows),
+		"activity_logs_ok":    actErr == nil,
+		"activity_logs_error": "",
 	}
-
-	stats := computeStats(rows, activityRows)
+	if actErr != nil {
+		log.Printf("tracker stats activity: %v", actErr)
+		payload["activity_logs_error"] = actErr.Error()
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"stats":   stats,
-	})
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 type TimelineBucket struct {
@@ -700,8 +719,7 @@ func bucketTimeline(activityRows []ActivityLog, freq string) []TimelineBucket {
 	loc := time.Now().Location()
 
 	for _, r := range activityRows {
-		localDate := r.ActivityDate.In(loc)
-		t := time.Date(localDate.Year(), localDate.Month(), localDate.Day(), 0, 0, 0, 0, loc)
+		t := time.Date(r.ActivityDate.Year(), r.ActivityDate.Month(), r.ActivityDate.Day(), 0, 0, 0, 0, loc)
 
 		var key string
 		switch freq {
@@ -762,23 +780,24 @@ func handleApplicationsTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	activityRows := make([]ActivityLog, 0)
-	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
-		log.Printf("tracker timeline bootstrap warning: %v", err)
-	} else if fetched, err := fetchAllActivityLogs(r.Context()); err != nil {
-		log.Printf("tracker timeline activity warning: %v", err)
-	} else {
-		activityRows = fetched
+	activityRows, actErr := loadActivityLogsForHandlers(r.Context())
+	if actErr != nil {
+		log.Printf("tracker timeline activity: %v", actErr)
 	}
-
 	buckets := bucketTimeline(activityRows, freq)
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"freq":    freq,
-		"buckets": buckets,
-	})
+	payload := map[string]interface{}{
+		"success":             true,
+		"freq":                freq,
+		"buckets":             buckets,
+		"activity_logs_ok":    actErr == nil,
+		"activity_logs_error": "",
+	}
+	if actErr != nil {
+		payload["activity_logs_error"] = actErr.Error()
+	}
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 // ContributionDay is one calendar day in a monthly applications heatmap.
@@ -791,8 +810,7 @@ func aggregateApplicationsByLocalDay(rows []ActivityLog) map[string]int {
 	loc := time.Now().Location()
 	out := make(map[string]int)
 	for _, r := range rows {
-		lt := r.ActivityDate.In(loc)
-		key := time.Date(lt.Year(), lt.Month(), lt.Day(), 0, 0, 0, 0, loc).Format("2006-01-02")
+		key := time.Date(r.ActivityDate.Year(), r.ActivityDate.Month(), r.ActivityDate.Day(), 0, 0, 0, 0, loc).Format("2006-01-02")
 		out[key] += r.DeltaCount
 	}
 	return out
@@ -845,15 +863,10 @@ func handleApplicationsContribution(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	activityRows := make([]ActivityLog, 0)
-	if err := ensureActivityLogBootstrap(r.Context()); err != nil {
-		log.Printf("tracker contribution bootstrap warning: %v", err)
-	} else if fetched, err := fetchAllActivityLogs(r.Context()); err != nil {
-		log.Printf("tracker contribution activity warning: %v", err)
-	} else {
-		activityRows = fetched
+	activityRows, actErr := loadActivityLogsForHandlers(r.Context())
+	if actErr != nil {
+		log.Printf("tracker contribution activity: %v", actErr)
 	}
-
 	counts := aggregateApplicationsByLocalDay(activityRows)
 	months := contributionMonthsList(counts)
 
@@ -879,11 +892,17 @@ func handleApplicationsContribution(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"success":          true,
-		"month":            monthParam,
-		"days":             days,
-		"max_applications": maxOut,
-		"months":           months,
-	})
+	payload := map[string]interface{}{
+		"success":             true,
+		"month":               monthParam,
+		"days":                days,
+		"max_applications":    maxOut,
+		"months":              months,
+		"activity_logs_ok":    actErr == nil,
+		"activity_logs_error": "",
+	}
+	if actErr != nil {
+		payload["activity_logs_error"] = actErr.Error()
+	}
+	_ = json.NewEncoder(w).Encode(payload)
 }

@@ -765,10 +765,20 @@
                 $('statAppliedSub').textContent = fmtPct(s.applied_pct) + ' of companies';
                 $('statRejected').textContent = fmtNum(s.rejected);
                 $('statRejectedSub').textContent = fmtPct(s.rejected_pct) + ' of companies';
-                $('statTodayCompanies').textContent = `${fmtNum(s.today_companies)} companies`;
-                $('statTodaySub').textContent = `applications added: ${fmtNum(s.today_applications)}`;
-                $('statWeekCompanies').textContent = `${fmtNum(s.week_companies)} companies`;
-                $('statWeekSub').textContent = `applications added: ${fmtNum(s.week_applications)}`;
+                if (data.activity_logs_ok === false) {
+                    const msg = data.activity_logs_error || 'Activity data unavailable';
+                    $('statTodayCompanies').textContent = '—';
+                    $('statTodaySub').textContent = msg;
+                    $('statTodaySub').classList.remove('success', 'error');
+                    $('statWeekCompanies').textContent = '—';
+                    $('statWeekSub').textContent = msg;
+                    $('statWeekSub').classList.remove('success', 'error');
+                } else {
+                    $('statTodayCompanies').textContent = `${fmtNum(s.today_companies)} companies`;
+                    $('statTodaySub').textContent = `applications added: ${fmtNum(s.today_applications)}`;
+                    $('statWeekCompanies').textContent = `${fmtNum(s.week_companies)} companies`;
+                    $('statWeekSub').textContent = `applications added: ${fmtNum(s.week_applications)}`;
+                }
                 $('statAvg').textContent = (s.avg_per_company || 0).toFixed(1);
                 $('statAvgSub').textContent = s.top_company ? `top: ${s.top_company} (${s.max_per_company})` : '—';
             } catch (err) {
@@ -1044,6 +1054,12 @@
             }
             try {
                 const data = await fetchJson('/api/applications/timeline?freq=' + freq);
+                if (data.activity_logs_ok === false) {
+                    const msg = escapeHtml(data.activity_logs_error || 'Could not load activity data.');
+                    wrap.innerHTML = `<div class="empty-chart">${msg}</div>`;
+                    latestTimelineBuckets = [];
+                    return;
+                }
                 latestTimelineBuckets = data.buckets || [];
                 renderChart(wrap, latestTimelineBuckets);
             } catch (err) {
@@ -1144,6 +1160,11 @@
             }
             try {
                 const data = await fetchJson(`/api/applications/contribution?month=${encodeURIComponent(preferred)}`);
+                if (data.activity_logs_ok === false) {
+                    const msg = data.activity_logs_error || 'Could not load activity data.';
+                    grid.innerHTML = `<div class="contribution-error">${escapeHtml(msg)}</div>`;
+                    return;
+                }
                 const months = data.months || [];
                 const month = data.month || preferred;
                 fillContributionMonthSelect(months, month);

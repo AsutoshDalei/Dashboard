@@ -129,7 +129,8 @@
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `CoverLetter_${companyName.replace(/\s+/g, '_')}.pdf`;
+                        let safe = companyName.replace(/ /g, '_').replace(/\//g, '_').replace(/\\/g, '_');
+                        a.download = `ASUTOSH_DALEI_COVERLETTER_${safe}.pdf`;
                         document.body.appendChild(a);
                         a.click();
                         window.URL.revokeObjectURL(url);
