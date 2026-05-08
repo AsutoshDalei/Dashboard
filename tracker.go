@@ -14,8 +14,37 @@ import (
 	"sync"
 	"time"
 
+	"os"
+
 	"github.com/jackc/pgx/v5"
 )
+
+var (
+	activityStatsTZOnce sync.Once
+	activityStatsTZLoc  *time.Location
+)
+
+// getActivityStatsLocation is the IANA zone used for activity log calendar dates and
+// today/this-week stats. Raspberry Pi OS often uses UTC while macOS uses local time; sharing
+// one DATABASE_URL then yields different "today" unless you set ACTIVITY_STATS_TIMEZONE
+// the same on both (e.g. America/New_York). When unset, uses the system local zone.
+func getActivityStatsLocation() *time.Location {
+	activityStatsTZOnce.Do(func() {
+		if tz := strings.TrimSpace(os.Getenv("ACTIVITY_STATS_TIMEZONE")); tz != "" {
+			loc, err := time.LoadLocation(tz)
+			if err != nil {
+				log.Printf("tracker: invalid ACTIVITY_STATS_TIMEZONE=%q, using system local: %v", tz, err)
+				activityStatsTZLoc = time.Local
+				return
+			}
+			activityStatsTZLoc = loc
+			log.Printf("tracker: activity stats use timezone %s", tz)
+			return
+		}
+		activityStatsTZLoc = time.Local
+	})
+	return activityStatsTZLoc
+}
 
 type Application struct {
 	ID               int     `json:"id,omitempty"`
@@ -259,7 +288,7 @@ func logApplicationActivity(ctx context.Context, organization string, deltaCount
 	if err := ensureApplicationActivityLogs(ctx); err != nil {
 		return err
 	}
-	when := time.Now().Format("2006-01-02")
+	when := time.Now().In(getActivityStatsLocation()).Format("2006-01-02")
 	if activityDate != nil {
 		when = activityDate.Format("2006-01-02")
 	}
@@ -551,7 +580,7 @@ LIMIT 200000`
 	}
 	defer rows.Close()
 
-	loc := time.Now().Location()
+	loc := getActivityStatsLocation()
 	out := make([]ActivityLog, 0)
 	for rows.Next() {
 		var item ActivityLog
@@ -624,7 +653,7 @@ func computeStats(rows []Application, activityRows []ActivityLog) StatsResponse 
 	}
 
 	now := time.Now()
-	loc := now.Location()
+	loc := getActivityStatsLocation()
 	nowLocal := now.In(loc)
 	todayStart := time.Date(nowLocal.Year(), nowLocal.Month(), nowLocal.Day(), 0, 0, 0, 0, loc)
 	tomorrowStart := todayStart.AddDate(0, 0, 1)
@@ -734,7 +763,7 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 	if actErr = ensureActivityLogBootstrap(r.Context()); actErr != nil {
 		log.Printf("tracker stats activity bootstrap: %v", actErr)
 	} else {
-		tc, ta, wc, wa, qerr := fetchTodayWeekActivityTotals(r.Context(), time.Now().Location())
+		tc, ta, wc, wa, qerr := fetchTodayWeekActivityTotals(r.Context(), getActivityStatsLocation())
 		if qerr != nil {
 			actErr = qerr
 			log.Printf("tracker stats today/week query: %v", qerr)
@@ -771,7 +800,7 @@ func bucketTimeline(activityRows []ActivityLog, freq string) []TimelineBucket {
 		companiesSet map[string]struct{}
 	}
 	bucketMap := map[string]*counter{}
-	loc := time.Now().Location()
+	loc := getActivityStatsLocation()
 
 	for _, r := range activityRows {
 		t := time.Date(r.ActivityDate.Year(), r.ActivityDate.Month(), r.ActivityDate.Day(), 0, 0, 0, 0, loc)
@@ -862,7 +891,7 @@ type ContributionDay struct {
 }
 
 func aggregateApplicationsByLocalDay(rows []ActivityLog) map[string]int {
-	loc := time.Now().Location()
+	loc := getActivityStatsLocation()
 	out := make(map[string]int)
 	for _, r := range rows {
 		key := time.Date(r.ActivityDate.Year(), r.ActivityDate.Month(), r.ActivityDate.Day(), 0, 0, 0, 0, loc).Format("2006-01-02")
@@ -872,7 +901,7 @@ func aggregateApplicationsByLocalDay(rows []ActivityLog) map[string]int {
 }
 
 func contributionMonthsList(counts map[string]int) []string {
-	loc := time.Now().Location()
+	loc := getActivityStatsLocation()
 	now := time.Now().In(loc)
 	currentMonthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
 
@@ -911,7 +940,7 @@ func handleApplicationsContribution(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loc := time.Now().Location()
+	loc := getActivityStatsLocation()
 	monthStart, err := time.ParseInLocation("2006-01", monthParam, loc)
 	if err != nil {
 		respondJSON(w, http.StatusBadRequest, false, "month must be YYYY-MM", "")
