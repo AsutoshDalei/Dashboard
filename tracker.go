@@ -367,7 +367,8 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 			return
 		}
 
-		if err := logApplicationActivity(r.Context(), req.Organization, req.Count, parseOptionalDate(req.AppliedDates), "created"); err != nil {
+		// Attribute activity to the day the save runs (server local), not the form's applied date.
+		if err := logApplicationActivity(r.Context(), req.Organization, req.Count, nil, "created"); err != nil {
 			log.Printf("tracker activity log (create) error: %v", err)
 			respondJSON(w, http.StatusBadGateway, false, "Failed to record activity: "+err.Error(), "")
 			return
@@ -388,7 +389,6 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 	if req.Count < 0 {
 		req.Count = 0
 	}
-	activityDate := parseOptionalDate(req.AppliedDates)
 	isAddFlow := req.Count > 0
 	if isAddFlow {
 		// Keep status and first applied date immutable when only adding more applications.
@@ -431,7 +431,7 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 	}
 
 	if isAddFlow {
-		if err := logApplicationActivity(r.Context(), existing.Organization, req.Count, activityDate, "added"); err != nil {
+		if err := logApplicationActivity(r.Context(), existing.Organization, req.Count, nil, "added"); err != nil {
 			log.Printf("tracker activity log (update) error: %v", err)
 			respondJSON(w, http.StatusBadGateway, false, "Failed to record activity: "+err.Error(), "")
 			return
