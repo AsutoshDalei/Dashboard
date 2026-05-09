@@ -168,6 +168,8 @@ func main() {
 	logDatabaseConnectionTarget(databaseURL)
 	defer dbPool.Close()
 
+	startDatabaseBackups(context.Background(), databaseURL)
+
 	staticFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
 		log.Fatalf("Error setting up static filesystem: %v", err)
