@@ -77,6 +77,7 @@ func scanApplication(scanner interface {
 }) (*Application, error) {
 	var app Application
 	var jobRole, location, contacts, appliedDates, remarks, status, category, usernamePassword sql.NullString
+	var count sql.NullInt64
 	err := scanner.Scan(
 		&app.ID,
 		&app.Organization,
@@ -87,11 +88,16 @@ func scanApplication(scanner interface {
 		&remarks,
 		&status,
 		&category,
-		&app.Count,
+		&count,
 		&usernamePassword,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if count.Valid {
+		app.Count = int(count.Int64)
+	} else {
+		app.Count = 0
 	}
 	app.JobRole = ptrFromNullString(jobRole)
 	app.Location = ptrFromNullString(location)
