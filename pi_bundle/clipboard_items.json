@@ -1,0 +1,46 @@
+{
+  "items": [
+    {
+      "id": "3d0fd757-53ca-41dc-8a94-cb67cadb0cf5",
+      "label": "LinkedIn",
+      "content": "https://www.linkedin.com/in/asutosh-dalei2212",
+      "created_at": "2026-05-08T08:35:59.518041456-04:00"
+    },
+    {
+      "id": "93b69ff7-158a-4fc2-af1d-16b0f442de17",
+      "label": "Portfolio",
+      "content": "https://asutoshdalei.github.io/AsutoshDalei/",
+      "created_at": "2026-05-08T08:36:12.272996992-04:00"
+    },
+    {
+      "id": "13c1c32c-ee5c-4349-a5b2-8ca7336ce882",
+      "label": "Google Scholar",
+      "content": "https://scholar.google.com/citations?user=ZTEw6iQAAAAJ\u0026hl=en\u0026oi=sra",
+      "created_at": "2026-05-08T08:36:27.168250985-04:00"
+    },
+    {
+      "id": "64f8b3f1-145b-43fb-8eac-860030a25c8a",
+      "label": "GitHub",
+      "content": "https://github.com/AsutoshDalei",
+      "created_at": "2026-05-08T08:36:38.637719592-04:00"
+    },
+    {
+      "id": "9c4f52a1-fdcf-4e52-b685-3d0aaa846fd8",
+      "label": "Nokia",
+      "content": "Contributed to the development of a scalable Knowledge Layer to support Retrieval-Augmented Generation (RAG) applications across complex technical documentation. Designed and implemented a unified retrieval engine integrating vector search (OpenSearch), relational metadata (PostgreSQL), and knowledge graphs (Neo4j) for high-performance semantic querying. Evaluated multiple state-of-the-art embedding models and developed custom sentence-aware chunking strategies to optimize document ingestion and retrieval. Extended the system to handle multimodal data, including tables and figures, by creating a joint vector space using Jina Embeddings V4 and OpenAI CLIP. Implemented a re-ranking stage using Qwen3 Reranker-8B (cross-encoder) to improve context relevance and retrieval precision. Currently building an agentic framework with Google Agent Development Kit to enable automated information retrieval workflows. Collaborated on end-to-end deployment with Docker, Kafka, FastAPI, MinIO, and GCP, ensuring robust, production-ready pipelines for large-scale document indexing and querying. Technologies & Tools: Python, Docker, FastAPI, PostgreSQL, OpenSearch, Neo4j, MinIO, Kafka, GCP, Jina Embeddings, OpenAI CLIP, Qwen3 Re-ranker, Google Agent Development Kit.",
+      "created_at": "2026-05-08T08:37:01.054363439-04:00"
+    },
+    {
+      "id": "7e32282a-7d40-43f3-8731-33bce2228ef3",
+      "label": "Suzuki",
+      "content": "Worked on large-scale automobile telematics data from 100,000+ connected vehicles to develop predictive and analytical solutions that enhanced vehicle reliability and customer satisfaction. Designed and deployed an LSTM-based deep learning system to predict lead-acid battery health and remaining useful life, achieving 98% accuracy in real-world field validation. Built time-series pipelines with temporal smoothing and anomaly detection to reduce sensor noise and false positives. Developed a Retrieval-Augmented Generation (RAG) conversational AI assistant for car manuals, improving support efficiency by 60%. Optimized ML workflows by auditing GPU-heavy pipelines, migrating workloads to multi-core CPU processing, and implementing automated hyperparameter tuning with Optuna, reducing cloud compute costs significantly. Addressed intermittent telematics data gaps caused by network outages by modeling anomalous patterns and identifying “dark spots” across India. Collaborated cross-functionally to translate business problems into deployable ML systems integrated into live vehicle ecosystems, delivering measurable operational impact. Technologies & Tools: Python, TensorFlow, PyTorch, LSTM, Time-Series Analysis, Telematics Data Processing, SQL, Optuna, Multi-core Optimization.",
+      "created_at": "2026-05-08T08:36:48.402708557-04:00"
+    },
+    {
+      "id": "282ce4b3-75ec-428f-a057-560562f54c9c",
+      "label": "About Me",
+      "content": "I am Asutosh Dalei. I am finishing a Master's in Data Science at UMD while interning at Nokia as an ML Engineer. Four years of industry experience, roughly half of it in production systems. At Nokia, I was working on retrieval infrastructure for a RAG application: vector search (OpenSearch), relational databases (PostgreSQL), and knowledge graphs (Neo4j) wired together to handle semantic queries over large technical document corpora. Before that, I spent two and a half years at Maruti Suzuki's R&D division, where I deployed a patented LSTM-based battery health predictor at 98% field accuracy across 7,000+ vehicles, cut a training pipeline from $4,000 per month in GPU compute to CPU execution without accuracy loss, and built a RAG-based assistant for car manuals. I focus on building ML systems that are reliable outside the lab and enjoy finding patterns in data.",
+      "created_at": "2026-05-08T08:37:13.204662498-04:00"
+    }
+  ]
+}
