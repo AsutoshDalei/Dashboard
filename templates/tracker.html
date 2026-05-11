@@ -1410,7 +1410,12 @@
             const crossedBreakpoint = (lastWidth > 768) !== (w > 768) || (lastWidth > 480) !== (w > 480);
             if (crossedBreakpoint || Math.abs(w - lastWidth) > 80) {
                 lastWidth = w;
-                loadTimeline(currentFreq);
+                const wrap = $('chartWrap');
+                if (latestTimelineBuckets && latestTimelineBuckets.length) {
+                    renderChart(wrap, latestTimelineBuckets);
+                } else {
+                    loadTimeline(currentFreq);
+                }
             }
         }, 200);
         window.addEventListener('resize', onResize);

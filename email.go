@@ -61,9 +61,9 @@ func GetConfig(senderKey string) (SenderConfig, error) {
 }
 
 func draftEmailBody(name, company string) (string, error) {
-	return renderRuntimeTemplate(
+	return renderHTMLRuntimeTemplate(
 		"EMAIL_TEMPLATE_PATH",
-		filepath.Join("templates", "email_body.tmpl"),
+		"templates/email_body.tmpl",
 		EmailTemplateData{
 			Name:    name,
 			Company: company,

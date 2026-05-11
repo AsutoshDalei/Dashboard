@@ -3,19 +3,24 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"os"
+	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -26,7 +31,7 @@ import (
 func logDatabaseConnectionTarget(rawURL string) {
 	u, err := url.Parse(rawURL)
 	if err != nil || u.Host == "" {
-		log.Printf("Database: could not parse DATABASE_URL host (using your connection as configured)")
+		slog.Info("Database: could not parse DATABASE_URL host (using your connection as configured)")
 		return
 	}
 	dbName := strings.TrimPrefix(u.Path, "/")
@@ -36,7 +41,7 @@ func logDatabaseConnectionTarget(rawURL string) {
 	if dbName == "" {
 		dbName = "(default)"
 	}
-	log.Printf("Database: host=%s db=%s", u.Host, dbName)
+	slog.Info("Database", "host", u.Host, "db", dbName)
 }
 
 //go:embed templates/*
@@ -47,6 +52,7 @@ var staticFiles embed.FS
 
 var templates *template.Template
 var dbPool *pgxpool.Pool
+var dbPoolReader *pgxpool.Pool
 
 type EmailRequest struct {
 	Name      string `json:"name"`
@@ -57,6 +63,7 @@ type EmailRequest struct {
 
 type LoginData struct {
 	Error string
+	Year  int
 }
 
 // Session management
@@ -103,13 +110,96 @@ func (s *SessionStore) Delete(token string) {
 	s.mu.Unlock()
 }
 
+func (s *SessionStore) pruneExpired() {
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for tok, exp := range s.sessions {
+		if now.After(exp) {
+			delete(s.sessions, tok)
+		}
+	}
+}
+
+func (s *SessionStore) runJanitor(ctx context.Context) {
+	t := time.NewTicker(time.Hour)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			s.pruneExpired()
+		}
+	}
+}
+
 func generateToken() string {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		log.Printf("Error generating token: %v", err)
-		return fmt.Sprintf("%d", time.Now().UnixNano())
+		slog.Error("crypto/rand failed for session token", "err", err)
+		os.Exit(1)
 	}
 	return hex.EncodeToString(bytes)
+}
+
+func constantTimePasskeyEqual(a, b string) bool {
+	n := len(a)
+	if len(b) > n {
+		n = len(b)
+	}
+	if n == 0 {
+		return len(a) == 0 && len(b) == 0
+	}
+	bufA := make([]byte, n)
+	bufB := make([]byte, n)
+	copy(bufA, a)
+	copy(bufB, b)
+	return subtle.ConstantTimeCompare(bufA, bufB) == 1
+}
+
+func parseEnvInt(key string, def int) int {
+	s := strings.TrimSpace(os.Getenv(key))
+	if s == "" {
+		return def
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 {
+		return def
+	}
+	return n
+}
+
+func openPrimaryPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		return nil, err
+	}
+	cfg.MaxConns = int32(parseEnvInt("DB_MAX_CONNS", 4))
+	cfg.MinConns = 1
+	cfg.MaxConnIdleTime = 5 * time.Minute
+	cfg.MaxConnLifetime = time.Hour
+	return pgxpool.NewWithConfig(ctx, cfg)
+}
+
+func openReaderPool(ctx context.Context) (*pgxpool.Pool, error) {
+	u := strings.TrimSpace(os.Getenv("DATABASE_URL_READER"))
+	if u == "" {
+		return nil, nil
+	}
+	cfg, err := pgxpool.ParseConfig(u)
+	if err != nil {
+		return nil, err
+	}
+	maxR := int32(parseEnvInt("DB_READER_MAX_CONNS", 4))
+	if maxR > 8 {
+		maxR = 8
+	}
+	cfg.MaxConns = maxR
+	cfg.MinConns = 0
+	cfg.MaxConnIdleTime = 5 * time.Minute
+	cfg.MaxConnLifetime = time.Hour
+	return pgxpool.NewWithConfig(ctx, cfg)
 }
 
 func firstNonLoopbackIPv4() string {
@@ -133,128 +223,196 @@ func init() {
 	var err error
 	templates, err = template.ParseFS(templateFiles, "templates/*.html")
 	if err != nil {
-		log.Fatalf("Error parsing templates: %v", err)
+		slog.Error("Error parsing templates", "err", err)
+		os.Exit(1)
 	}
 }
 
+func registerRoutes(mux *http.ServeMux) {
+	staticFS, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		slog.Error("Error setting up static filesystem", "err", err)
+		os.Exit(1)
+	}
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+
+	mux.HandleFunc("/", handleRoot)
+	mux.HandleFunc("/login", handleLogin)
+	mux.HandleFunc("/auth", handleAuth)
+	mux.HandleFunc("/logout", handleLogout)
+	mux.HandleFunc("/healthz", handleHealthz)
+
+	mux.HandleFunc("/dashboard", requireAuth(handleDashboard))
+	mux.HandleFunc("/tools/email", requireAuth(handleEmailTool))
+	mux.HandleFunc("/tools/cover-letter", requireAuth(handleCoverLetterTool))
+	mux.HandleFunc("/generate-cover-letter", requireAuth(handleGenerateCoverLetter))
+	mux.HandleFunc("/tools/clipboard", requireAuth(handleClipboardTool))
+	mux.HandleFunc("/api/clipboard", requireAuth(handleClipboardAPI))
+	mux.HandleFunc("/api/clipboard/", requireAuth(handleClipboardItemAPI))
+	mux.HandleFunc("/tools/tracker", requireAuth(handleTrackerTool))
+	mux.HandleFunc("/api/applications", requireAuth(handleApplicationsUpsert))
+	mux.HandleFunc("/api/applications/check", requireAuth(handleApplicationsCheck))
+	mux.HandleFunc("/api/applications/suggest", requireAuth(handleApplicationsSuggest))
+	mux.HandleFunc("/api/applications/stats", requireAuth(handleApplicationsStats))
+	mux.HandleFunc("/api/applications/timeline", requireAuth(handleApplicationsTimeline))
+	mux.HandleFunc("/api/applications/contribution", requireAuth(handleApplicationsContribution))
+	mux.HandleFunc("/api/applications/query", requireAuth(handleApplicationsQuery))
+	mux.HandleFunc("/send-email", requireAuth(handleSendEmail))
+}
+
 func main() {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
 	if err := godotenv.Load(".env"); err != nil {
 		if err = godotenv.Load("../.env"); err != nil {
-			log.Println("Warning: No .env file found in .env or ../.env. Relying on system environment variables.")
+			slog.Info("No .env file found in .env or ../.env; using system environment variables")
 		}
 	}
 
 	if _, err := GetConfig("university"); err != nil {
-		log.Printf("Warning: failed to load university config: %v", err)
+		slog.Warn("failed to load university config", "err", err)
 	}
 
 	passkey := os.Getenv("ACCESS_PASSKEY")
 	if passkey == "" {
-		log.Println("Warning: ACCESS_PASSKEY not set. Authentication will fail for all requests.")
+		slog.Warn("ACCESS_PASSKEY not set. Authentication will fail for all requests.")
 	}
 
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if databaseURL == "" {
-		log.Fatal("DATABASE_URL is required")
+		slog.Error("DATABASE_URL is required")
+		os.Exit(1)
 	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	var err error
-	dbPool, err = pgxpool.New(context.Background(), databaseURL)
+	dbPool, err = openPrimaryPool(ctx, databaseURL)
 	if err != nil {
-		log.Fatalf("Failed to create database pool: %v", err)
+		slog.Error("Failed to create database pool", "err", err)
+		os.Exit(1)
 	}
-	if pingErr := dbPool.Ping(context.Background()); pingErr != nil {
-		log.Fatalf("Failed to connect to database: %v", pingErr)
+	if pingErr := dbPool.Ping(ctx); pingErr != nil {
+		slog.Error("Failed to connect to database", "err", pingErr)
+		os.Exit(1)
 	}
 	logDatabaseConnectionTarget(databaseURL)
 	defer dbPool.Close()
 
-	startDatabaseBackups(context.Background(), databaseURL)
-
-	staticFS, err := fs.Sub(staticFiles, "static")
+	dbPoolReader, err = openReaderPool(ctx)
 	if err != nil {
-		log.Fatalf("Error setting up static filesystem: %v", err)
+		slog.Error("Failed to create reader database pool", "err", err)
+		os.Exit(1)
 	}
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	if dbPoolReader != nil {
+		defer dbPoolReader.Close()
+		if pingErr := dbPoolReader.Ping(ctx); pingErr != nil {
+			slog.Error("Failed to ping reader database pool", "err", pingErr)
+			os.Exit(1)
+		}
+		slog.Info("Reader pool enabled (DATABASE_URL_READER)")
+	}
 
-	// Public routes
-	http.HandleFunc("/", handleRoot)
-	http.HandleFunc("/login", handleLogin)
-	http.HandleFunc("/auth", handleAuth)
-	http.HandleFunc("/logout", handleLogout)
+	startDatabaseBackups(ctx, databaseURL)
+	go sessionStore.runJanitor(ctx)
 
-	// Protected routes
-	http.HandleFunc("/dashboard", requireAuth(handleDashboard))
-	http.HandleFunc("/tools/email", requireAuth(handleEmailTool))
-	http.HandleFunc("/tools/cover-letter", requireAuth(handleCoverLetterTool))
-	http.HandleFunc("/generate-cover-letter", requireAuth(handleGenerateCoverLetter))
-	http.HandleFunc("/tools/clipboard", requireAuth(handleClipboardTool))
-	http.HandleFunc("/api/clipboard", requireAuth(handleClipboardAPI))
-	http.HandleFunc("/api/clipboard/", requireAuth(handleClipboardItemAPI))
-	http.HandleFunc("/tools/tracker", requireAuth(handleTrackerTool))
-	http.HandleFunc("/api/applications", requireAuth(handleApplicationsUpsert))
-	http.HandleFunc("/api/applications/check", requireAuth(handleApplicationsCheck))
-	http.HandleFunc("/api/applications/suggest", requireAuth(handleApplicationsSuggest))
-	http.HandleFunc("/api/applications/stats", requireAuth(handleApplicationsStats))
-	http.HandleFunc("/api/applications/timeline", requireAuth(handleApplicationsTimeline))
-	http.HandleFunc("/api/applications/contribution", requireAuth(handleApplicationsContribution))
-	http.HandleFunc("/api/applications/query", requireAuth(handleApplicationsQuery))
-	http.HandleFunc("/send-email", requireAuth(handleSendEmail))
+	mux := http.NewServeMux()
+	registerRoutes(mux)
+	handler := withRequestID(withSecurityHeaders(mux))
 
 	port := "5001"
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 16,
+	}
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+	}()
+
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("ENABLE_NGROK"))) {
 	case "1", "true", "yes":
 		token := strings.TrimSpace(os.Getenv("NGROK_AUTHTOKEN"))
 		if token == "" {
-			log.Fatal("ENABLE_NGROK is set but NGROK_AUTHTOKEN is empty; add your authtoken to the environment or .env")
+			slog.Error("ENABLE_NGROK is set but NGROK_AUTHTOKEN is empty")
+			os.Exit(1)
 		}
 
 		agent, err := ngrok.NewAgent(ngrok.WithAuthtoken(token))
 		if err != nil {
-			log.Fatalf("ngrok NewAgent: %v", err)
+			slog.Error("ngrok NewAgent", "err", err)
+			os.Exit(1)
 		}
 		listenOpts := []ngrok.EndpointOption{ngrok.WithPoolingEnabled(true)}
 		if internalURL := strings.TrimSpace(os.Getenv("NGROK_INTERNAL_ENDPOINT_URL")); internalURL != "" {
 			listenOpts = append(listenOpts, ngrok.WithURL(internalURL))
 		}
 
-		ln, err := agent.Listen(context.Background(), listenOpts...)
+		ln, err := agent.Listen(ctx, listenOpts...)
 		if err != nil {
-			log.Fatalf("ngrok Listen failed: %v (check token, network, and https://status.ngrok.com)", err)
+			slog.Error("ngrok Listen failed", "err", err)
+			os.Exit(1)
 		}
 
 		tunnelURL := ln.URL()
 		envPublic := strings.TrimSpace(os.Getenv("NGROK_PUBLIC_URL"))
 		isInternal := tunnelURL != nil && strings.HasSuffix(strings.ToLower(tunnelURL.Hostname()), "internal")
 
-		log.Println("Ready. Checks: configuration loaded, database connected, HTTP routes registered, ngrok listener active.")
+		slog.Info("Ready: ngrok listener active")
 		if lan := firstNonLoopbackIPv4(); lan != "" {
-			log.Printf("Local/LAN HTTP: not used while ENABLE_NGROK=true (this host LAN IP is %s; use ENABLE_NGROK=false for http://127.0.0.1:%s and http://%s:%s)", lan, port, lan, port)
+			slog.Info("Local/LAN HTTP not used while ENABLE_NGROK=true", "lan_ip", lan, "port", port)
 		} else {
-			log.Printf("Local/LAN HTTP: not used while ENABLE_NGROK=true (use ENABLE_NGROK=false for http://127.0.0.1:%s)", port)
+			slog.Info("Local/LAN HTTP not used while ENABLE_NGROK=true", "port", port)
 		}
 		switch {
 		case envPublic != "":
-			log.Printf("Internet (website): %s", envPublic)
+			slog.Info("Internet (website)", "url", envPublic)
 		case isInternal:
-			log.Printf("Internet (website): your Cloud Endpoint URL in the browser (traffic policy forward-internal → %s); optional NGROK_PUBLIC_URL in .env to print the public URL here", tunnelURL.String())
+			slog.Info("Internet (website)", "hint", "Cloud Endpoint URL; optional NGROK_PUBLIC_URL in .env", "tunnel", tunnelURL.String())
 		default:
-			log.Printf("Internet (website): %s", tunnelURL.String())
+			slog.Info("Internet (website)", "url", tunnelURL.String())
 		}
 
-		if err := http.Serve(ln, nil); err != nil {
-			log.Fatalf("Server failed: %v", err)
+		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+			slog.Error("Server failed", "err", err)
+			os.Exit(1)
 		}
 	default:
 		lan := firstNonLoopbackIPv4()
-		log.Println("Ready. Checks: configuration loaded, database connected, HTTP routes registered, listening for HTTP.")
-		log.Printf("Local:  http://127.0.0.1:%s", port)
+		slog.Info("Ready: listening for HTTP", "local", "http://127.0.0.1:"+port)
 		if lan != "" {
-			log.Printf("LAN:    http://%s:%s", lan, port)
+			slog.Info("LAN", "url", fmt.Sprintf("http://%s:%s", lan, port))
 		}
-		if err := http.ListenAndServe(":"+port, nil); err != nil {
-			log.Fatalf("Server failed to start: %v", err)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Server failed to start", "err", err)
+			os.Exit(1)
 		}
 	}
+}
+
+func handleHealthz(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	pctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := dbPool.Ping(pctx); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("unhealthy\n"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok\n"))
 }
 
 // Authentication middleware
@@ -263,7 +421,7 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		cookie, err := r.Cookie(sessionCookieName)
 		if err != nil || !sessionStore.Validate(cookie.Value) {
 			if strings.HasPrefix(r.URL.Path, "/api/") {
-				respondJSON(w, http.StatusUnauthorized, false, "authentication required", "")
+				respondJSONAPI(w, r, http.StatusUnauthorized, false, "authentication required", "", nil)
 				return
 			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -301,8 +459,9 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := templates.ExecuteTemplate(w, "login.html", LoginData{}); err != nil {
-		log.Printf("Template rendering error: %v", err)
+	data := LoginData{Year: time.Now().Year()}
+	if err := templates.ExecuteTemplate(w, "login.html", data); err != nil {
+		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -318,10 +477,19 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !allowAuthAttempt(r) {
+		renderLoginError(w, "Invalid access key")
+		return
+	}
+
 	passkey := r.FormValue("passkey")
 	expectedPasskey := os.Getenv("ACCESS_PASSKEY")
+	if strings.TrimSpace(expectedPasskey) == "" {
+		renderLoginError(w, "Invalid access key")
+		return
+	}
 
-	if passkey == "" || passkey != expectedPasskey {
+	if passkey == "" || !constantTimePasskeyEqual(passkey, expectedPasskey) {
 		renderLoginError(w, "Invalid access key")
 		return
 	}
@@ -341,8 +509,8 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 
 func renderLoginError(w http.ResponseWriter, errorMsg string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := templates.ExecuteTemplate(w, "login.html", LoginData{Error: errorMsg}); err != nil {
-		log.Printf("Template rendering error: %v", err)
+	if err := templates.ExecuteTemplate(w, "login.html", LoginData{Error: errorMsg, Year: time.Now().Year()}); err != nil {
+		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -367,7 +535,7 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := templates.ExecuteTemplate(w, "dashboard.html", nil); err != nil {
-		log.Printf("Template rendering error: %v", err)
+		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -375,7 +543,7 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 func handleEmailTool(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := templates.ExecuteTemplate(w, "email.html", nil); err != nil {
-		log.Printf("Template rendering error: %v", err)
+		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -396,6 +564,10 @@ func handleSendEmail(w http.ResponseWriter, r *http.Request) {
 		respondJSON(w, http.StatusBadRequest, false, "Missing required fields", "")
 		return
 	}
+	if _, err := mail.ParseAddress(req.Email); err != nil {
+		respondJSON(w, http.StatusBadRequest, false, "Invalid email address", "")
+		return
+	}
 
 	if req.SenderKey == "" {
 		defaultKey := os.Getenv("DEFAULT_SENDER_KEY")
@@ -407,8 +579,7 @@ func handleSendEmail(w http.ResponseWriter, r *http.Request) {
 
 	senderLabel, err := SendEmail(req.Email, req.Name, req.Company, strings.ToLower(strings.TrimSpace(req.SenderKey)))
 	if err != nil {
-		log.Printf("Error sending email: %v", err)
-		respondJSON(w, http.StatusInternalServerError, false, err.Error(), "")
+		respondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
 	}
 
@@ -418,7 +589,7 @@ func handleSendEmail(w http.ResponseWriter, r *http.Request) {
 func handleCoverLetterTool(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := templates.ExecuteTemplate(w, "coverletter.html", nil); err != nil {
-		log.Printf("Template rendering error: %v", err)
+		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -448,8 +619,7 @@ func handleGenerateCoverLetter(w http.ResponseWriter, r *http.Request) {
 
 	pdfData, err := GenerateCoverLetterPDF(companyName)
 	if err != nil {
-		log.Printf("Error generating cover letter PDF: %v", err)
-		respondJSON(w, http.StatusInternalServerError, false, err.Error(), "")
+		respondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
 	}
 
@@ -461,7 +631,7 @@ func handleGenerateCoverLetter(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"ASUTOSH_DALEI_COVERLETTER_%s.pdf\"", safeCompanyName))
 
 	if _, err := w.Write(pdfData); err != nil {
-		log.Printf("Error writing PDF to client: %v", err)
+		slog.Error("Error writing PDF to client", "err", err)
 	}
 }
 
@@ -478,5 +648,5 @@ func respondJSON(w http.ResponseWriter, status int, success bool, errMessage, me
 	if message != "" {
 		resp["message"] = message
 	}
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }

@@ -6,15 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"os"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -24,21 +23,39 @@ var (
 	activityStatsTZLoc  *time.Location
 )
 
+var (
+	suggestTrgmOnce   sync.Once
+	suggestTrgmUsable bool
+)
+
+func suggestTrgmEnabled() bool {
+	if strings.TrimSpace(os.Getenv("ENABLE_SUGGEST_TRGM")) == "" {
+		return false
+	}
+	suggestTrgmOnce.Do(func() {
+		var exists bool
+		err := dbPool.QueryRow(context.Background(), `SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm')`).Scan(&exists)
+		if err == nil && exists {
+			suggestTrgmUsable = true
+		}
+	})
+	return suggestTrgmUsable
+}
+
 // getActivityStatsLocation is the IANA zone used for activity log calendar dates and
-// today/this-week stats. Raspberry Pi OS often uses UTC while macOS uses local time; sharing
-// one DATABASE_URL then yields different "today" unless you set ACTIVITY_STATS_TIMEZONE
-// the same on both (e.g. America/New_York). When unset, uses the system local zone.
+// today/this-week stats. Set ACTIVITY_STATS_TIMEZONE the same on every host that shares
+// one DATABASE_URL so "today" matches. When unset, uses the system local zone.
 func getActivityStatsLocation() *time.Location {
 	activityStatsTZOnce.Do(func() {
 		if tz := strings.TrimSpace(os.Getenv("ACTIVITY_STATS_TIMEZONE")); tz != "" {
 			loc, err := time.LoadLocation(tz)
 			if err != nil {
-				log.Printf("tracker: invalid ACTIVITY_STATS_TIMEZONE=%q, using system local: %v", tz, err)
+				slog.Warn("tracker: invalid ACTIVITY_STATS_TIMEZONE, using system local", "tz", tz, "err", err)
 				activityStatsTZLoc = time.Local
 				return
 			}
 			activityStatsTZLoc = loc
-			log.Printf("tracker: activity stats use timezone %s", tz)
+			slog.Info("tracker: activity stats use timezone", "tz", tz)
 			return
 		}
 		activityStatsTZLoc = time.Local
@@ -113,7 +130,7 @@ func scanApplication(scanner interface {
 func handleTrackerTool(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := templates.ExecuteTemplate(w, "tracker.html", nil); err != nil {
-		log.Printf("Template rendering error: %v", err)
+		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -149,8 +166,7 @@ func handleApplicationsCheck(w http.ResponseWriter, r *http.Request) {
 
 	app, err := fetchApplicationByOrg(r.Context(), company)
 	if err != nil {
-		log.Printf("tracker check error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		respondJSONAPI(w, r, http.StatusBadGateway, false, "", "", err)
 		return
 	}
 
@@ -222,10 +238,26 @@ SELECT organization
 FROM dedup
 ORDER BY rank, organization
 LIMIT $2`
-	rows, err := dbPool.Query(r.Context(), suggestQuery, query, limit)
+
+	const suggestQueryTrgm = `
+SELECT organization
+FROM applications
+WHERE lower(organization::text) OPERATOR(pg_catalog.%) lower($1::text)
+ORDER BY word_similarity(lower($1::text), lower(organization::text)) DESC NULLS LAST, organization
+LIMIT $2`
+
+	var rows pgx.Rows
+	var err error
+	if suggestTrgmEnabled() {
+		rows, err = dbPool.Query(r.Context(), suggestQueryTrgm, query, limit)
+		if err != nil {
+			rows, err = dbPool.Query(r.Context(), suggestQuery, query, limit)
+		}
+	} else {
+		rows, err = dbPool.Query(r.Context(), suggestQuery, query, limit)
+	}
 	if err != nil {
-		log.Printf("tracker suggest error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		respondJSONAPI(w, r, http.StatusBadGateway, false, "", "", err)
 		return
 	}
 	defer rows.Close()
@@ -234,15 +266,13 @@ LIMIT $2`
 	for rows.Next() {
 		var s CompanySuggestion
 		if err := rows.Scan(&s.Organization); err != nil {
-			log.Printf("tracker suggest scan error: %v", err)
-			respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+			respondJSONAPI(w, r, http.StatusBadGateway, false, "", "", err)
 			return
 		}
 		suggestions = append(suggestions, s)
 	}
 	if err := rows.Err(); err != nil {
-		log.Printf("tracker suggest rows error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		respondJSONAPI(w, r, http.StatusBadGateway, false, "", "", err)
 		return
 	}
 
@@ -367,8 +397,7 @@ func handleApplicationsUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 	existing, err := fetchApplicationByOrg(r.Context(), req.Organization)
 	if err != nil {
-		log.Printf("tracker upsert lookup error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		respondJSONAPI(w, r, http.StatusBadGateway, false, "", "", err)
 		return
 	}
 
@@ -397,18 +426,17 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 		)
 		inserted, err := scanApplication(row)
 		if err != nil {
-			log.Printf("tracker insert error: %v", err)
-			respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+			respondJSONAPI(w, r, http.StatusBadGateway, false, "", "", err)
 			return
 		}
 
 		// Attribute activity to the day the save runs (server local), not the form's applied date.
 		if err := logApplicationActivity(r.Context(), req.Organization, req.Count, nil, "created"); err != nil {
-			log.Printf("tracker activity log (create) error: %v", err)
-			respondJSON(w, http.StatusBadGateway, false, "Failed to record activity: "+err.Error(), "")
+			respondJSONAPI(w, r, http.StatusBadGateway, false, "Failed to record activity", "", err)
 			return
 		}
 
+		invalidateStatsCache()
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -460,19 +488,18 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 	)
 	patched, err := scanApplication(row)
 	if err != nil {
-		log.Printf("tracker patch error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		respondJSONAPI(w, r, http.StatusBadGateway, false, "", "", err)
 		return
 	}
 
 	if isAddFlow {
 		if err := logApplicationActivity(r.Context(), existing.Organization, req.Count, nil, "added"); err != nil {
-			log.Printf("tracker activity log (update) error: %v", err)
-			respondJSON(w, http.StatusBadGateway, false, "Failed to record activity: "+err.Error(), "")
+			respondJSONAPI(w, r, http.StatusBadGateway, false, "Failed to record activity", "", err)
 			return
 		}
 	}
 
+	invalidateStatsCache()
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":        true,
@@ -750,29 +777,155 @@ func computeStats(rows []Application, activityRows []ActivityLog) StatsResponse 
 	return stats
 }
 
+const statsAggregateSQL = `
+SELECT
+  (SELECT COUNT(*)::int FROM applications) AS companies,
+  (SELECT COALESCE(SUM(count), 0)::bigint FROM applications) AS applications,
+  (SELECT COUNT(*)::int FROM applications WHERE lower(btrim(coalesce(status::text, ''))) = 'applied') AS applied,
+  (SELECT COALESCE(SUM(count), 0)::bigint FROM applications WHERE lower(btrim(coalesce(status::text, ''))) = 'applied') AS applied_apps,
+  (SELECT COUNT(*)::int FROM applications WHERE lower(btrim(coalesce(status::text, ''))) = 'rejected') AS rejected,
+  (SELECT COALESCE(SUM(count), 0)::bigint FROM applications WHERE lower(btrim(coalesce(status::text, ''))) = 'rejected') AS rejected_apps,
+  (SELECT COUNT(*)::int FROM applications WHERE lower(btrim(coalesce(status::text, ''))) NOT IN ('applied', 'rejected')) AS other,
+  (SELECT COALESCE(SUM(count), 0)::bigint FROM applications WHERE lower(btrim(coalesce(status::text, ''))) NOT IN ('applied', 'rejected')) AS other_apps,
+  (SELECT COALESCE(MAX(count), 0)::int FROM applications) AS max_per_company,
+  (SELECT organization FROM applications ORDER BY count DESC NULLS LAST, id ASC LIMIT 1) AS top_company,
+  (SELECT to_char(MAX(applied_dates::date), 'YYYY-MM-DD') FROM applications WHERE applied_dates IS NOT NULL) AS last_applied,
+  (SELECT COUNT(*)::int FROM applications WHERE applied_dates IS NOT NULL AND applied_dates::date >= $1::date) AS last30_companies,
+  (SELECT COALESCE(SUM(count), 0)::bigint FROM applications WHERE applied_dates IS NOT NULL AND applied_dates::date >= $1::date) AS last30_apps,
+  (SELECT COALESCE((SELECT jsonb_object_agg(status_key, cnt) FROM (
+        SELECT CASE WHEN status IS NULL OR btrim(status::text) = '' THEN '(none)' ELSE btrim(status::text) END AS status_key,
+               COUNT(*)::int AS cnt
+        FROM applications GROUP BY 1
+   ) sb)::text, '{}')) AS status_json,
+  (SELECT COALESCE((SELECT jsonb_object_agg(cat_key, cnt) FROM (
+        SELECT CASE WHEN category IS NULL OR btrim(category::text) = '' THEN '(none)' ELSE btrim(category::text) END AS cat_key,
+               COUNT(*)::int AS cnt
+        FROM applications GROUP BY 1
+   ) cb)::text, '{}')) AS category_json
+`
+
+var (
+	statsCacheMu    sync.Mutex
+	statsCacheUntil time.Time
+	statsCacheBody  map[string]interface{}
+)
+
+func invalidateStatsCache() {
+	statsCacheMu.Lock()
+	statsCacheBody = nil
+	statsCacheUntil = time.Time{}
+	statsCacheMu.Unlock()
+}
+
+func last30CutoffLocalDate() string {
+	t := time.Now().In(time.Local).AddDate(0, 0, -30)
+	t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
+	return t.Format("2006-01-02")
+}
+
+func decodeJSONIntMap(raw []byte) (map[string]int, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return map[string]int{}, nil
+	}
+	var tmp map[string]interface{}
+	if err := json.Unmarshal(raw, &tmp); err != nil {
+		return nil, err
+	}
+	out := make(map[string]int, len(tmp))
+	for k, v := range tmp {
+		if n, ok := v.(float64); ok {
+			out[k] = int(n)
+		}
+	}
+	return out, nil
+}
+
+func fetchStatsAggregatesSQL(ctx context.Context, cutoff string) (StatsResponse, error) {
+	var s StatsResponse
+	var applications, appliedApps, rejectedApps, otherApps, last30Apps int64
+	var lastApplied sql.NullString
+	var topOrg sql.NullString
+	var statusJSON, categoryJSON []byte
+
+	err := dbPool.QueryRow(ctx, statsAggregateSQL, cutoff).Scan(
+		&s.Companies,
+		&applications,
+		&s.Applied,
+		&appliedApps,
+		&s.Rejected,
+		&rejectedApps,
+		&s.Other,
+		&otherApps,
+		&s.MaxPerCompany,
+		&topOrg,
+		&lastApplied,
+		&s.Last30DaysCompanies,
+		&last30Apps,
+		&statusJSON,
+		&categoryJSON,
+	)
+	if err != nil {
+		return s, err
+	}
+	s.Applications = int(applications)
+	s.AppliedApps = int(appliedApps)
+	s.RejectedApps = int(rejectedApps)
+	s.OtherApps = int(otherApps)
+	s.Last30DaysApps = int(last30Apps)
+	if topOrg.Valid {
+		s.TopCompany = topOrg.String
+	}
+	if lastApplied.Valid {
+		s.LastAppliedDate = &lastApplied.String
+	}
+	sb, err := decodeJSONIntMap(statusJSON)
+	if err != nil {
+		return s, err
+	}
+	cb, err := decodeJSONIntMap(categoryJSON)
+	if err != nil {
+		return s, err
+	}
+	s.StatusBreakdown = sb
+	s.CategoryBreakdown = cb
+	if s.Companies > 0 {
+		s.AppliedPct = float64(s.Applied) / float64(s.Companies) * 100
+		s.RejectedPct = float64(s.Rejected) / float64(s.Companies) * 100
+		s.AvgPerCompany = float64(s.Applications) / float64(s.Companies)
+	}
+	return s, nil
+}
+
 func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	rows, err := fetchAllApplications(r.Context())
+	statsCacheMu.Lock()
+	if time.Now().Before(statsCacheUntil) && statsCacheBody != nil {
+		body := statsCacheBody
+		statsCacheMu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(body)
+		return
+	}
+	statsCacheMu.Unlock()
+
+	stats, err := fetchStatsAggregatesSQL(r.Context(), last30CutoffLocalDate())
 	if err != nil {
-		log.Printf("tracker stats error: %v", err)
-		respondJSON(w, http.StatusBadGateway, false, err.Error(), "")
+		respondJSONAPI(w, r, http.StatusBadGateway, false, "", "", err)
 		return
 	}
 
-	stats := computeStats(rows, nil)
-
 	var actErr error
 	if actErr = ensureActivityLogBootstrap(r.Context()); actErr != nil {
-		log.Printf("tracker stats activity bootstrap: %v", actErr)
+		slog.Warn("tracker stats activity bootstrap", "err", actErr)
 	} else {
 		tc, ta, wc, wa, qerr := fetchTodayWeekActivityTotals(r.Context(), getActivityStatsLocation())
 		if qerr != nil {
 			actErr = qerr
-			log.Printf("tracker stats today/week query: %v", qerr)
+			slog.Warn("tracker stats today/week query", "err", qerr)
 		} else {
 			stats.TodayCompanies = tc
 			stats.TodayApplications = ta
@@ -788,8 +941,14 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 		"activity_logs_error": "",
 	}
 	if actErr != nil {
-		payload["activity_logs_error"] = actErr.Error()
+		payload["activity_logs_error"] = "Could not load activity summary"
 	}
+
+	statsCacheMu.Lock()
+	statsCacheBody = payload
+	statsCacheUntil = time.Now().Add(30 * time.Second)
+	statsCacheMu.Unlock()
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(payload)
 }
@@ -872,7 +1031,7 @@ func handleApplicationsTimeline(w http.ResponseWriter, r *http.Request) {
 
 	activityRows, actErr := loadActivityLogsForHandlers(r.Context())
 	if actErr != nil {
-		log.Printf("tracker timeline activity: %v", actErr)
+		slog.Warn("tracker timeline activity", "err", actErr)
 	}
 	buckets := bucketTimeline(activityRows, freq)
 
@@ -885,7 +1044,7 @@ func handleApplicationsTimeline(w http.ResponseWriter, r *http.Request) {
 		"activity_logs_error": "",
 	}
 	if actErr != nil {
-		payload["activity_logs_error"] = actErr.Error()
+		payload["activity_logs_error"] = "Could not load activity data"
 	}
 	_ = json.NewEncoder(w).Encode(payload)
 }
@@ -955,7 +1114,7 @@ func handleApplicationsContribution(w http.ResponseWriter, r *http.Request) {
 
 	activityRows, actErr := loadActivityLogsForHandlers(r.Context())
 	if actErr != nil {
-		log.Printf("tracker contribution activity: %v", actErr)
+		slog.Warn("tracker contribution activity", "err", actErr)
 	}
 	counts := aggregateApplicationsByLocalDay(activityRows)
 	months := contributionMonthsList(counts)
@@ -992,7 +1151,7 @@ func handleApplicationsContribution(w http.ResponseWriter, r *http.Request) {
 		"activity_logs_error": "",
 	}
 	if actErr != nil {
-		payload["activity_logs_error"] = actErr.Error()
+		payload["activity_logs_error"] = "Could not load activity data"
 	}
 	_ = json.NewEncoder(w).Encode(payload)
 }

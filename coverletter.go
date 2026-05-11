@@ -5,17 +5,48 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 type CoverLetterTemplateData struct {
 	Company string
 }
 
+var tectonicCompileSem = make(chan struct{}, 1)
+
+func escapeLatexUserInput(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	if len(s) > 200 {
+		return "", fmt.Errorf("company name too long (max 200 characters)")
+	}
+	repl := strings.NewReplacer(
+		`\`, `\textbackslash{}`,
+		`{`, `\{`,
+		`}`, `\}`,
+		`$`, `\$`,
+		`&`, `\&`,
+		`#`, `\#`,
+		`^`, `\^{}`,
+		`_`, `\_`,
+		`~`, `\~{}`,
+		`%`, `\%`,
+	)
+	return repl.Replace(s), nil
+}
+
 func GenerateCoverLetterPDF(companyName string) ([]byte, error) {
+	escaped, err := escapeLatexUserInput(companyName)
+	if err != nil {
+		return nil, err
+	}
+
+	tectonicCompileSem <- struct{}{}
+	defer func() { <-tectonicCompileSem }()
+
 	latex, err := renderRuntimeTemplate(
 		"COVERLETTER_TEMPLATE_PATH",
-		filepath.Join("templates", "coverletter.tex.tmpl"),
-		CoverLetterTemplateData{Company: companyName},
+		"templates/coverletter.tex.tmpl",
+		CoverLetterTemplateData{Company: escaped},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build cover letter template: %w", err)
@@ -28,7 +59,7 @@ func GenerateCoverLetterPDF(companyName string) ([]byte, error) {
 	defer os.RemoveAll(tempDir)
 
 	texPath := filepath.Join(tempDir, "cover.tex")
-	if err := os.WriteFile(texPath, []byte(latex), 0644); err != nil {
+	if err := os.WriteFile(texPath, []byte(latex), 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write tex file: %w", err)
 	}
 

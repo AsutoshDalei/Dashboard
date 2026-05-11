@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -60,8 +61,14 @@ func saveClipboardItems() error {
 		return fmt.Errorf("error marshaling clipboard data: %w", err)
 	}
 
-	if err := os.WriteFile(clipboardFile, data, 0644); err != nil {
-		return fmt.Errorf("error writing clipboard file: %w", err)
+	dir := filepath.Dir(clipboardFile)
+	tmp := filepath.Join(dir, filepath.Base(clipboardFile)+".tmp")
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return fmt.Errorf("error writing clipboard temp file: %w", err)
+	}
+	if err := os.Rename(tmp, clipboardFile); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("error replacing clipboard file: %w", err)
 	}
 
 	return nil

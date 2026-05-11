@@ -28,14 +28,15 @@ func getGmailCredentials() (*oauth2.Token, error) {
 		tokenPath = filepath.Join("..", "token.json")
 	}
 
-    if _, err := os.Stat(tokenPath); os.IsNotExist(err) {
-        tokenPath = "token.json" // try current directory
-    }
+	if _, err := os.Stat(tokenPath); os.IsNotExist(err) {
+		tokenPath = "token.json" // try current directory
+	}
 
 	credsData, err := os.ReadFile(tokenPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not read token.json at %s: %w", tokenPath, err)
 	}
+	_ = os.Chmod(tokenPath, 0o600)
 
 	var pt PythonToken
 	if err := json.Unmarshal(credsData, &pt); err != nil {
@@ -82,7 +83,7 @@ func getGmailCredentials() (*oauth2.Token, error) {
 
 		updatedData, err := json.Marshal(pt)
 		if err == nil {
-			os.WriteFile(tokenPath, updatedData, 0644)
+			_ = os.WriteFile(tokenPath, updatedData, 0o600)
 		}
 	}
 

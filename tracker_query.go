@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 const openRouterEndpoint = "https://openrouter.ai/api/v1/chat/completions"
@@ -220,6 +222,63 @@ func normalizeRowValue(v interface{}) interface{} {
 	}
 }
 
+func respondQueryError(w http.ResponseWriter, status int, sqlText, errMessage string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": false,
+		"sql":     sqlText,
+		"error":   errMessage,
+	})
+}
+
+func respondQueryErrorInternal(w http.ResponseWriter, r *http.Request, status int, sqlText string, logErr error) {
+	slog.Error("tracker query", "err", logErr, "request_id", requestIDFrom(r), "sql", sqlText)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":    false,
+		"sql":        sqlText,
+		"error":      "Query execution failed. Check server logs.",
+		"request_id": requestIDFrom(r),
+	})
+}
+
+func runReadOnlyApplicationQuery(ctx context.Context, sqlText string) (pgx.Rows, func(), error) {
+	if dbPoolReader != nil {
+		rows, err := dbPoolReader.Query(ctx, sqlText)
+		if err != nil {
+			return nil, nil, err
+		}
+		return rows, func() { rows.Close() }, nil
+	}
+
+	tx, err := dbPool.Begin(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	cleanup := func() {
+		_ = tx.Rollback(ctx)
+	}
+	if _, err = tx.Exec(ctx, "SET LOCAL statement_timeout = '5000'"); err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	if _, err = tx.Exec(ctx, "SET LOCAL transaction_read_only = on"); err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	rows, err := tx.Query(ctx, sqlText)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	return rows, func() {
+		rows.Close()
+		_ = tx.Rollback(ctx)
+	}, nil
+}
+
 func handleApplicationsQuery(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -251,8 +310,7 @@ func handleApplicationsQuery(w http.ResponseWriter, r *http.Request) {
 		defer cancel()
 		raw, err := callOpenRouter(llmCtx, req.Query)
 		if err != nil {
-			log.Printf("tracker query LLM error: %v", err)
-			respondQueryError(w, http.StatusBadGateway, "", err.Error())
+			respondQueryErrorInternal(w, r, http.StatusBadGateway, "", err)
 			return
 		}
 		sqlText = extractSQL(raw)
@@ -271,13 +329,13 @@ func handleApplicationsQuery(w http.ResponseWriter, r *http.Request) {
 
 	dbCtx, cancel := context.WithTimeout(r.Context(), queryTimeout)
 	defer cancel()
-	rows, err := dbPool.Query(dbCtx, sqlText)
+
+	rows, closeRows, err := runReadOnlyApplicationQuery(dbCtx, sqlText)
 	if err != nil {
-		log.Printf("tracker query execution error: %v", err)
-		respondQueryError(w, http.StatusBadRequest, sqlText, err.Error())
+		respondQueryErrorInternal(w, r, http.StatusBadRequest, sqlText, err)
 		return
 	}
-	defer rows.Close()
+	defer closeRows()
 
 	fds := rows.FieldDescriptions()
 	columns := make([]string, len(fds))
@@ -294,8 +352,7 @@ func handleApplicationsQuery(w http.ResponseWriter, r *http.Request) {
 		}
 		vals, err := rows.Values()
 		if err != nil {
-			log.Printf("tracker query row scan error: %v", err)
-			respondQueryError(w, http.StatusBadRequest, sqlText, err.Error())
+			respondQueryErrorInternal(w, r, http.StatusBadRequest, sqlText, err)
 			return
 		}
 		for i := range vals {
@@ -304,8 +361,7 @@ func handleApplicationsQuery(w http.ResponseWriter, r *http.Request) {
 		out = append(out, vals)
 	}
 	if err := rows.Err(); err != nil {
-		log.Printf("tracker query rows error: %v", err)
-		respondQueryError(w, http.StatusBadRequest, sqlText, err.Error())
+		respondQueryErrorInternal(w, r, http.StatusBadRequest, sqlText, err)
 		return
 	}
 
@@ -317,15 +373,5 @@ func handleApplicationsQuery(w http.ResponseWriter, r *http.Request) {
 		"rows":      out,
 		"row_count": len(out),
 		"truncated": truncated,
-	})
-}
-
-func respondQueryError(w http.ResponseWriter, status int, sqlText, errMessage string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": false,
-		"sql":     sqlText,
-		"error":   errMessage,
 	})
 }

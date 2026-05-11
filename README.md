@@ -19,11 +19,14 @@ A lightweight, self-hosted email application designed for Raspberry Pi Zero 2 W.
 ```
 asutosh_portfolio/
 ├── main.go              # HTTP server, routes, authentication
+├── http_meta.go         # Request ID + security headers + JSON error helper
+├── tracker_query.go     # NL/SQL query endpoint (OpenRouter + read-only execution)
 ├── email.go             # Email building and sending logic
 ├── coverletter.go       # Cover letter PDF generation using Tectonic
 ├── clipboard.go         # Clipboard tool storage + API
-├── tracker.go           # Job Tracker: Supabase REST client + handlers
+├── tracker.go           # Job Tracker handlers and stats
 ├── oauth.go             # Gmail OAuth token management
+├── sql/                 # Optional DB DDL (e.g. pg_trgm index)
 ├── go.mod / go.sum      # Go dependencies
 ├── build.sh             # Cross-compilation script
 ├── templates/           # UI HTML templates + runtime content templates
@@ -58,6 +61,13 @@ PERSONAL_EMAIL="your-personal@gmail.com"  # Optional, defaults to EMAIL
 # Authentication
 ACCESS_PASSKEY="your-secret-passkey"      # Required for web UI login
 
+# Database (Job Tracker, backups, natural-language query)
+DATABASE_URL="postgresql://user:pass@host:5432/dbname?sslmode=require"   # Required (direct Postgres URI; prefer 5432 over pooler for backups)
+DATABASE_URL_READER=""                    # Optional: second URI (e.g. read-only role) for `/api/applications/query` only
+DB_MAX_CONNS="4"                          # Optional: primary `pgxpool` max connections (default 4)
+DB_READER_MAX_CONNS="4"                   # Optional: reader pool max connections (default 4, hard cap 8)
+ENABLE_SUGGEST_TRGM="1"                   # Optional: use trigram-based autocomplete when `pg_trgm` is installed (see `sql/optional_pg_trgm.sql`)
+
 # Job Tracker (Supabase)
 SUPABASE_URL="https://<project-ref>.supabase.co"   # Required for Job Tracker tool
 SUPABASE_SERVICE_KEY="<service_role_key>"          # Service-role key (bypasses RLS for inserts/updates)
@@ -79,6 +89,12 @@ DB_BACKUP_ROW_TOLERANCE="0"               # Allowed |dump - live| row delta per 
 DB_BACKUP_SCHEMAS="public"                # Comma-separated schemas to dump; "*" for all non-system
 DISABLE_DB_BACKUP=""                      # Set to "1" / "true" to skip automated dumps entirely
 ```
+
+**Operations / hardening:** the HTTP server uses timeouts and graceful shutdown on `SIGINT`/`SIGTERM`, sets security headers, rate-limits `POST /auth`, and exposes `GET /healthz` (database ping, no auth) for probes. Runtime templates (`email_body.tmpl`, `coverletter.tex.tmpl`) are embedded in the binary; `EMAIL_TEMPLATE_PATH` / `COVERLETTER_TEMPLATE_PATH` still override with files on disk when set.
+
+**Autocomplete index:** for large `applications` tables, run `sql/optional_pg_trgm.sql` once, then set `ENABLE_SUGGEST_TRGM=1`.
+
+**Layout refactor:** splitting the large `tracker.html` into a shared layout plus external CSS/JS is deferred to a follow-up change set (see audit roadmap).
 
 > The Job Tracker reads and writes a Supabase `applications` table with the schema below. Reads work with the publishable/anon key, but inserts and updates are blocked by Row Level Security unless you use the **service-role key** (or add an open RLS policy). Get the service-role key from Supabase Dashboard → Project Settings → API.
 >
