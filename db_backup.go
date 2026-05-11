@@ -116,10 +116,6 @@ func startDatabaseBackups(ctx context.Context, databaseURL string) {
 		log.Printf("backup: DISABLE_DB_BACKUP set; skipping automated dumps")
 		return
 	}
-	if _, err := exec.LookPath("pg_dump"); err != nil {
-		log.Printf("backup: pg_dump not found in PATH; automated dumps disabled (%v)", err)
-		return
-	}
 
 	cfg := loadBackupConfig()
 	if err := os.MkdirAll(cfg.dumpDir, 0o755); err != nil {
@@ -127,9 +123,11 @@ func startDatabaseBackups(ctx context.Context, databaseURL string) {
 		return
 	}
 
-	log.Printf("backup: dump dir=%q interval=%s schemas=%s retries=%d", cfg.dumpDir, cfg.interval, schemasLabel(cfg), cfg.maxRetries)
+	log.Printf("backup: dump dir=%q interval=%s schemas=%s retries=%d (data=native COPY)", cfg.dumpDir, cfg.interval, schemasLabel(cfg), cfg.maxRetries)
 
-	if err := runSchemaBackup(ctx, cfg, databaseURL); err != nil {
+	if _, err := exec.LookPath("pg_dump"); err != nil {
+		log.Printf("backup: pg_dump not found in PATH; schema.sql skipped — use migrations or install postgresql-client for schema dumps (%v)", err)
+	} else if err := runSchemaBackup(ctx, cfg, databaseURL); err != nil {
 		log.Printf("backup: initial schema dump failed: %v", err)
 	}
 
@@ -187,6 +185,231 @@ func dumpFlagsForSchemas(base []string, cfg backupConfig) []string {
 	return out
 }
 
+func listTableColumns(ctx context.Context, schema, table string) ([]string, error) {
+	rows, err := dbPool.Query(ctx, `
+SELECT column_name
+FROM information_schema.columns
+WHERE table_schema = $1 AND table_name = $2
+ORDER BY ordinal_position`, schema, table)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var cols []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		cols = append(cols, name)
+	}
+	return cols, rows.Err()
+}
+
+// listFKParentBeforeChildEdges returns (parentKey, childKey) pairs where parentKey is the
+// referenced table and childKey the dependent; parent must appear before child in the dump
+// so a straight psql restore satisfies foreign keys.
+func listFKParentBeforeChildEdges(ctx context.Context, cfg backupConfig, inBackup map[string]bool) ([][2]string, error) {
+	var rows pgx.Rows
+	var err error
+	if cfg.allSchemas {
+		rows, err = dbPool.Query(ctx, `
+SELECT rn.nspname::text, r.relname::text, n.nspname::text, c.relname::text
+FROM pg_constraint con
+JOIN pg_class c ON con.conrelid = c.oid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+JOIN pg_class r ON con.confrelid = r.oid
+JOIN pg_namespace rn ON r.relnamespace = rn.oid
+WHERE con.contype = 'f'
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+  AND rn.nspname NOT IN ('pg_catalog', 'information_schema')`)
+	} else {
+		rows, err = dbPool.Query(ctx, `
+SELECT rn.nspname::text, r.relname::text, n.nspname::text, c.relname::text
+FROM pg_constraint con
+JOIN pg_class c ON con.conrelid = c.oid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+JOIN pg_class r ON con.confrelid = r.oid
+JOIN pg_namespace rn ON r.relnamespace = rn.oid
+WHERE con.contype = 'f'
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+  AND rn.nspname NOT IN ('pg_catalog', 'information_schema')
+  AND n.nspname = ANY($1::text[])
+  AND rn.nspname = ANY($1::text[])`, cfg.schemas)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var edges [][2]string
+	for rows.Next() {
+		var refSchema, refTable, depSchema, depTable string
+		if err := rows.Scan(&refSchema, &refTable, &depSchema, &depTable); err != nil {
+			return nil, err
+		}
+		parentKey := refSchema + "." + refTable
+		childKey := depSchema + "." + depTable
+		if parentKey == childKey {
+			continue
+		}
+		if !inBackup[parentKey] || !inBackup[childKey] {
+			continue
+		}
+		edges = append(edges, [2]string{parentKey, childKey})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return edges, nil
+}
+
+func topoSortTables(tables []liveTable, edges [][2]string) []liveTable {
+	key := func(t liveTable) string { return t.schema + "." + t.table }
+	keys := make([]string, 0, len(tables))
+	idx := make(map[string]liveTable, len(tables))
+	for _, t := range tables {
+		k := key(t)
+		idx[k] = t
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	indegree := make(map[string]int, len(keys))
+	adj := make(map[string][]string)
+	for _, k := range keys {
+		indegree[k] = 0
+	}
+	for _, e := range edges {
+		p, c := e[0], e[1]
+		if _, ok := indegree[p]; !ok {
+			continue
+		}
+		if _, ok := indegree[c]; !ok {
+			continue
+		}
+		adj[p] = append(adj[p], c)
+		indegree[c]++
+	}
+
+	queue := make([]string, 0)
+	for _, k := range keys {
+		if indegree[k] == 0 {
+			queue = append(queue, k)
+		}
+	}
+	sort.Strings(queue)
+
+	out := make([]liveTable, 0, len(tables))
+	processed := 0
+	for len(queue) > 0 {
+		u := queue[0]
+		queue = queue[1:]
+		out = append(out, idx[u])
+		processed++
+		neighbors := append([]string(nil), adj[u]...)
+		sort.Strings(neighbors)
+		for _, v := range neighbors {
+			indegree[v]--
+			if indegree[v] == 0 {
+				queue = append(queue, v)
+				sort.Strings(queue)
+			}
+		}
+	}
+	if processed < len(tables) {
+		seen := make(map[string]bool, len(out))
+		for _, t := range out {
+			seen[key(t)] = true
+		}
+		var rest []string
+		for _, k := range keys {
+			if !seen[k] {
+				rest = append(rest, k)
+			}
+		}
+		sort.Strings(rest)
+		for _, k := range rest {
+			out = append(out, idx[k])
+		}
+	}
+	return out
+}
+
+func runNativeDataDump(ctx context.Context, cfg backupConfig, outPath string) (err error) {
+	dumpCtx, cancel := context.WithTimeout(ctx, pgDumpTimeout)
+	defer cancel()
+
+	f, err := os.Create(outPath)
+	if err != nil {
+		return err
+	}
+	bw := bufio.NewWriterSize(f, 256*1024)
+	defer func() {
+		flushErr := bw.Flush()
+		closeErr := f.Close()
+		if err == nil {
+			if flushErr != nil {
+				err = flushErr
+			} else if closeErr != nil {
+				err = closeErr
+			}
+		}
+		if err != nil {
+			_ = os.Remove(outPath)
+		}
+	}()
+
+	tables, err := listLiveTables(dumpCtx, cfg)
+	if err != nil {
+		return err
+	}
+	inBackup := make(map[string]bool, len(tables))
+	for _, t := range tables {
+		inBackup[t.schema+"."+t.table] = true
+	}
+	edges, err := listFKParentBeforeChildEdges(dumpCtx, cfg, inBackup)
+	if err != nil {
+		return err
+	}
+	sorted := topoSortTables(tables, edges)
+
+	conn, err := dbPool.Acquire(dumpCtx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	pgConn := conn.Conn().PgConn()
+
+	for _, t := range sorted {
+		cols, err := listTableColumns(dumpCtx, t.schema, t.table)
+		if err != nil {
+			return fmt.Errorf("columns %s.%s: %w", t.schema, t.table, err)
+		}
+		if len(cols) == 0 {
+			return fmt.Errorf("no columns for %s.%s", t.schema, t.table)
+		}
+		quotedCols := make([]string, len(cols))
+		for i, c := range cols {
+			quotedCols[i] = quoteIdent(c)
+		}
+		q := quoteQualified(t.schema, t.table)
+		header := fmt.Sprintf("COPY %s (%s) FROM stdin;\n", q, strings.Join(quotedCols, ", "))
+		if _, err := bw.WriteString(header); err != nil {
+			return err
+		}
+		copySQL := fmt.Sprintf("COPY %s (%s) TO STDOUT", q, strings.Join(quotedCols, ", "))
+		if _, err := pgConn.CopyTo(dumpCtx, bw, copySQL); err != nil {
+			return fmt.Errorf("COPY %s.%s: %w", t.schema, t.table, err)
+		}
+		if _, err := bw.WriteString("\\.\n"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func runSchemaBackup(ctx context.Context, cfg backupConfig, databaseURL string) error {
 	finalPath := filepath.Join(cfg.dumpDir, schemaDumpFilename)
 	tmpPath := finalPath + ".tmp"
@@ -242,10 +465,9 @@ func runSchemaBackup(ctx context.Context, cfg backupConfig, databaseURL string) 
 }
 
 func runDataBackup(ctx context.Context, cfg backupConfig, databaseURL string) error {
+	_ = databaseURL // native export uses dbPool
 	finalPath := filepath.Join(cfg.dumpDir, dataDumpFilename)
 	tmpPath := finalPath + ".tmp"
-
-	flags := dumpFlagsForSchemas([]string{"--data-only", "--no-owner", "--no-acl"}, cfg)
 
 	start := time.Now()
 
@@ -260,8 +482,8 @@ func runDataBackup(ctx context.Context, cfg backupConfig, databaseURL string) er
 			}
 		}
 
-		if err := runPgDump(ctx, tmpPath, databaseURL, flags); err != nil {
-			lastErr = fmt.Errorf("pg_dump data: %w", err)
+		if err := runNativeDataDump(ctx, cfg, tmpPath); err != nil {
+			lastErr = fmt.Errorf("native data dump: %w", err)
 			_ = os.Remove(tmpPath)
 			continue
 		}

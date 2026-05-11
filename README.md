@@ -71,7 +71,7 @@ COVERLETTER_TEMPLATE_PATH="templates/coverletter.tex.tmpl"   # Runtime cover let
 OPENROUTER_API_KEY="sk-or-v1-..."         # Required for Job Tracker "Query your data" (NL-to-SQL via OpenRouter)
 OPENROUTER_MODEL="google/gemma-3n-e4b-it:free,minimax/minimax-m2.5:free,openai/gpt-oss-120b:free"   # Optional. Comma-separated: primary,fallback1,fallback2,...
 
-# Database backups (automated pg_dump)
+# Database backups (native data.sql + optional schema via pg_dump)
 DB_DUMP_DIR="db_dumps"                    # Where schema.sql and data.sql are written (relative to cwd)
 DB_BACKUP_INTERVAL="24h"                  # How often the data dump is refreshed; Go duration string
 DB_BACKUP_MAX_RETRIES="2"                 # Max re-dumps when verification fails
@@ -109,24 +109,24 @@ DISABLE_DB_BACKUP=""                      # Set to "1" / "true" to skip automate
 
 ### Automated Database Backups
 
-When the server starts, it shells out to `pg_dump` against `DATABASE_URL` to write two fixed files into `DB_DUMP_DIR` (default `db_dumps/`, relative to cwd). The same files are overwritten on every refresh; no timestamped names are created.
+After the DB ping succeeds, the server writes backups into `DB_DUMP_DIR` (default `db_dumps/`, relative to cwd). The same filenames are overwritten on every refresh; no timestamped names are created.
 
-| File | When |
-|------|------|
-| `db_dumps/schema.sql` | Once at startup (after the DB ping succeeds) |
-| `db_dumps/data.sql` | At startup, then every `DB_BACKUP_INTERVAL` (default 24h) |
+| File | When | How |
+|------|------|-----|
+| `db_dumps/data.sql` | At startup, then every `DB_BACKUP_INTERVAL` (default 24h) | **Native Go:** streams `COPY ... TO STDOUT` over your existing `DATABASE_URL` connection (via `pgx`) into PostgreSQL text-format `COPY ... FROM stdin` blocks—no `pg_dump` required for data. Tables are ordered using foreign-key dependencies when possible (cycles fall back to alphabetical order). |
+| `db_dumps/schema.sql` | Once at startup | **Optional:** only if `pg_dump` is on `PATH`. If it is missing, this file is skipped; use your migrations, Supabase schema, or repo DDL (for example the `applications` snippet above and `ensureApplicationActivityLogs` in the code) as the schema source. |
 
 Each dump is verified before it replaces the previous file:
 
 - The data dump is parsed for `COPY ... FROM stdin` row counts per table, and compared with `SELECT count(*)` from the live DB. On a mismatch the dump is retried up to `DB_BACKUP_MAX_RETRIES` (default `2`), with a short sleep so any in-flight write can settle. `DB_BACKUP_ROW_TOLERANCE` (default `0`) lets you accept small deltas on busier DBs.
-- The schema dump compares the count of `CREATE TABLE` statements in `schema.sql` to `information_schema.tables` for the configured schemas.
+- When `schema.sql` is produced, it is checked by comparing the count of `CREATE TABLE` statements to `information_schema.tables` for the configured schemas.
 - Output is written to `*.sql.tmp` and atomically renamed to the final filename only after verification, so consumers never see a half-written file. If verification still fails after all retries, the latest attempt is kept on disk and a `WARN` is logged with the table-by-table delta.
 
 Requirements / notes:
 
-- **`pg_dump` on `PATH`.** Install the PostgreSQL client tools (e.g. `apt install postgresql-client` on Debian/Raspberry Pi OS, or `brew install libpq && brew link --force libpq` on macOS). Match the major version of your Supabase Postgres if possible. If `pg_dump` is not found, automated backups are skipped (the server still runs).
-- **Use the direct connection string.** `pg_dump` needs a real Postgres connection. Use Supabase's **direct** connection (typically port `5432`, `sslmode=require`) for `DATABASE_URL`, not the transaction pooler URI (port `6543`), which can break or limit `pg_dump`.
-- Set `DISABLE_DB_BACKUP=1` to turn the feature off entirely (e.g. on a build host).
+- **`DATABASE_URL` must allow server-side `COPY ... TO STDOUT`.** Use a normal Postgres session (Supabase **direct** connection on port `5432` with `sslmode=require` is typical). Transaction pooling (port `6543`) can interfere with long-running or COPY-related operations; prefer the direct URI for backups.
+- **`pg_dump` (optional).** Install PostgreSQL client tools if you want `schema.sql` snapshots (e.g. `apt install postgresql-client` on Raspberry Pi OS). Match the major version of your Supabase Postgres when possible. Data export does not use `pg_dump`.
+- Set `DISABLE_DB_BACKUP=1` to turn backups off entirely (e.g. on a build host).
 
 ## Building
 
@@ -134,7 +134,7 @@ Requirements / notes:
 
 - Go 1.21+ installed on your build machine
 - [Tectonic](https://tectonic-typesetting.github.io/) LaTeX engine (for cover letter generation)
-- `pg_dump` (PostgreSQL client tools) on `PATH` if you want automated DB backups; the server runs without it but skips dumps
+- `pg_dump` on `PATH` only if you want automated `schema.sql` snapshots; `data.sql` backups do not require it
 
 ### Build for Raspberry Pi Zero 2 W
 
@@ -342,9 +342,9 @@ The server runs on port 5001. Kill any existing process or modify `main.go` to u
 - Check that the `tectonic` command works: `tectonic --version`
 
 ### Automated DB backups not running / verification mismatches
-- `backup: pg_dump not found in PATH` — install PostgreSQL client tools and ensure `pg_dump --version` works for the user that runs the server
-- `pg_dump data: ... server version mismatch` — install a `pg_dump` whose major version is >= the Supabase Postgres major version
-- `pg_dump data: ... canceling statement due to ... pooler` (or `prepared statements`) — switch `DATABASE_URL` from the **pooler** (`6543`) to the **direct** Supabase connection (`5432`, `sslmode=require`)
+- `backup: pg_dump not found ... schema.sql skipped` — expected if client tools are not installed; `data.sql` still runs. Install `postgresql-client` (or similar) only if you want `schema.sql` via `pg_dump`.
+- `native data dump: COPY ...` / pooler errors — switch `DATABASE_URL` to the **direct** Supabase connection (`5432`, `sslmode=require`) instead of transaction pooling (`6543`) if COPY or long sessions fail.
+- `pg_dump schema: ...` — when `schema.sql` is enabled, install a `pg_dump` whose major version is >= the Supabase Postgres major version, or ignore and rely on migrations for schema.
 - `data verify mismatch: <table>: dump=N live=M` — usually means writes happened between the dump finishing and the verification query; the loop retries automatically. If you legitimately have a busy DB, raise `DB_BACKUP_ROW_TOLERANCE`
 - `WARN data dump kept despite mismatch` — retries were exhausted; the latest attempt is still on disk at `db_dumps/data.sql` for forensic use, but treat it as best-effort until the next successful refresh
 
