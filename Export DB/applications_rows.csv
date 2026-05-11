@@ -1,0 +1,642 @@
+id,organization,job_role,location,contacts,applied_dates,remarks,status,category,count,username_password,created_at
+1,100ms,,India,,2026-02-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+2,10a Labs,https://job-boards.greenhouse.io/10alabs,,,2025-12-08,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+3,2K,,,,2026-04-25,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+4,AE Studio,,,,2026-04-08,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+5,AES,,,,2026-01-20,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+6,AMG & Associates,,,,2026-04-26,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+7,AQR,,,,2026-02-19,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+8,Aarki,,,,2026-03-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+9,Abaka AI,,,,2026-04-13,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+10,Abbvie,,,,2025-11-13,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+11,Abridge,,,,2026-02-13,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+12,Accenture,,,,2026-01-15,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+13,Acorns,,,,2026-02-18,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+14,Actively AI,,,,2026-01-24,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+15,Adobe,https://careers.adobe.com/us/en/job/R158632/2026-University-Graduate-Machine-Learning-Engineer,Bay,,2025-08-24,,Rejected,Fulltime,8,,2026-04-28 21:26:17.264805
+16,Aechelon,,,,2026-01-21,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+17,AegisAI,,,,2026-02-03,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+18,Aeva,,,,2026-04-01,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+19,Affirm,https://job-boards.greenhouse.io/affirm/jobs/6555054003,,,2025-09-07,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+20,Afresh,,,,2026-03-03,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+21,Aily Labs,,Madrid,,2026-04-01,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+22,Aircall,,,,2026-01-18,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+23,Akur8,,,,2026-04-01,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+24,Alan*,,Paris,,2026-02-01,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+25,Alignment Health,,,,2026-04-09,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+26,AllCloud,,,,2026-03-30,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+27,Allstate,,,,2025-09-07,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+28,Altos Labs,https://www.altoslabs.com/careers,,,2025-11-25,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+29,Amazon,,,,2026-03-02,,Rejected,Fulltime,7,5 Rejected,2026-04-28 21:26:17.264805
+30,American Airlines,,,,2026-02-18,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+31,Ameriprise,,,,2026-01-16,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+32,Amex,,,Swattik,2025-11-18,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+33,Amgen,,,,2026-03-24,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+34,Amigo,,,,2026-02-01,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+35,Amplitude,,,,2026-04-01,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+36,Analog Devices,,,,2026-03-26,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+37,AntkinsRealis*,,,,2026-03-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+38,Anyscale*,,1 India,,2026-03-01,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+39,AppLovin,https://job-boards.greenhouse.io/applovin/jobs/4447610006?gh_jid=4447610006,Bay,,2025-09-03,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+40,Apple,,,,2025-09-04,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+41,Applied Intuition,,,,2025-11-05,,Rejected,Fulltime,12,,2026-04-28 21:26:17.264805
+42,Applied Materials,,,,2025-12-30,1 India,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+43,Aramark,,,,2026-04-18,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+44,Arevon,,,,2026-03-17,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+45,ArizeAI,,,,2026-01-20,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+46,Arlo,,,,2026-04-13,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+47,Arrowstreet,,,,2026-02-04,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+48,Asana,,,,2026-02-04,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+49,Ascot*,,,,2026-04-10,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+50,AssemblyAI,,,,2026-02-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+51,Assort Health,,,,2026-01-18,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+52,AstraZeneca,,,,2025-11-13,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+53,Astral,,,,2026-02-03,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+54,Astrix,,,,2026-01-31,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+55,Attentive*,,,,2026-02-05,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+56,Attlasian,,,,2025-09-08,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+57,Attune,,,,2026-03-09,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+58,Auctor,,,,2026-04-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+59,Augment Code,,,,2026-02-08,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+60,Aurora,,,,2026-02-06,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+61,Autodesk,,,,2026-02-08,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+62,Automat*,,,,2026-02-09,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+63,Avathon*,,,,2026-03-01,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+64,AvenueZ,,,,2025-11-16,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+65,Avis Budget Group,,,,2026-03-31,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+66,Avoca,,,,2026-04-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+67,Avride*,,,,2026-03-13,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+68,Axcelis,,,,2026-03-07,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+69,B3 Consulting,,Sweden,,2026-04-04,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+70,BDO,,,,2026-02-09,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+71,BECU,,,,2026-03-24,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+72,BJC Health System,,,,2026-03-07,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+73,Babel*,,,,2026-03-11,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+74,Bain Capital,,,,2026-04-08,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+75,BambooHR,,,,2026-02-09,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+76,Bank United,,,,2026-03-05,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+77,Bank of America,,,,2026-02-08,,Rejected,Fulltime,8,,2026-04-28 21:26:17.264805
+78,Baselayer,,,,2025-09-06,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+79,Baseten,,,,2025-09-07,,Rejected,Fulltime,9,1 Rejected,2026-04-28 21:26:17.264805
+80,Basis,,,,2026-02-04,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+81,Bayer,,1 Poland,,2026-01-16,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+82,Berkshire Hathaway,,,,2026-03-09,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+83,Best Egg,,,,2026-03-05,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+84,Bevi,,,,2026-03-06,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+85,BillGo,,,,2026-04-15,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+86,Bimbo Bakeries,,,,2026-03-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+87,BioRender,,,,2026-04-10,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+88,Biohub,,,,2026-02-07,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+89,BlackRock,,3 India,,2025-11-24,,Rejected,Fulltime,6,1 Rejected,2026-04-28 21:26:17.264805
+90,Bland AI,,,,2026-04-05,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+91,Block*,,,,2026-02-01,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+92,Blue River Technologies,,,,2026-02-09,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+93,Bold,,,,2026-02-09,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+94,Bombora,,,,2026-04-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+95,Bose Corporation,,,,2026-04-22,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+96,BosonAI,https://www.boson.ai/,,,2026-01-03,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+97,Bracebridge,,,,2026-01-12,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+98,Brain Co.,,,,2026-04-08,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+99,BrainTrust,,,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+100,Broadcom,,,,2025-11-24,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+101,Burford,,,,2026-02-06,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+102,Burlington,,,,2026-03-21,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+103,CD Projekt,,Poland,,2026-01-06,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+104,CTGT,,,,2026-04-13,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+105,CVS,,,,2026-01-21,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+106,Cadence,,,,2026-02-06,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+107,Cadence Solutions,,,,2026-04-06,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+108,Calico,,,,2026-03-09,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+109,Cambia,,,,2026-04-02,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+110,Cambridge Mobile Telematics,,,,2026-03-04,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+111,CampFire,,,,2026-04-16,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+112,Cantina,,,,2026-04-18,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+113,Cartesia,,,,2026-02-03,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+114,CaseGaurd,https://caseguard.com/careers/,,,2026-01-27,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+115,Caterpillar,,,,2025-09-18,,Rejected,Fulltime,8,5 Rejected,2026-04-28 21:26:17.264805
+116,Cayuse Holdings,,,,2026-01-20,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+117,Cedar,,,,2026-02-13,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+118,Celonis*,,,,2025-11-05,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+119,ChenMed,,,,2026-04-25,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+120,Cherre,https://jobs.lever.co/cherre/776a468f-0fc3-42f9-a5e1-a0f89353414f,,,2025-09-16,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+121,Chewy*,,,,2026-03-11,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+122,Chime,,,,2026-02-15,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+123,Cinemark,,,,2026-04-01,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+124,Cint,,,,2026-04-16,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+125,Cisco,https://careers.cisco.com/global/en/job/1444681/AI-Software-Engineering-Hybrid,,,2025-11-13,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+126,Citadel,,,,2026-02-12,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+127,Citi,,,,2026-02-09,,Rejected,Fulltime,7,Bunu#22122402,2026-04-28 21:26:17.264805
+128,Citizen Health,,,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+129,City of NY,,,,2026-01-28,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+130,Clariti,,,,2025-11-16,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+131,Clay,,,,2026-04-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+132,Cleo,,,,2026-03-15,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+133,Clio,,,,2026-04-18,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+134,CoRover AI,,India,,2026-02-25,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+135,Cobot,,,,2026-02-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+136,Cognition,,,,2026-04-06,,Applied,Fulltime,11,,2026-04-28 21:26:17.264805
+137,Cognizant,,,,2026-02-04,5-Feb-26,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+138,Cohere AI,,,,2025-10-12,,Applied,Fulltime,19,,2026-04-28 21:26:17.264805
+139,Cohere Health,,,,2026-01-27,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+140,Colgate-Palmolive,,,,2026-04-10,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+141,Collate,,,,2026-04-03,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+142,Comcast,,,,2026-04-20,,Applied,Fulltime,1,Bunu#22122402$312asutoshDal,2026-04-28 21:26:17.264805
+143,Confido,,,,2026-04-16,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+144,Confie,,,,2026-04-15,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+145,Context,,,,2026-04-23,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+146,Copart,,,,2026-04-23,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+147,Cordial,,,,2026-04-20,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+148,Coris*,,,,2026-04-12,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+149,Corridor,,,,2026-04-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+150,Cotiviti,,,,2026-01-07,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+151,Create Music Group,,,,2026-03-13,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+152,CreditKarma,,,,2026-03-09,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+153,Cresta,https://cresta.com/careers#careers,,,2025-11-24,,Rejected,Fulltime,4,2 Rejected,2026-04-28 21:26:17.264805
+154,CrewAI,,,,2026-04-11,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+155,CrowdStrike,,,,2026-01-16,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+156,Crusoe,,,,2025-12-30,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+157,Crustdata,,,,2026-03-17,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+158,Culture Amp,,Australia,,2026-02-06,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+159,Current,,,,2026-02-13,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+160,Cushman & Wakefield*,,,,2026-04-20,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+161,Cyberhill*,,,,2026-02-06,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+162,Cyera,,,,2026-04-26,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+163,DE Shaw,,,,2025-10-04,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+164,DHL*,,,,2026-02-02,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+165,DRW,https://www.drw.com/work-at-drw/listings?filterType=campus&value=Campus,,,2025-12-08,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+166,Danaher*,,,,2026-02-07,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+167,Dandy,,,,2026-04-08,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+168,Dassault Systemes,,,,2026-04-04,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+169,DataLabs,,,,2026-02-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+170,Databricks,https://www.databricks.com/company/careers/open-positions,,,2025-11-18,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+171,Datadog,,,,2026-02-22,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+172,Daydream*,,,,2026-04-15,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+173,Decagon,,,,2025-11-10,,Applied,Fulltime,7,,2026-04-28 21:26:17.264805
+174,Deccan AI,,,,2026-04-05,,Applied,Fulltime,5,,2026-04-28 21:26:17.264805
+175,DeepScribe,,,,2025-11-16,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+176,Definitive Healthcare,,,,2026-03-28,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+177,Delloite,,,,2026-03-13,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+178,Deluxe,,,,2026-04-08,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+179,DiDi,,,,2026-03-29,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+180,Dialpad,,Canada,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+181,Dime Line Trading,,,,2026-03-09,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+182,Discord,,,,2026-03-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+183,Disney,,,,2026-01-31,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+184,Distyl,,,,2026-01-12,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+185,Doordash,,,,2026-02-20,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+186,Dopple,,,,2026-03-03,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+187,Dovetail,,Sydney,,2026-02-03,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+188,Dual Entry,,,,2026-02-08,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+189,ESRI,,India,,2025-10-12,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+190,ETS,,,,2026-01-24,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+191,EY,,,,2025-09-11,,Rejected,Fulltime,8,7 Rejected,2026-04-28 21:26:17.264805
+192,Edward,,,,2026-03-28,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+193,Eight Sleep,,,,2026-02-09,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+194,Elastix AI,,,,2026-04-05,,Applied,Fulltime,5,,2026-04-28 21:26:17.264805
+195,Elevance Health,,,,2025-09-18,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+196,Eli Lilly,,,,2026-03-21,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+197,Ema,,,,2026-04-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+198,Equifax,,,,2026-04-06,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+199,Etsy,,,,2026-02-13,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+200,Eudia,,,,2026-03-24,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+201,EvenUp*,,,,2025-11-13,,Applied,Fulltime,9,,2026-04-28 21:26:17.264805
+202,EvolutionIQ,,,,2026-04-06,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+203,Exa,,,,2026-02-03,,Applied,Fulltime,2,Sponsors,2026-04-28 21:26:17.264805
+204,ExaCare AI,,,,2026-04-15,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+205,Expedia,,,,2026-02-05,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+206,Experian*,,,,2025-11-08,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+207,Extend,,,,2026-04-04,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+208,ExtraHop,,,,2025-10-31,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+209,Factory,,,,2026-04-18,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+210,Faire,,,,2026-02-06,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+211,Fal AI,,,,2026-02-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+212,Far.ai,,,,2026-01-21,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+213,FedEx,,,,2026-03-05,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+214,Fico,,,,2026-03-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+215,Fidelity,,,,2026-04-18,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+216,Field Guide,,,,2026-01-07,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+217,FieldAI,,,,2026-03-17,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+218,Figma,,,,2026-02-02,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+219,Fireworks AI,,,,2026-02-22,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+220,Fiserv,,,,2026-03-17,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+221,Fitch Group,,Few in UK,,2026-02-15,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+222,Ford*,,,,2026-02-03,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+223,Fortinet,,,,2026-03-28,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+224,Four Kites,,,,2026-04-06,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+225,Fractal,,India,,2026-04-10,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+226,Freshworks,,,,2026-02-18,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+227,Fuse Machines,,,,2026-04-02,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+228,Fusion Risk Management,,,,2026-04-14,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+229,G42,,Abu Dhabi,,2026-02-01,,Applied,Fulltime,5,,2026-04-28 21:26:17.264805
+230,GSK,,,,2026-03-06,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+231,GXO,,,,2026-03-15,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+232,Garner Health,,,,2026-04-03,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+233,Gartner,,,,2026-01-18,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+234,Gecko Robotics,,,,2026-02-07,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+235,Generac,,,,2026-03-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+236,General Motors,,,,2026-02-12,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+237,Genmo,,,,2026-03-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+238,Glean,,,,2026-02-05,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+239,GlobalFoundries,,,,2026-04-24,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+240,GlobalLogic,,,,2026-03-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+241,Goldman Sachs,,,,2025-11-13,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+242,Google,REVIST WEBSITE AFTER 30 DAYS,,,2025-09-03,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+243,Gotion,,,,2026-04-10,,Applied,Fulltime,5,,2026-04-28 21:26:17.264805
+244,Graphite,,,,2026-04-26,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+245,Gray Swan,,,,2026-03-21,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+246,Gruve,https://gruve.ai/careers/?gh_jid=4662372008,,,2025-11-08,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+247,GumGum*,,,,2026-01-28,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+248,HMH*,,,,2026-03-04,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+249,HPE,,,,2026-01-22,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+250,HPIQ,,,,2026-03-05,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+251,HRT,,,,2026-02-01,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+252,Hapag Lloyd*,,,,2026-03-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+253,Happy Elements,,,,2026-04-20,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+254,Harmonic,,,,2026-04-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+255,HaydenAI,,,,2026-03-06,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+256,HealthStream,,,,2026-02-14,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+257,Hearst,,,,2026-03-13,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+258,Helsing,,Berlin,,2026-02-03,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+259,Herald API,https://job-boards.greenhouse.io/heraldapi/jobs/4976239008,,,2025-11-18,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+260,Hertz,,,,2026-03-12,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+261,Hex*,,,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+262,Hippocratic AI,,,,2026-02-11,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+263,HockeyStack,,,,2026-02-02,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+264,HolidayInn,,,,2026-03-15,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+265,HomeBase,,,,2026-03-07,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+266,HomeKey,,,,2026-02-18,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+267,HomeServe,,,,2026-03-21,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+268,Honda,,,,2026-02-03,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+269,Horace Mann,,,,2026-03-06,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+270,HorizonMedia,,,,2026-02-02,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+271,HouseCall Pro,,,,2026-02-12,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+272,HumanSignal,,,,2026-04-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+273,IBM,,,,2026-01-06,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+274,ICE,,,,2026-03-17,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+275,IFS,,,,2026-03-24,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+276,IMC,,,,2025-11-25,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+277,Ideogram,,,,2026-02-11,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+278,InductiveBio,,,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+279,InflectionAI,,,,2026-03-30,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+280,Instacart,,,,2026-02-06,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+281,Intel,,,,2026-04-22,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+282,Intercom,,,,2026-02-22,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+283,Intuit,,,,2026-02-08,,Applied,Fulltime,12,B!un1u#2%!516@$,2026-04-28 21:26:17.264805
+284,Intuitive,,,,2026-04-18,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+285,Ipsos,,,,2026-01-20,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+286,Ironclad,https://jobs.ashbyhq.com/ironcladhq/186a9b25-0d54-43d9-a637-c54208dbe415/application,,,2025-09-28,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+287,JP Morgan Chase,,,,2025-09-05,,Rejected,Fulltime,13,7 Rejected,2026-04-28 21:26:17.264805
+288,JaneStreet,,,,2025-09-06,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+289,Janicki,,,,2026-04-18,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+290,Jerry,,,,2026-03-12,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+291,Johnson Controls,,,,2026-04-23,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+292,Judi Health*,,,,2026-02-02,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+293,Jump Trading,https://www.jumptrading.com/careers/7141699/,NYC,,2025-08-18,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+294,KLA,,,,2026-01-04,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+295,Kalshi,,,,2026-04-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+296,Kalviyo,,,,2026-02-09,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+297,Kaseya,,,,2026-01-19,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+298,Kia Motors,,,,2026-02-20,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+299,Kickoff,,,,2026-03-08,,Applied,Fulltime,9,,2026-04-28 21:26:17.264805
+300,Kion Group,,,,2026-04-14,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+301,Klarna,,Europe,,2026-02-06,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+302,Klaviyo,,,,2026-04-20,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+303,Kodiak,https://job-boards.greenhouse.io/kodiak/jobs/4009494009,,,2025-09-19,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+304,Kohls,,,,2026-04-16,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+305,Komodo Health,,,,2026-02-13,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+306,Labelbox*,,,,2026-02-02,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+307,Lam Research,,,,2026-03-21,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+308,LangChain,https://jobs.ashbyhq.com/langchain/c75915ba-a32b-4e17-873d-19b47564170d/application?embed=js,,,2025-09-14,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+309,Latent,,,,2026-04-14,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+310,Lazard,,,,2026-01-05,,Applied,Fulltime,1,Bunu#22122402%@$,2026-04-28 21:26:17.264805
+311,Leap Tools,,,,2026-04-03,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+312,Lennox,,,,2026-03-06,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+313,Lenovo,https://jobs.lenovo.com/en_US/careers/JobDetail?jobId=71031,,,2025-11-13,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+314,LexisNexis,,,,2025-11-24,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+315,LightCast,,,,2026-03-08,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+316,Lime,https://www.li.me/about/careers,,,2025-11-24,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+317,Lincare,,,,2026-03-15,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+318,Lincon Financial,,,,2026-03-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+319,LiquidAI,,,,2026-02-19,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+320,Listen Labs,,,,2026-04-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+321,LivePerson,,,,2026-03-06,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+322,Loenbro,,,,2026-03-23,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+323,LogicMonitor*,,,,2026-02-05,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+324,Loop,https://www.loop.com/company/careers#open-roles,,,2025-09-18,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+325,Lucidya,,Riyadh,,2026-02-01,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+326,LumaAI,,,,2026-01-06,,Applied,Fulltime,5,,2026-04-28 21:26:17.264805
+327,Lyft,,,,2026-03-05,,Rejected,Fulltime,17,,2026-04-28 21:26:17.264805
+328,MAI,,,,2026-01-28,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+329,MSCI,,8 in India,,2025-11-13,,Applied,Fulltime,12,,2026-04-28 21:26:17.264805
+330,Machinify,,,,2026-03-24,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+331,Magnite,,,,2026-02-01,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+332,Manulife,,,,2026-01-27,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+333,Mariana Minerals,,,,2026-02-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+334,Marmon Holdings,,,,2026-03-24,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+335,Masimo,,,,2026-03-29,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+336,Mastercard,,,,2026-03-24,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+337,McKinsey,,,,2026-03-08,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+338,Meltwater,,,,2026-03-05,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+339,Mercedes Benz,,Malaysia,,2026-02-01,,Rejected,Fulltime,2,Bunu#19283@$,2026-04-28 21:26:17.264805
+340,Merlin Labs,,,,2026-04-19,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+341,Meta,,,,2026-01-22,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+342,Metropolis,,,,2026-04-13,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+343,Micron,,,Bhavishya Bhaiya,2026-03-04,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+344,Microsoft,,,,2025-09-03,,Rejected,Fulltime,3,2 Rejected,2026-04-28 21:26:17.264805
+345,Mirage,,,,2026-02-04,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+346,Mistral,,,,2026-02-22,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+347,Mitek,,,,2026-03-05,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+348,Modern Amenities,,,,2026-04-02,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+349,Modular,,,,2026-02-13,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+350,Mojang,,,,2025-09-14,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+351,Moloco,,,,2025-12-08,,Rejected,Fulltime,11,,2026-04-28 21:26:17.264805
+352,Moondream AI,,,,2026-03-04,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+353,MorningStar*,,,,2026-03-01,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+354,Moveworks*,,,,2026-02-03,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+355,Mozilla,,,,2026-04-03,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+356,Murphy USA,,,,2026-04-20,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+357,Mutual of Omaha,,,,2026-03-30,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+358,N-Able*,,,,2026-03-15,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+359,NBCUniversal,,,,2026-04-16,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+360,NVIDIA,,,Aditi Di,2026-01-22,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+361,Nasdaq,,,,2026-03-12,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+362,National Interstate,,,,2026-03-26,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+363,Navy Federal,,,,2026-01-13,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+364,Netomi,,India,,2026-02-19,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+365,New York Life,,,,2026-02-10,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+366,NewsBreak,,,,2026-04-03,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+367,NextEra Energies,,,,2026-04-27,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+368,Nextdoor,https://about.nextdoor.com/careers-list/?gh_jid=5584158,,,2025-09-06,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+369,Niron Magnetics,,,,2026-04-12,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+370,Nomic,,,,2026-02-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+371,Nooks*,,,,2026-03-21,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+372,Nordstrom,,,,2026-01-06,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+373,Norm AI,https://jobs.ashbyhq.com/norm-ai/863bc8ca-aa4f-4f84-904e-a1ec7e3f2ff4,,,2025-12-08,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+374,Nothern Trust,,,,2026-04-12,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+375,Nuro,https://www.nuro.ai/careersitem?gh_jid=5434059,,,2025-09-14,,Applied,Fulltime,7,,2026-04-28 21:26:17.264805
+376,Nutanix,,,,2026-01-12,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+377,Octus,,,,2026-02-25,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+378,Oden Technologies*,,,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+379,OneMagnify,,,,2026-04-08,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+380,OneMain Financial,,,,2026-04-16,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+381,Onto Innovations,,,,2026-02-12,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+382,Opendoor,,,,2026-02-20,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+383,Operio,,,,2026-03-09,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+384,Optum,,,Anant Sir,2026-02-03,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+385,OpusClip,https://jobs.ashbyhq.com/opusclip/41e2464a-42fd-43db-bec7-910763904887?employmentType=FullTime&locationId=f4f88eed-6415-4d0d-a5b6-cc58355f1246,,,2025-09-16,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+386,Oracle,,,,2026-01-24,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+387,Orchard Robotics,,,,2026-02-17,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+388,Oscar*,,,,2026-02-17,,Rejected,Fulltime,10,,2026-04-28 21:26:17.264805
+389,OtterAI*,,,,2026-02-18,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+390,Oversight,,,,2026-04-13,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+391,Pairwise,,,,2026-03-07,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+392,Pangram*,,,,2026-02-13,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+393,Parafin,,,,2025-09-19,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+394,Parallel,,,,2026-02-22,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+395,Parallel Rail,,,,2026-03-23,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+396,Path Robotics,,,,2026-04-19,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+397,PathAI,,,,2026-02-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+398,Pave,,,,2026-02-25,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+399,Paypal,,,,2025-11-05,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+400,Payscale,,,,2026-01-15,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+401,Pepsico,,,,2026-03-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+402,Percepta,,,,2026-02-01,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+403,Peregrine,,,,2026-02-06,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+404,Permian Resources,,,,2026-03-05,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+405,Phia,,,,2026-04-25,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+406,Physicx,https://www.physicsx.ai/careers,,,2025-12-08,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+407,Pindrop,,,,2026-02-02,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+408,Pinterest,,,,2026-01-20,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+409,Pitchbook*,,,,2026-02-01,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+410,Plaid,,,,2025-11-30,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+411,Planview,,,,2026-03-17,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+412,PlusAI,,,,2026-04-08,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+413,Pogo,,,,2026-04-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+414,Point72,,,,2026-02-19,,Rejected,Fulltime,20,,2026-04-28 21:26:17.264805
+415,Possible Finance,,,,2026-03-24,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+416,Postman,,,,2026-02-22,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+417,Profound,,,,2026-04-06,,Applied,Fulltime,14,,2026-04-28 21:26:17.264805
+418,Prolific,https://job-boards.eu.greenhouse.io/prolific/jobs/4558342101,,,2025-09-06,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+419,Promise,,,,2025-10-31,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+420,Prophecy,https://job-boards.greenhouse.io/prophecysimpledatalabs/jobs/4876131007,,,2025-09-18,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+421,Prosper,,,,2026-03-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+422,Protégé,,,,2026-03-29,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+423,PurePower*,,,,2026-02-02,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+424,Pyannote AI,,Paris,,2026-03-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+425,Qloo,,,,2026-04-16,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+426,Qualcomm,,,,2026-03-29,,Rejected,Fulltime,9,,2026-04-28 21:26:17.264805
+427,Qualified Health,,,,2026-04-22,,Applied,Fulltime,5,,2026-04-28 21:26:17.264805
+428,Quantcast,,,,2025-09-18,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+429,Quantifi,,,,2026-04-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+430,Quantified,,,,2026-02-09,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+431,Quantifind,,,,2026-03-07,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+432,Quantiphi,,,,2026-04-24,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+433,Quid,,,,2026-03-17,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+434,Quilter,,,,2026-02-22,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+435,Quora,,,,2026-01-15,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+436,Qventus,,,,2026-04-25,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+437,RAPP,,,,2026-03-08,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+438,RBC,,,,2026-03-04,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+439,Radian,,,,2025-09-07,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+440,Raptive*,,,,2026-02-18,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+441,Rational Dynamics,,,,2026-03-26,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+442,RedBull PU,,,Hardik,2025-11-18,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+443,RedHat,,,,2026-01-20,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+444,Reddit,,,,2026-02-06,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+445,Reducto*,,,,2026-04-12,,Applied,Fulltime,5,,2026-04-28 21:26:17.264805
+446,Redwood,,,,2026-04-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+447,Reever*,,,,2026-04-14,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+448,Replit,,,,2025-10-31,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+449,Resolve AI,,,,2026-02-13,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+450,Revalize,,,,2026-03-17,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+451,Revolut,,Europe,,2026-02-22,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+452,Rillet,,,,2026-02-18,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+453,Roe,,,,2026-01-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+454,Rokt,,,,2025-11-10,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+455,Roku,,,,2026-01-21,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+456,Root,,,,2026-03-11,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+457,Roper,,,,2026-03-09,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+458,Rover.com,,,,2025-10-31,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+459,Rubrik,,,,2026-03-03,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+460,Rush Enterprise,,,,2026-04-22,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+461,SAP,,,,2026-04-23,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+462,SSI,,,,2025-12-30,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+463,Sage Care Inc,,,,2026-04-08,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+464,Salesforce,,,Jyotika,2026-01-01,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+465,Salient,,,,2026-02-11,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+466,Sandbar,,,,2026-04-14,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+467,Saviynt,,,,2026-02-15,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+468,ScaleAI,,,,2025-11-24,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+469,Scowtt,,,,2026-01-27,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+470,Scribd Inc,,,,2026-03-26,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+471,Seagate,,,,2026-03-04,,Applied,Fulltime,1,Bunu#22122,2026-04-28 21:26:17.264805
+472,Seismic,,,,2026-03-13,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+473,Semgrep,,,,2026-02-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+474,SewerAI,,,,2026-03-11,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+475,Shepherd,,,,2026-04-05,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+476,Shift,,"France, Japan, Singapore",,2026-02-01,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+477,ShipERP,,,,2026-03-15,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+478,Shipt,,,,2026-01-28,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+479,Siemens,,,,2026-02-02,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+480,SiriusXM,,,,2026-03-17,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+481,Siro,,,,2026-02-22,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+482,SkildAI,https://www.skild.ai/career,,,2025-11-05,,Applied,Fulltime,12,,2026-04-28 21:26:17.264805
+483,Skydio*,,,,2026-02-13,,Applied,Fulltime,4,,2026-04-28 21:26:17.264805
+484,Skyworks,,,,2026-03-06,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+485,Slack,,,,2026-02-03,,Rejected,Fulltime,7,,2026-04-28 21:26:17.264805
+486,Slingshot AI,,,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+487,Snap,,,,2025-09-04,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+488,SnorkelAI,,,,2026-04-25,,Rejected,Fulltime,8,,2026-04-28 21:26:17.264805
+489,Snowflake,,,,2026-02-06,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+490,SoFi,,,,2026-04-18,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+491,Sonatus*,,,,2026-03-04,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+492,Sony Interactive,https://careers.playstation.com/machine-learning-engineer-ii-search/job/5664044004,,,2025-11-08,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+493,SoundCloud,,,,2026-04-23,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+494,Spade,,,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+495,Spellbrush,,,,2026-03-01,,Applied,Fulltime,0,,2026-04-28 21:26:17.264805
+496,Sphere,,,,2026-03-03,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+497,Spotify,,,,2025-09-04,,Applied,Fulltime,8,,2026-04-28 21:26:17.264805
+498,Spring Health,,,,2026-03-28,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+499,Starbucks,,,,2026-03-15,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+500,State Street,,,,2026-02-23,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+501,Stepstone,,,,2026-01-28,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+502,Strava,,,,2026-02-05,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+503,Stripe,,,,2026-01-31,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+504,Stryker,,,,2026-02-08,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+505,Supernova,,,,2026-02-13,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+506,Susquehanna,,,,2026-02-08,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+507,Syngenta,,,,2026-03-09,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+508,Sysco,,,,2026-02-20,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+509,SystImmune,,,,2026-03-03,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+510,T Mobile,,,,2025-09-04,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+511,Tailored Brands,,,,2026-04-15,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+512,Talroo,,,,2026-02-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+513,Target,,,,2026-03-02,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+514,Tatari,,,,2026-01-18,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+515,Tavern*,,,,2026-03-11,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+516,Teads,,Solvenia,,2026-02-22,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+517,Tempus,,,,2026-01-18,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+518,Terra AI,,,,2026-04-18,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+519,TestSprite,,,,2026-04-16,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+520,Texas Instruments,,,,2026-02-08,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+521,The Aspen Group,,,,2026-03-30,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+522,The Trade Desk,,,,2026-02-04,,Applied,Fulltime,5,,2026-04-28 21:26:17.264805
+523,Thermo Fisher,,,,2026-01-12,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+524,Thomson Reuters,https://careers.thomsonreuters.com/us/en/c/technology-careers-jobs?s=1,,,2026-04-29,,Applied,Fulltime,11,,2026-04-28 21:26:17.264805
+525,Thorne,,,,2026-03-17,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+526,Thoughtworks,,Singapore,,2026-01-05,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+527,TikTok,https://lifeattiktok.com/search/7534982208201984274,,,2025-09-03,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+528,Tinder,,,,2026-02-20,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+529,TogetherAI,https://job-boards.greenhouse.io/togetherai/jobs/4835315007,,,2025-09-04,,Rejected,Fulltime,3,1 Rejected,2026-04-28 21:26:17.264805
+530,Torc Robotics,,,,2026-03-04,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+531,TotalEnergies*,,,,2026-04-26,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+532,Toyota,,,,2026-02-03,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+533,Traackr,,,,2026-03-30,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+534,TransUnion,,,,2025-11-08,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+535,Travellers,,,,2025-10-12,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+536,Traversal,,,,2026-02-05,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+537,Treeswift,,,,2026-03-03,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+538,TrellisAI,,,,2026-03-17,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+539,Trinity,,,,2026-04-20,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+540,Triplelift*,,,,2026-04-20,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+541,Triumph.gg,,,,2026-04-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+542,Trulioo,,,,2026-03-05,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+543,Trustpilot,,Europe,,2026-02-22,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+544,Tubi*,,,,2026-01-31,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+545,Turquoise,,,,2026-02-11,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+546,Twelve Labs,,,,2026-02-22,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+547,Twitch,,,,2025-10-04,,Rejected,Fulltime,4,2 Rejected,2026-04-28 21:26:17.264805
+548,TwoSigma,,,,2025-11-10,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+549,UJET.cx,,,,2026-04-13,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+550,Uber,,,,2025-11-10,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+551,Uber Freight,,,,2026-03-30,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+552,Unconventional AI,,,,2026-02-11,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+553,Unison,,,,2026-03-05,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+554,UnitX,,,,2026-04-04,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+555,United Health Group,,,,2025-11-24,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+556,UpStart,,,,2025-11-18,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+557,Upstart,,,,2026-03-05,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+558,V7,,,,2026-03-28,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+559,Valkyrie,,,,2026-02-07,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+560,Varonis,,,,2026-02-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+561,Vevo*,,,,2026-02-18,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+562,VideoAmp*,,,,2026-03-17,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+563,Vilya,,,,2026-01-27,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+564,Virtu Financial*,,,,2026-04-14,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+565,Visa,,,,2026-01-28,,Rejected,Fulltime,9,3 Rejected,2026-04-28 21:26:17.264805
+566,Visteon,,,,2026-04-15,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+567,Voleon Group*,,,,2026-02-01,,Applied,Fulltime,12,,2026-04-28 21:26:17.264805
+568,WSP,,,,2026-03-01,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+569,Waabi,,,,2025-11-24,,Applied,Fulltime,6,,2026-04-28 21:26:17.264805
+570,Walmart,,,,2026-03-02,,Rejected,Fulltime,23,,2026-04-28 21:26:17.264805
+571,Warner Music Group,,,,2026-01-09,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+572,Watershed,https://jobs.ashbyhq.com/Watershed/d83c7850-2211-4cbd-a527-09e25f5d94a8/application?utm_source=Simplify&ref=Simplify,,,2025-10-31,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+573,Wayfair,,,,2025-09-04,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+574,Waymo,,,,2026-02-02,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+575,Waystar,,,,2026-03-03,,Rejected,Fulltime,12,6 Rejected,2026-04-28 21:26:17.264805
+576,Weaviate,,,,2026-02-19,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+577,WebAI,,,,2026-04-18,,Rejected,Fulltime,3,,2026-04-28 21:26:17.264805
+578,Wells Fargo,,,,2026-03-26,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+579,Western Digital,,,,2026-04-02,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+580,WhatNot*,,,,2026-02-01,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+581,William Blair*,,,,2026-03-15,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+582,Within,,,,2026-03-28,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+583,Wonderschool,,,,2026-02-02,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+584,Workday,,,,2026-04-23,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+585,Worldpay,,,,2026-03-06,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+586,XBOW,,,,2026-02-05,,Applied,Fulltime,2,,2026-04-28 21:26:17.264805
+587,XiFin Inc,,,,2026-02-18,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+588,Xogene,,,,2026-01-13,,Rejected,Fulltime,2,,2026-04-28 21:26:17.264805
+589,Xpeng,,,,2025-11-25,,Rejected,Fulltime,6,,2026-04-28 21:26:17.264805
+590,You.com,,,,2026-03-24,,Applied,Fulltime,3,,2026-04-28 21:26:17.264805
+591,Yum! Brands,,,,2026-03-24,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+592,ZS,,,,2026-02-07,,Rejected,Fulltime,11,,2026-04-28 21:26:17.264805
+593,ZenDesk,,,,2026-04-26,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+594,Zillow,,,,2025-12-08,,Rejected,Fulltime,5,,2026-04-28 21:26:17.264805
+595,Zoom,,,,2026-02-25,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+596,Zoox,,,Rajat Bhaiya,2026-01-22,,Rejected,Fulltime,4,,2026-04-28 21:26:17.264805
+597,a16z,,,,2026-02-13,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+598,asari ai,,,,2026-01-28,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+599,eBay,,,,2026-04-25,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+600,iCapital,,,,2026-03-07,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+601,iHeartMedia,,,,2025-11-13,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+602,iTradeNetwork,,,,2026-01-27,,Rejected,Fulltime,1,,2026-04-28 21:26:17.264805
+603,xAI,https://job-boards.greenhouse.io/xai/jobs/4800108007,,,2025-09-14,,Applied,Fulltime,1,,2026-04-28 21:26:17.264805
+604,Cooper Companies,,,,2026-04-28,,Applied,Fulltime,1,,2026-04-29 02:47:58.06871
+605,Genetech,,,,2026-04-28,,Rejected,Fulltime,1,,2026-04-29 02:48:11.235061
+606,CareSource,,,,2026-04-28,,Applied,Fulltime,1,,2026-04-29 02:48:20.372707
+607,Calico Labs,,,,2026-04-28,,Applied,Fulltime,1,,2026-04-29 02:48:32.991049
+608,TD Bank,,,,2026-04-28,,Applied,Fulltime,1,,2026-04-29 02:48:44.163897
+609,Qlik,,,,2026-04-28,,Applied,Fulltime,1,,2026-04-29 02:48:54.289819
+610,Handshake,,,,2026-04-28,,Applied,Fulltime,6,,2026-04-29 02:49:09.225895
+611,Tractor Supply Co,,,,2026-04-28,,Applied,Fulltime,1,,2026-04-29 02:49:55.10124
+612,West Yost,,,,2026-04-28,,Rejected,Fulltime,1,,2026-04-29 03:12:11.346329
+613,Groupon,,,,2026-04-29,,Applied,Fulltime,1,,2026-04-29 16:33:58.680624
+614,Archetype,,,,2026-04-29,,Applied,Fulltime,2,,2026-04-29 17:07:24.029522
+615,Rocket,,,,2026-04-29,,Applied,Fulltime,1,,2026-04-29 18:56:56.391043
+616,ObserveAI,,,,2026-04-30,,Applied,Fulltime,2,,2026-04-30 15:26:25.922569
+617,AppZen,,,,2026-04-30,,Applied,Fulltime,1,,2026-04-30 19:18:13.080619
+618,Open Lending,,,,2026-05-01,,Applied,Fulltime,2,,2026-05-01 14:58:40.207743
+619,Abnormal,,,,2026-05-01,,Applied,Fulltime,1,,2026-05-02 00:41:08.064402
+620,Match Group,,,,2026-05-01,,Rejected,Fulltime,3,,2026-05-02 00:47:58.867643
+621,Cengage,,,,2026-05-01,,Rejected,Fulltime,2,,2026-05-02 00:53:59.758573
+622,Starr,,,,2026-05-02,,Applied,Fulltime,1,,2026-05-02 14:46:56.686388
+623,Optimum RV,,,,2026-05-02,,Applied,Fulltime,1,,2026-05-02 15:22:29.822183
+624,Corebridge Financial,,,,2026-05-02,,Applied,Fulltime,1,,2026-05-02 15:31:39.2742
+625,Bretton AI,,,,2026-05-02,,Applied,Fulltime,2,,2026-05-02 16:06:21.605736
+626,Franklin Templeton,,,,2026-05-04,,Applied,Fulltime,1,,2026-05-04 15:58:26.974111
+627,Capco,,,,2026-05-05,,Rejected,Fulltime,3,,2026-05-05 13:28:20.752964
+628,Tarro,,,,2026-05-05,,Applied,Fulltime,1,,2026-05-05 13:49:29.248701
+629,Modal,,,,2026-05-05,,Rejected,Fulltime,1,,2026-05-05 14:11:13.944958
+630,Humana,,,,2026-05-05,,Rejected,Fulltime,1,,2026-05-05 14:42:20.01671
+631,Realtor.com,,,,2026-05-05,,Rejected,Fulltime,1,,2026-05-05 17:24:20.394396
+632,HeyGen,,,,2026-05-05,,Applied,Fulltime,4,,2026-05-05 17:28:26.940212
+633,ExtraSpace Storage*,,,,2026-05-06,,Applied,Fulltime,1,,2026-05-06 13:56:30.748837
+634,Cambium,,,,2026-05-06,,Applied,Fulltime,2,,2026-05-06 14:09:40.261905
+635,Corvic AI,,,,2026-05-06,,Applied,Fulltime,1,,2026-05-06 14:14:02.744491
+636,OpenArt,,,,2026-05-06,,Applied,Fulltime,1,,2026-05-06 14:33:12.62741
+637,Gamma,,,,2026-05-06,,Rejected,Fulltime,4,,2026-05-06 15:00:21.368336
+638,GEICO,,,,2026-05-07,,Applied,Fulltime,1,,2026-05-07 18:32:18.133817
+639,Iambic,,,,2026-05-07,,Applied,Fulltime,1,,2026-05-07 23:10:23.004108
+640,Warner Bros,,,,2026-05-07,,Applied,Fulltime,1,,2026-05-07 23:23:21.993642
+641,Verse,,,,2026-05-07,,Applied,Fulltime,1,,2026-05-08 00:02:19.541913
