@@ -306,12 +306,15 @@ input, select, textarea {
     margin-left: var(--sidebar-width);
     padding-top: var(--topbar-height);
     min-height: 100vh;
+    min-width: 0;
+    width: 100%;
 }
 
 .content-wrapper {
     max-width: var(--max-content-width);
     margin: 0 auto;
     padding: var(--space-xl) var(--space-xl);
+    min-width: 0;
 }
 
 .page-header {
@@ -324,11 +327,13 @@ input, select, textarea {
     color: var(--on-surface);
     margin-bottom: var(--space-sm);
     letter-spacing: -0.02em;
+    overflow-wrap: break-word;
 }
 
 .page-subtitle {
     color: var(--on-surface-variant);
     font-size: 16px;
+    overflow-wrap: break-word;
 }
 
 /* ========================================
@@ -365,6 +370,7 @@ input, select, textarea {
     font-weight: 600;
     color: #fafafa;
     margin-bottom: var(--space-sm);
+    overflow-wrap: break-word;
 }
 
 .card-description {
@@ -372,12 +378,13 @@ input, select, textarea {
     color: #a1a1aa;
     margin-bottom: var(--space-lg);
     line-height: 1.5;
+    overflow-wrap: break-word;
 }
 
 /* Tool Cards Grid */
 .tools-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-lg);
 }
 
