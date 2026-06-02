@@ -359,6 +359,7 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 
 	var fullContent strings.Builder
+	var inThinking bool
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
@@ -391,11 +392,39 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		for _, choice := range streamResp.Choices {
+for _, choice := range streamResp.Choices {
 			content := choice.Delta.Content
 			if content == "" {
 				continue
 			}
+
+			if inThinking {
+				closeIdx := strings.Index(content, "</thinking>")
+				if closeIdx >= 0 {
+					inThinking = false
+					content = content[closeIdx+len("</thinking>"):]
+				} else {
+					continue
+				}
+			}
+
+			openIdx := strings.Index(content, "<thinking>")
+			if openIdx >= 0 {
+				before := content[:openIdx]
+				after := content[openIdx+len("<thinking>"):]
+				content = before
+				inThinking = true
+				closeIdx := strings.Index(after, "</thinking>")
+				if closeIdx >= 0 {
+					content += after[closeIdx+len("</thinking>"):]
+					inThinking = false
+				}
+			}
+
+			if content == "" {
+				continue
+			}
+
 			fullContent.WriteString(content)
 
 			eventData, _ := json.Marshal(map[string]string{"token": content})

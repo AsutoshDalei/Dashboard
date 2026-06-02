@@ -1008,25 +1008,6 @@ input, select, textarea {
     justify-content: flex-end;
 }
 
-.chat-avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    flex-shrink: 0;
-}
-
-.user-avatar {
-    background: var(--primary-container);
-}
-
-.assistant-avatar {
-    background: var(--surface-highest);
-}
-
 .chat-message-bubble {
     padding: var(--space-md);
     border-radius: var(--radius-lg);

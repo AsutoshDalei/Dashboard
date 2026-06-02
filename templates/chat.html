@@ -240,9 +240,7 @@
 
             const header = document.createElement('div');
             header.className = 'chat-message-header';
-            header.innerHTML = role === 'user'
-                ? '<span class="chat-avatar user-avatar">👤</span> You'
-                : '<span class="chat-avatar assistant-avatar">🤖</span> Humanizer';
+            header.textContent = role === 'user' ? 'You' : 'Humanizer';
 
             const bubble = document.createElement('div');
             bubble.className = 'chat-message-bubble';
