@@ -114,21 +114,28 @@ func generateChatID() string {
 	return hex.EncodeToString(bytes)
 }
 
-func getOrCreateSession(r *http.Request) string {
-	cookie, _ := r.Cookie("chat_session_id")
-	if cookie != nil && cookie.Value != "" {
-		sessionMu.RLock()
-		_, exists := sessions[cookie.Value]
-		sessionMu.RUnlock()
-		if exists {
-			return cookie.Value
+func getSessionToken(r *http.Request) string {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
+}
+
+func deleteChatSession(token string) {
+	sessionMu.Lock()
+	delete(sessions, token)
+	sessionMu.Unlock()
+}
+
+func pruneChatSessions(validTokens map[string]bool) {
+	sessionMu.Lock()
+	for tok := range sessions {
+		if !validTokens[tok] {
+			delete(sessions, tok)
 		}
 	}
-	id := generateChatID()
-	sessionMu.Lock()
-	sessions[id] = &chatSession{Messages: []ChatMessage{}}
 	sessionMu.Unlock()
-	return id
 }
 
 func handleChatTool(w http.ResponseWriter, r *http.Request) {
@@ -258,7 +265,11 @@ func handleChatClear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID := getOrCreateSession(r)
+	sessionID := getSessionToken(r)
+	if sessionID == "" {
+		respondJSON(w, http.StatusBadRequest, false, "Not authenticated", "")
+		return
+	}
 	sessionMu.Lock()
 	sessions[sessionID] = &chatSession{Messages: []ChatMessage{}}
 	sessionMu.Unlock()
@@ -284,7 +295,11 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID := getOrCreateSession(r)
+	sessionID := getSessionToken(r)
+	if sessionID == "" {
+		respondJSON(w, http.StatusBadRequest, false, "Not authenticated", "")
+		return
+	}
 
 	sessionMu.Lock()
 	s, ok := sessions[sessionID]
@@ -453,15 +468,6 @@ for _, choice := range streamResp.Choices {
 	eventData, _ := json.Marshal(map[string]string{"done": assistantContent})
 	fmt.Fprintf(w, "data: %s\n\n", eventData)
 	flusher.Flush()
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "chat_session_id",
-		Value:    sessionID,
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   86400,
-		SameSite: http.SameSiteLaxMode,
-	})
 }
 
 func resolveChatModels() []string {

@@ -108,6 +108,7 @@ func (s *SessionStore) Delete(token string) {
 	s.mu.Lock()
 	delete(s.sessions, token)
 	s.mu.Unlock()
+	deleteChatSession(token)
 }
 
 func (s *SessionStore) pruneExpired() {
@@ -119,6 +120,11 @@ func (s *SessionStore) pruneExpired() {
 			delete(s.sessions, tok)
 		}
 	}
+	valid := make(map[string]bool, len(s.sessions))
+	for tok := range s.sessions {
+		valid[tok] = true
+	}
+	pruneChatSessions(valid)
 }
 
 func (s *SessionStore) runJanitor(ctx context.Context) {
