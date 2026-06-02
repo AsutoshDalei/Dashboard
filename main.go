@@ -258,6 +258,14 @@ func registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/applications/contribution", requireAuth(handleApplicationsContribution))
 	mux.HandleFunc("/api/applications/query", requireAuth(handleApplicationsQuery))
 	mux.HandleFunc("/send-email", requireAuth(handleSendEmail))
+
+	mux.HandleFunc("/tools/chat", requireAuth(handleChatTool))
+	mux.HandleFunc("/api/chat/send", requireAuth(handleChatSend))
+	mux.HandleFunc("/api/chat/prompts", requireAuth(handleChatPrompts))
+	mux.HandleFunc("/api/chat/prompts/add", requireAuth(handleChatPromptsAdd))
+	mux.HandleFunc("/api/chat/prompts/delete", requireAuth(handleChatPromptsDelete))
+	mux.HandleFunc("/api/chat/clear", requireAuth(handleChatClear))
+	mux.HandleFunc("/api/chat/skill", requireAuth(handleChatSkill))
 }
 
 func main() {

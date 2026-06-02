@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat - Asutosh's Portfolio</title>
+    <link rel="stylesheet" href="/static/zenith.css">
+    <style>
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+            height: calc(100vh - var(--topbar-height) - 100px);
+        }
+        @media (max-width: 768px) {
+            .chat-container {
+                height: calc(100vh - var(--topbar-height) - 60px);
+            }
+        }
+        .chat-input {
+            resize: none;
+            min-height: 48px;
+            max-height: 160px;
+            padding: var(--space-md);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            color: var(--on-surface);
+            font-size: 14px;
+            line-height: 1.5;
+            transition: all var(--transition-normal);
+            width: 100%;
+        }
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary-container);
+            box-shadow: 0 0 0 3px rgba(138, 148, 255, 0.15);
+        }
+        .chat-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-brand">Asutosh's Portfolio</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-link">
+                    <span class="nav-icon">◉</span>
+                    Dashboard
+                </a>
+                <a href="/tools/email" class="nav-link">
+                    <span class="nav-icon">📧</span>
+                    Email Tool
+                </a>
+                <a href="/tools/cover-letter" class="nav-link">
+                    <span class="nav-icon">📄</span>
+                    Cover Letter Generator
+                </a>
+                <a href="/tools/clipboard" class="nav-link">
+                    <span class="nav-icon">📋</span>
+                    Clipboard
+                </a>
+                <a href="/tools/tracker" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    Job Tracker
+                </a>
+                <a href="/tools/chat" class="nav-link active">
+                    <span class="nav-icon">💬</span>
+                    AI Chat
+                </a>
+            </nav>
+        </aside>
+
+        <header class="topbar">
+            <button class="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="topbar-actions">
+                <a href="/logout" class="topbar-btn" title="Logout" aria-label="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </a>
+            </div>
+        </header>
+        <div class="sidebar-backdrop" aria-hidden="true"></div>
+
+        <main class="main-content">
+            <div class="content-wrapper" style="padding-top:var(--space-md);padding-bottom:var(--space-md);">
+                <header class="page-header">
+                    <h1 class="page-title">AI Chat</h1>
+                    <p class="page-subtitle">Chat with the Humanizer — an expert editor that removes AI patterns from your text.</p>
+                </header>
+
+                <div class="chat-container">
+                    <div class="chat-skill-bar">
+                        <span class="chat-skill-tag">⚡ Humanizer</span>
+                        <span class="chat-skill-desc" id="skillDesc">Expert writing editor that removes AI patterns and makes text sound naturally human-written.</span>
+                    </div>
+
+                    <div class="chat-prompts-row" id="promptsRow">
+                        <div class="chat-prompt-add" id="addPromptBtn">+ Add Prompt</div>
+                    </div>
+
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-empty-state" id="emptyState">
+                            <div class="chat-empty-state-icon">💬</div>
+                            <p class="chat-empty-state-text">Send a message to start a conversation. The Humanizer will analyze your text and produce a draft, audit, final revision, and summary of changes.</p>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-row">
+                        <textarea class="chat-input" id="chatInput" placeholder="Paste your AI-generated text here to humanize it..." rows="1"></textarea>
+                        <div class="chat-input-actions">
+                            <button class="btn btn-primary" id="sendBtn">
+                                <span class="btn-text">Send</span>
+                                <div class="btn-loader"></div>
+                            </button>
+                            <button class="btn btn-ghost" id="clearBtn" title="Clear chat">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="prompt-modal-overlay" id="promptModal">
+        <div class="prompt-modal">
+            <h3 class="prompt-modal-title">Add Default Prompt</h3>
+            <div class="form-group">
+                <label class="form-label" for="promptTitle">Title</label>
+                <input type="text" id="promptTitle" class="form-input" placeholder="e.g. Help me humanize" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="promptContent">Prompt Text</label>
+                <textarea id="promptContent" class="form-input" placeholder="The prompt text that will be sent..." rows="3" style="resize:vertical;font-family:inherit;"></textarea>
+            </div>
+            <div style="display:flex;gap:var(--space-sm);justify-content:flex-end;">
+                <button class="btn btn-ghost" id="promptCancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="promptSaveBtn">
+                    <span class="btn-text">Save</span>
+                    <div class="btn-loader"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let prompts = [];
+        let streaming = false;
+        let messagesEl = document.getElementById('chatMessages');
+        let emptyState = document.getElementById('emptyState');
+        let chatInput = document.getElementById('chatInput');
+        let sendBtn = document.getElementById('sendBtn');
+        let clearBtn = document.getElementById('clearBtn');
+        let promptsRow = document.getElementById('promptsRow');
+        let promptModal = document.getElementById('promptModal');
+        let promptTitle = document.getElementById('promptTitle');
+        let promptContent = document.getElementById('promptContent');
+        let addPromptBtn = document.getElementById('addPromptBtn');
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function nl2br(text) {
+            return escapeHtml(text).replace(/\n/g, '<br>');
+        }
+
+        function renderMarkdown(text) {
+            let html = escapeHtml(text);
+            html = html.replace(/### (.+)/g, '<h3>$1</h3>');
+            html = html.replace(/## (.+)/g, '<h2>$1</h2>');
+            html = html.replace(/# (.+)/g, '<h1>$1</h1>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            html = html.replace(/^- (.+)/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+            html = html.replace(/\n---\n/g, '\n<hr>\n');
+            html = html.replace(/\n/g, '<br>');
+            html = html.replace(/<li><br>/g, '<li>');
+            html = html.replace(/<br><\/li>/g, '</li>');
+            html = html.replace(/<br><\/ul>/g, '</ul>');
+            html = html.replace(/<ul><br>/g, '<ul>');
+            return html;
+        }
+
+        async function loadSkill() {
+            try {
+                const resp = await fetch('/api/chat/skill');
+                const data = await resp.json();
+                if (data.success && data.skill) {
+                    document.getElementById('skillDesc').textContent = data.skill.description;
+                }
+            } catch (e) {}
+        }
+
+        async function loadPrompts() {
+            try {
+                const resp = await fetch('/api/chat/prompts');
+                const data = await resp.json();
+                if (data.success) {
+                    prompts = data.prompts || [];
+                    renderPrompts();
+                }
+            } catch (e) {}
+        }
+
+        function renderPrompts() {
+            let html = '';
+            for (const p of prompts) {
+                html += '<div class="chat-prompt-pill" onclick="fillPrompt(\'' + escapeHtml(p.id) + '\')">';
+                html += escapeHtml(p.title);
+                html += '<span class="pill-remove" onclick="event.stopPropagation();deletePrompt(\'' + escapeHtml(p.id) + '\')">✕</span>';
+                html += '</div>';
+            }
+            html += '<div class="chat-prompt-add" id="addPromptBtn">+ Add Prompt</div>';
+            promptsRow.innerHTML = html;
+            document.getElementById('addPromptBtn').addEventListener('click', showPromptModal);
+        }
+
+        function fillPrompt(id) {
+            const p = prompts.find(x => x.id === id);
+            if (p) {
+                chatInput.value = p.content;
+                chatInput.focus();
+            }
+        }
+
+        async function deletePrompt(id) {
+            try {
+                const resp = await fetch('/api/chat/prompts/delete?id=' + encodeURIComponent(id), {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    prompts = prompts.filter(x => x.id !== id);
+                    renderPrompts();
+                }
+            } catch (e) {
+                console.error('Failed to delete prompt:', e);
+            }
+        }
+
+        function showPromptModal() {
+            promptTitle.value = '';
+            promptContent.value = '';
+            promptModal.classList.add('show');
+            promptTitle.focus();
+        }
+
+        document.getElementById('promptCancelBtn').addEventListener('click', () => {
+            promptModal.classList.remove('show');
+        });
+        promptModal.addEventListener('click', (e) => {
+            if (e.target === promptModal) promptModal.classList.remove('show');
+        });
+
+        document.getElementById('promptSaveBtn').addEventListener('click', async () => {
+            const title = promptTitle.value.trim();
+            const content = promptContent.value.trim();
+            if (!title || !content) return;
+
+            const btn = document.getElementById('promptSaveBtn');
+            btn.classList.add('loading');
+
+            try {
+                const resp = await fetch('/api/chat/prompts/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    prompts.push(data.prompt);
+                    renderPrompts();
+                    promptModal.classList.remove('show');
+                }
+            } catch (e) {
+                console.error('Failed to add prompt:', e);
+            } finally {
+                btn.classList.remove('loading');
+            }
+        });
+
+        function addMessage(role, content) {
+            emptyState.style.display = 'none';
+
+            let existing = messagesEl.querySelector('.chat-message.assistant:last-child');
+            if (role === 'assistant' && existing && existing.dataset.streaming === 'true') {
+                let bubble = existing.querySelector('.chat-message-bubble');
+                let cursor = existing.querySelector('.chat-cursor');
+                if (cursor) cursor.remove();
+                bubble.innerHTML = renderMarkdown(content);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+                return;
+            }
+
+            if (role === 'assistant' && streaming) {
+                let existing2 = messagesEl.querySelector('.chat-message.assistant:last-child');
+                if (existing2 && existing2.dataset.streaming === 'true') {
+                    let bubble2 = existing2.querySelector('.chat-message-bubble');
+                    let cursor2 = existing2.querySelector('.chat-cursor');
+                    if (cursor2) cursor2.remove();
+                    bubble2.innerHTML = renderMarkdown(content);
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                    return;
+                }
+            }
+
+            const div = document.createElement('div');
+            div.className = 'chat-message ' + role;
+            if (role === 'assistant' && streaming) {
+                div.dataset.streaming = 'true';
+            }
+
+            const header = document.createElement('div');
+            header.className = 'chat-message-header';
+            header.textContent = role === 'user' ? 'You' : 'Humanizer';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-message-bubble';
+            bubble.innerHTML = renderMarkdown(content);
+
+            div.appendChild(header);
+            div.appendChild(bubble);
+
+            if (role === 'assistant' && streaming) {
+                const cursor = document.createElement('span');
+                cursor.className = 'chat-cursor';
+                bubble.appendChild(cursor);
+            }
+
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function appendToken(token) {
+            emptyState.style.display = 'none';
+            let lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child');
+            if (!lastMsg || lastMsg.dataset.streaming !== 'true') {
+                addMessage('assistant', token);
+                return;
+            }
+            let bubble = lastMsg.querySelector('.chat-message-bubble');
+            let cursor = lastMsg.querySelector('.chat-cursor');
+            let currentText = bubble.textContent;
+            bubble.innerHTML = renderMarkdown(currentText + token);
+            if (cursor) bubble.appendChild(cursor);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function finalizeMessage(fullContent) {
+            streaming = false;
+            let lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child');
+            if (lastMsg && lastMsg.dataset.streaming === 'true') {
+                delete lastMsg.dataset.streaming;
+                let bubble = lastMsg.querySelector('.chat-message-bubble');
+                let cursor = lastMsg.querySelector('.chat-cursor');
+                if (cursor) cursor.remove();
+                bubble.innerHTML = renderMarkdown(fullContent);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+            sendBtn.classList.remove('loading');
+            chatInput.disabled = false;
+            chatInput.focus();
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message || streaming) return;
+
+            streaming = true;
+            addMessage('user', message);
+            chatInput.value = '';
+            sendBtn.classList.add('loading');
+            chatInput.disabled = true;
+
+            try {
+                const resp = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!resp.ok) {
+                    const errData = await resp.json().catch(() => ({}));
+                    addMessage('assistant', 'Error: ' + (errData.error || 'Request failed'));
+                    streaming = false;
+                    sendBtn.classList.remove('loading');
+                    chatInput.disabled = false;
+                    return;
+                }
+
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullContent = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const data = line.slice(6).trim();
+                        if (!data) continue;
+
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.token) {
+                                fullContent += parsed.token;
+                                appendToken(parsed.token);
+                            } else if (parsed.done !== undefined) {
+                                fullContent = parsed.done || fullContent;
+                                finalizeMessage(fullContent);
+                                return;
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                if (buffer) {
+                    const data = buffer.slice(6).trim();
+                    if (data) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.done !== undefined) {
+                                fullContent = parsed.done || fullContent;
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                finalizeMessage(fullContent);
+            } catch (e) {
+                console.error('Send error:', e);
+                addMessage('assistant', 'Error: ' + (e.message || 'Connection failed'));
+                streaming = false;
+                sendBtn.classList.remove('loading');
+                chatInput.disabled = false;
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        clearBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/api/chat/clear', { method: 'POST' });
+            } catch (e) {}
+            messagesEl.querySelectorAll('.chat-message').forEach(el => el.remove());
+            emptyState.style.display = 'flex';
+            streaming = false;
+            sendBtn.classList.remove('loading');
+            chatInput.disabled = false;
+            chatInput.value = '';
+        });
+
+        chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+        });
+
+        loadSkill();
+        loadPrompts();
+    </script>
+    <script src="/static/sidebar.js" defer></script>
+</body>
+</html>

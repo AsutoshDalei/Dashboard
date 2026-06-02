@@ -13,6 +13,7 @@ echo "Building pi_portfolio for Raspberry Pi Zero 2 W..."
 GOOS=linux GOARCH=arm64 go build -o pi_bundle/pi_portfolio_arm64
 go build -o pi_bundle/pi_portfolio_normal
 mkdir -p pi_bundle/templates
+mkdir -p pi_bundle/data
 cp templates/email_body.tmpl pi_bundle/templates/email_body.tmpl
 cp templates/coverletter.tex.tmpl pi_bundle/templates/coverletter.tex.tmpl
 
