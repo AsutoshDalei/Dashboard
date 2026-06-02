@@ -3,44 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat - Asutosh's Portfolio</title>
+    <title>Chat - Asutosh's Portfolio</title>
     <link rel="stylesheet" href="/static/zenith.css">
-    <style>
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-lg);
-            height: calc(100vh - var(--topbar-height) - 100px);
-        }
-        @media (max-width: 768px) {
-            .chat-container {
-                height: calc(100vh - var(--topbar-height) - 60px);
-            }
-        }
-        .chat-input {
-            resize: none;
-            min-height: 48px;
-            max-height: 160px;
-            padding: var(--space-md);
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            color: var(--on-surface);
-            font-size: 14px;
-            line-height: 1.5;
-            transition: all var(--transition-normal);
-            width: 100%;
-        }
-        .chat-input:focus {
-            outline: none;
-            border-color: var(--primary-container);
-            box-shadow: 0 0 0 3px rgba(138, 148, 255, 0.15);
-        }
-        .chat-input:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-    </style>
 </head>
 <body>
     <div class="dashboard-layout">
@@ -71,7 +35,7 @@
                 </a>
                 <a href="/tools/chat" class="nav-link active">
                     <span class="nav-icon">💬</span>
-                    AI Chat
+                    Chat
                 </a>
             </nav>
         </aside>
@@ -93,38 +57,33 @@
         <div class="sidebar-backdrop" aria-hidden="true"></div>
 
         <main class="main-content">
-            <div class="content-wrapper" style="padding-top:var(--space-md);padding-bottom:var(--space-md);">
-                <header class="page-header">
-                    <h1 class="page-title">AI Chat</h1>
-                    <p class="page-subtitle">Chat with the Humanizer — an expert editor that removes AI patterns from your text.</p>
-                </header>
+            <div class="chat-wrapper">
+                <div class="chat-skill-bar">
+                    <span class="chat-skill-tag">⚡ Humanizer</span>
+                    <span class="chat-skill-desc" id="skillDesc">Expert writing editor that removes AI patterns and makes text sound naturally human-written.</span>
+                    <button class="chat-prompts-toggle" id="promptsToggle" title="Toggle prompts">📋</button>
+                </div>
 
-                <div class="chat-container">
-                    <div class="chat-skill-bar">
-                        <span class="chat-skill-tag">⚡ Humanizer</span>
-                        <span class="chat-skill-desc" id="skillDesc">Expert writing editor that removes AI patterns and makes text sound naturally human-written.</span>
+                <div class="chat-prompts-row" id="promptsRow">
+                    <div class="chat-prompt-add" id="addPromptBtn">+ Add Prompt</div>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-empty-state" id="emptyState">
+                        <div class="chat-empty-state-icon">💬</div>
+                        <p class="chat-empty-state-text">Send a message to start a conversation. The Humanizer will analyze your text and produce a draft, audit, final revision, and summary of changes.</p>
                     </div>
+                </div>
 
-                    <div class="chat-prompts-row" id="promptsRow">
-                        <div class="chat-prompt-add" id="addPromptBtn">+ Add Prompt</div>
-                    </div>
-
-                    <div class="chat-messages" id="chatMessages">
-                        <div class="chat-empty-state" id="emptyState">
-                            <div class="chat-empty-state-icon">💬</div>
-                            <p class="chat-empty-state-text">Send a message to start a conversation. The Humanizer will analyze your text and produce a draft, audit, final revision, and summary of changes.</p>
-                        </div>
-                    </div>
-
-                    <div class="chat-input-row">
-                        <textarea class="chat-input" id="chatInput" placeholder="Paste your AI-generated text here to humanize it..." rows="1"></textarea>
-                        <div class="chat-input-actions">
-                            <button class="btn btn-primary" id="sendBtn">
-                                <span class="btn-text">Send</span>
-                                <div class="btn-loader"></div>
-                            </button>
-                            <button class="btn btn-ghost" id="clearBtn" title="Clear chat">Clear</button>
-                        </div>
+                <div class="chat-input-row">
+                    <textarea class="chat-input" id="chatInput" placeholder="Paste your AI-generated text here to humanize it..." rows="1"></textarea>
+                    <div class="chat-input-actions">
+                        <button class="btn btn-primary" id="sendBtn">
+                            <span class="btn-text">Send</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                        <button class="btn btn-ghost chat-stop-btn" id="stopBtn" title="Stop generating">■</button>
+                        <button class="btn btn-ghost" id="clearBtn" title="Clear chat">✕</button>
                     </div>
                 </div>
             </div>
@@ -155,25 +114,23 @@
     <script>
         let prompts = [];
         let streaming = false;
+        let abortController = null;
         let messagesEl = document.getElementById('chatMessages');
         let emptyState = document.getElementById('emptyState');
         let chatInput = document.getElementById('chatInput');
         let sendBtn = document.getElementById('sendBtn');
+        let stopBtn = document.getElementById('stopBtn');
         let clearBtn = document.getElementById('clearBtn');
         let promptsRow = document.getElementById('promptsRow');
+        let promptsToggle = document.getElementById('promptsToggle');
         let promptModal = document.getElementById('promptModal');
         let promptTitle = document.getElementById('promptTitle');
         let promptContent = document.getElementById('promptContent');
-        let addPromptBtn = document.getElementById('addPromptBtn');
 
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-
-        function nl2br(text) {
-            return escapeHtml(text).replace(/\n/g, '<br>');
         }
 
         function renderMarkdown(text) {
@@ -185,15 +142,330 @@
             html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
             html = html.replace(/^- (.+)/gm, '<li>$1</li>');
-            html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+            html = html.replace(/(<li>.*<\/li>(?:\n?))+(\n<ul>|$)/g, (m) => {
+                const items = m.replace(/\n?$/, '');
+                return '<ul>' + items + '</ul>';
+            });
             html = html.replace(/\n---\n/g, '\n<hr>\n');
             html = html.replace(/\n/g, '<br>');
             html = html.replace(/<li><br>/g, '<li>');
             html = html.replace(/<br><\/li>/g, '</li>');
             html = html.replace(/<br><\/ul>/g, '</ul>');
             html = html.replace(/<ul><br>/g, '<ul>');
+            html = html.replace(/<\/ul><br><ul>/g, '');
             return html;
         }
+
+        function humanizerSections(text) {
+            const sections = [];
+            const lines = text.split('\n');
+            let currentLabel = null;
+            let currentContent = [];
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                const h3Match = trimmed.match(/^###\s+\d+\.\s+(.+)/);
+                const h2Match = trimmed.match(/^##\s+(.+)/);
+                const h1Match = trimmed.match(/^#\s+(.+)/);
+                const strongMatch = trimmed.match(/^\*\*(.+?)\*\*$/);
+
+                if (h3Match || h2Match || h1Match) {
+                    if (currentLabel) {
+                        sections.push({ label: currentLabel, content: currentContent.join('\n') });
+                    }
+                    currentLabel = (h3Match || h2Match || h1Match)[1];
+                    currentContent = [];
+                } else if (strongMatch && /changes|summary|audit|draft|rewrite/i.test(strongMatch[1]) && currentContent.length === 0) {
+                    if (currentLabel) {
+                        sections.push({ label: currentLabel, content: currentContent.join('\n') });
+                    }
+                    currentLabel = strongMatch[1];
+                    currentContent = [];
+                } else {
+                    currentContent.push(line);
+                }
+            }
+            if (currentLabel) {
+                sections.push({ label: currentLabel, content: currentContent.join('\n') });
+            }
+            return sections;
+        }
+
+        function isHumanizerOutput(text) {
+            const lower = text.toLowerCase();
+            const hasDraft = lower.includes('draft') && lower.includes('rewrite');
+            const hasFinal = lower.includes('final');
+            const hasSummary = lower.includes('summary');
+            const hasAudit = lower.includes('audit');
+            return (hasDraft || hasFinal) && (hasSummary || hasAudit);
+        }
+
+        function renderAssistantContent(text) {
+            if (!isHumanizerOutput(text)) {
+                return '<div class="chat-msg-content">' + renderMarkdown(text) + '</div>';
+            }
+
+            const sections = humanizerSections(text);
+            if (sections.length < 2) {
+                return '<div class="chat-msg-content">' + renderMarkdown(text) + '</div>';
+            }
+
+            const labels = ['Draft Rewrite', 'AI Tells Audit', 'Final Rewrite', 'Summary of Changes'];
+
+            let html = '<div class="chat-sections">';
+            for (const sec of sections) {
+                const matchedLabel = labels.find(l => sec.label.toLowerCase().includes(l.toLowerCase()));
+                const icon = !matchedLabel ? '📄'
+                    : matchedLabel === 'Draft Rewrite' ? '✏️'
+                    : matchedLabel === 'AI Tells Audit' ? '🔍'
+                    : matchedLabel === 'Final Rewrite' ? '✅'
+                    : '📋';
+                const isSummary = matchedLabel === 'Summary of Changes';
+                const cleaned = sec.content.replace(/^(Draft|Audit|Final|Changes).*?\n/i, '').trim();
+                if (!cleaned) continue;
+                html += '<details class="chat-section" ' + (isSummary ? '' : 'open') + '>';
+                html += '<summary class="chat-section-summary"><span class="chat-section-icon">' + icon + '</span> ' + escapeHtml(matchedLabel || sec.label) + '</summary>';
+                html += '<div class="chat-section-body">' + renderMarkdown(cleaned) + '</div>';
+                html += '</details>';
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function addMessage(role, content) {
+            emptyState.style.display = 'none';
+
+            const div = document.createElement('div');
+            div.className = 'chat-message ' + role;
+
+            const header = document.createElement('div');
+            header.className = 'chat-message-header';
+            header.innerHTML = role === 'user'
+                ? '<span class="chat-avatar user-avatar">👤</span> You'
+                : '<span class="chat-avatar assistant-avatar">🤖</span> Humanizer';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-message-bubble';
+
+            if (role === 'assistant' && streaming) {
+                div.dataset.streaming = 'true';
+                const cursor = document.createElement('span');
+                cursor.className = 'chat-cursor';
+                bubble.appendChild(cursor);
+            } else if (role === 'assistant') {
+                bubble.innerHTML = renderAssistantContent(content);
+            } else {
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'chat-msg-content';
+                contentDiv.innerHTML = renderMarkdown(content);
+                bubble.appendChild(contentDiv);
+            }
+
+            div.appendChild(header);
+            div.appendChild(bubble);
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        let rafToken = null;
+        let pendingToken = '';
+
+        function flushToken() {
+            rafToken = null;
+            const token = pendingToken;
+            pendingToken = '';
+
+            let lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child');
+            if (!lastMsg || lastMsg.dataset.streaming !== 'true') {
+                addMessage('assistant', token);
+                return;
+            }
+            let cursor = lastMsg.querySelector('.chat-cursor');
+            lastMsg.querySelector('.chat-message-bubble').innerHTML = renderAssistantContent(token);
+            if (cursor) {
+                lastMsg.querySelector('.chat-message-bubble').appendChild(cursor);
+            }
+            if (lastMsg.hasAttribute('data-user-scrolled')) return;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function scheduleFlush() {
+            if (!rafToken) {
+                rafToken = requestAnimationFrame(flushToken);
+            }
+        }
+
+        messagesEl.addEventListener('scroll', () => {
+            if (streaming) {
+                const threshold = messagesEl.scrollHeight - messagesEl.clientHeight - 60;
+                if (messagesEl.scrollTop < threshold) {
+                    const lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child[data-streaming]');
+                    if (lastMsg) lastMsg.dataset.userScrolled = 'true';
+                } else {
+                    const lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child[data-streaming]');
+                    if (lastMsg) delete lastMsg.dataset.userScrolled;
+                }
+            }
+        });
+
+        function finalizeMessage(fullContent) {
+            streaming = false;
+            abortController = null;
+            stopBtn.style.display = 'none';
+            let lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child');
+            if (lastMsg && lastMsg.dataset.streaming === 'true') {
+                delete lastMsg.dataset.streaming;
+                delete lastMsg.dataset.userScrolled;
+                let bubble = lastMsg.querySelector('.chat-message-bubble');
+                let cursor = lastMsg.querySelector('.chat-cursor');
+                if (cursor) cursor.remove();
+                bubble.innerHTML = renderAssistantContent(fullContent);
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'chat-copy-btn';
+                copyBtn.textContent = '📋 Copy';
+                copyBtn.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(fullContent);
+                        copyBtn.textContent = '✅ Copied!';
+                        setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+                    } catch (e) { copyBtn.textContent = '❌ Failed'; }
+                });
+                bubble.appendChild(copyBtn);
+            }
+            sendBtn.classList.remove('loading');
+            chatInput.disabled = false;
+            chatInput.focus();
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message || streaming) return;
+
+            streaming = true;
+            abortController = new AbortController();
+            stopBtn.style.display = 'inline-flex';
+            addMessage('user', message);
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            sendBtn.classList.add('loading');
+            chatInput.disabled = true;
+
+            try {
+                const resp = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message }),
+                    signal: abortController.signal
+                });
+
+                if (!resp.ok) {
+                    const errData = await resp.json().catch(() => ({}));
+                    addMessage('assistant', 'Error: ' + (errData.error || 'Request failed'));
+                    streaming = false;
+                    stopBtn.style.display = 'none';
+                    sendBtn.classList.remove('loading');
+                    chatInput.disabled = false;
+                    return;
+                }
+
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullContent = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const data = line.slice(6).trim();
+                        if (!data) continue;
+
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.token) {
+                                fullContent += parsed.token;
+                                pendingToken = fullContent;
+                                scheduleFlush();
+                            } else if (parsed.done !== undefined) {
+                                fullContent = parsed.done || fullContent;
+                                if (rafToken) {
+                                    cancelAnimationFrame(rafToken);
+                                    rafToken = null;
+                                }
+                                pendingToken = '';
+                                finalizeMessage(fullContent);
+                                return;
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                if (rafToken) {
+                    cancelAnimationFrame(rafToken);
+                    rafToken = null;
+                }
+                pendingToken = '';
+                finalizeMessage(fullContent);
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    if (rafToken) {
+                        cancelAnimationFrame(rafToken);
+                        rafToken = null;
+                    }
+                    pendingToken = '';
+                    finalizeMessage(fullContent || '');
+                    return;
+                }
+                addMessage('assistant', 'Error: ' + (e.message || 'Connection failed'));
+                streaming = false;
+                stopBtn.style.display = 'none';
+                sendBtn.classList.remove('loading');
+                chatInput.disabled = false;
+            }
+        }
+
+        stopBtn.addEventListener('click', () => {
+            if (abortController) {
+                abortController.abort();
+            }
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        clearBtn.addEventListener('click', async () => {
+            if (streaming && abortController) {
+                abortController.abort();
+            }
+            try {
+                await fetch('/api/chat/clear', { method: 'POST' });
+            } catch (e) {}
+            messagesEl.querySelectorAll('.chat-message').forEach(el => el.remove());
+            emptyState.style.display = 'flex';
+            streaming = false;
+            abortController = null;
+            stopBtn.style.display = 'none';
+            sendBtn.classList.remove('loading');
+            chatInput.disabled = false;
+            chatInput.value = '';
+        });
+
+        chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+        });
 
         async function loadSkill() {
             try {
@@ -234,6 +506,7 @@
             if (p) {
                 chatInput.value = p.content;
                 chatInput.focus();
+                chatInput.dispatchEvent(new Event('input'));
             }
         }
 
@@ -248,10 +521,12 @@
                     prompts = prompts.filter(x => x.id !== id);
                     renderPrompts();
                 }
-            } catch (e) {
-                console.error('Failed to delete prompt:', e);
-            }
+            } catch (e) {}
         }
+
+        promptsToggle.addEventListener('click', () => {
+            promptsRow.classList.toggle('collapsed');
+        });
 
         function showPromptModal() {
             promptTitle.value = '';
@@ -287,199 +562,9 @@
                     renderPrompts();
                     promptModal.classList.remove('show');
                 }
-            } catch (e) {
-                console.error('Failed to add prompt:', e);
-            } finally {
+            } catch (e) {} finally {
                 btn.classList.remove('loading');
             }
-        });
-
-        function addMessage(role, content) {
-            emptyState.style.display = 'none';
-
-            let existing = messagesEl.querySelector('.chat-message.assistant:last-child');
-            if (role === 'assistant' && existing && existing.dataset.streaming === 'true') {
-                let bubble = existing.querySelector('.chat-message-bubble');
-                let cursor = existing.querySelector('.chat-cursor');
-                if (cursor) cursor.remove();
-                bubble.innerHTML = renderMarkdown(content);
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-                return;
-            }
-
-            if (role === 'assistant' && streaming) {
-                let existing2 = messagesEl.querySelector('.chat-message.assistant:last-child');
-                if (existing2 && existing2.dataset.streaming === 'true') {
-                    let bubble2 = existing2.querySelector('.chat-message-bubble');
-                    let cursor2 = existing2.querySelector('.chat-cursor');
-                    if (cursor2) cursor2.remove();
-                    bubble2.innerHTML = renderMarkdown(content);
-                    messagesEl.scrollTop = messagesEl.scrollHeight;
-                    return;
-                }
-            }
-
-            const div = document.createElement('div');
-            div.className = 'chat-message ' + role;
-            if (role === 'assistant' && streaming) {
-                div.dataset.streaming = 'true';
-            }
-
-            const header = document.createElement('div');
-            header.className = 'chat-message-header';
-            header.textContent = role === 'user' ? 'You' : 'Humanizer';
-
-            const bubble = document.createElement('div');
-            bubble.className = 'chat-message-bubble';
-            bubble.innerHTML = renderMarkdown(content);
-
-            div.appendChild(header);
-            div.appendChild(bubble);
-
-            if (role === 'assistant' && streaming) {
-                const cursor = document.createElement('span');
-                cursor.className = 'chat-cursor';
-                bubble.appendChild(cursor);
-            }
-
-            messagesEl.appendChild(div);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-
-        function appendToken(token) {
-            emptyState.style.display = 'none';
-            let lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child');
-            if (!lastMsg || lastMsg.dataset.streaming !== 'true') {
-                addMessage('assistant', token);
-                return;
-            }
-            let bubble = lastMsg.querySelector('.chat-message-bubble');
-            let cursor = lastMsg.querySelector('.chat-cursor');
-            let currentText = bubble.textContent;
-            bubble.innerHTML = renderMarkdown(currentText + token);
-            if (cursor) bubble.appendChild(cursor);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-
-        function finalizeMessage(fullContent) {
-            streaming = false;
-            let lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child');
-            if (lastMsg && lastMsg.dataset.streaming === 'true') {
-                delete lastMsg.dataset.streaming;
-                let bubble = lastMsg.querySelector('.chat-message-bubble');
-                let cursor = lastMsg.querySelector('.chat-cursor');
-                if (cursor) cursor.remove();
-                bubble.innerHTML = renderMarkdown(fullContent);
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-            }
-            sendBtn.classList.remove('loading');
-            chatInput.disabled = false;
-            chatInput.focus();
-        }
-
-        async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message || streaming) return;
-
-            streaming = true;
-            addMessage('user', message);
-            chatInput.value = '';
-            sendBtn.classList.add('loading');
-            chatInput.disabled = true;
-
-            try {
-                const resp = await fetch('/api/chat/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
-                });
-
-                if (!resp.ok) {
-                    const errData = await resp.json().catch(() => ({}));
-                    addMessage('assistant', 'Error: ' + (errData.error || 'Request failed'));
-                    streaming = false;
-                    sendBtn.classList.remove('loading');
-                    chatInput.disabled = false;
-                    return;
-                }
-
-                const reader = resp.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                let fullContent = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || '';
-
-                    for (const line of lines) {
-                        if (!line.startsWith('data: ')) continue;
-                        const data = line.slice(6).trim();
-                        if (!data) continue;
-
-                        try {
-                            const parsed = JSON.parse(data);
-                            if (parsed.token) {
-                                fullContent += parsed.token;
-                                appendToken(parsed.token);
-                            } else if (parsed.done !== undefined) {
-                                fullContent = parsed.done || fullContent;
-                                finalizeMessage(fullContent);
-                                return;
-                            }
-                        } catch (e) {}
-                    }
-                }
-
-                if (buffer) {
-                    const data = buffer.slice(6).trim();
-                    if (data) {
-                        try {
-                            const parsed = JSON.parse(data);
-                            if (parsed.done !== undefined) {
-                                fullContent = parsed.done || fullContent;
-                            }
-                        } catch (e) {}
-                    }
-                }
-
-                finalizeMessage(fullContent);
-            } catch (e) {
-                console.error('Send error:', e);
-                addMessage('assistant', 'Error: ' + (e.message || 'Connection failed'));
-                streaming = false;
-                sendBtn.classList.remove('loading');
-                chatInput.disabled = false;
-            }
-        }
-
-        sendBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        clearBtn.addEventListener('click', async () => {
-            try {
-                await fetch('/api/chat/clear', { method: 'POST' });
-            } catch (e) {}
-            messagesEl.querySelectorAll('.chat-message').forEach(el => el.remove());
-            emptyState.style.display = 'flex';
-            streaming = false;
-            sendBtn.classList.remove('loading');
-            chatInput.disabled = false;
-            chatInput.value = '';
-        });
-
-        chatInput.addEventListener('input', () => {
-            chatInput.style.height = 'auto';
-            chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
         });
 
         loadSkill();

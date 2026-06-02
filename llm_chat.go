@@ -310,9 +310,9 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models := resolveOpenRouterModels()
+	models := resolveChatModels()
 	if len(models) == 0 {
-		respondJSON(w, http.StatusBadGateway, false, "OpenRouter is not configured. Set OPENROUTER_MODEL.", "")
+		respondJSON(w, http.StatusBadGateway, false, "OpenRouter is not configured. Set OPENROUTER_CHAT_MODEL or OPENROUTER_MODEL.", "")
 		return
 	}
 
@@ -433,6 +433,24 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   86400,
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+func resolveChatModels() []string {
+	raw := strings.TrimSpace(os.Getenv("OPENROUTER_CHAT_MODEL"))
+	if raw == "" {
+		raw = strings.TrimSpace(os.Getenv("OPENROUTER_MODEL"))
+	}
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 func toOpenRouterMessages(src []ChatMessage) []openRouterMessage {
