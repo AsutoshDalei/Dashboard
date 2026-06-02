@@ -837,27 +837,6 @@ input, select, textarea {
     white-space: nowrap;
 }
 
-.chat-prompts-toggle {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--surface-high);
-    color: var(--on-surface-variant);
-    cursor: pointer;
-    font-size: 14px;
-    flex-shrink: 0;
-    transition: all var(--transition-fast);
-}
-
-.chat-prompts-toggle:hover {
-    background: var(--surface-highest);
-    color: var(--on-surface);
-}
-
 .chat-prompts-row {
     display: flex;
     gap: var(--space-sm);
@@ -1090,117 +1069,13 @@ input, select, textarea {
     padding: 0;
 }
 
-.chat-sections {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-}
-
-.chat-section {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.15);
-}
-
-.chat-section[open] {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.chat-section-summary {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
+.chat-msg-content blockquote {
+    border-left: 3px solid var(--primary-container);
+    margin: var(--space-sm) 0;
     padding: var(--space-sm) var(--space-md);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--on-surface);
-    user-select: none;
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.chat-section-summary:hover {
-    background: rgba(255, 255, 255, 0.06);
-}
-
-.chat-section-summary::-webkit-details-marker {
-    display: none;
-}
-
-.chat-section-summary::before {
-    content: '▶';
-    font-size: 10px;
-    color: var(--on-surface-muted);
-    transition: transform var(--transition-fast);
-}
-
-.chat-section[open] > .chat-section-summary::before {
-    transform: rotate(90deg);
-}
-
-.chat-section-icon {
-    font-size: 14px;
-    margin-right: var(--space-xs);
-}
-
-.chat-section-body {
-    padding: var(--space-sm) var(--space-md) var(--space-md) var(--space-md);
-    font-size: 14px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.chat-section-body h1,
-.chat-section-body h2,
-.chat-section-body h3,
-.chat-section-body h4 {
-    margin: 0.75em 0 0.4em 0;
-    color: var(--on-surface);
-}
-
-.chat-section-body h1:first-child,
-.chat-section-body h2:first-child,
-.chat-section-body h3:first-child,
-.chat-section-body h4:first-child {
-    margin-top: 0;
-}
-
-.chat-section-body strong {
-    color: var(--on-surface);
-}
-
-.chat-section-body ul,
-.chat-section-body ol {
-    padding-left: var(--space-lg);
-    margin: var(--space-sm) 0;
-}
-
-.chat-section-body li {
-    margin-bottom: var(--space-xs);
-}
-
-.chat-section-body code {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-size: 13px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
-.chat-section-body pre {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    overflow-x: auto;
-    margin: var(--space-sm) 0;
-}
-
-.chat-section-body pre code {
-    background: none;
-    padding: 0;
+    background: rgba(138, 148, 255, 0.05);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--on-surface-variant);
 }
 
 .chat-copy-btn {
@@ -1280,28 +1155,6 @@ input, select, textarea {
     gap: var(--space-sm);
     flex-shrink: 0;
     align-items: flex-end;
-}
-
-.chat-stop-btn {
-    display: none;
-    width: 40px;
-    height: 40px;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: bold;
-    color: var(--error);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: var(--radius-md);
-    background: var(--error-soft);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.chat-stop-btn:hover {
-    background: var(--error);
-    color: white;
-    border-color: var(--error);
 }
 
 .chat-empty-state {
