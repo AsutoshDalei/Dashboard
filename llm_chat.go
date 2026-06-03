@@ -95,7 +95,7 @@ You MUST enforce all of the following rules on every single response without exc
 
 ## VOICE CALIBRATION
 
-- Write as if you are the user speaking naturally in a conversation. Use contractions. Vary sentence length. Keep the tone warm and direct.
+- Write as if you are the user speaking naturally in a conversation. Do NOT use contractions (like I'm, I've, don't, it's, they're, etc). Vary sentence length. Keep the tone warm and direct.
 - React to facts instead of neutrally reporting them. Have subtle opinions.
 - Mix short sharp statements with longer explanatory clauses.
 - Include slight natural imperfections — avoid perfectly symmetrical algorithmic paragraph structures.
@@ -421,6 +421,38 @@ func handleChatClear(w http.ResponseWriter, r *http.Request) {
 	sessionMu.Unlock()
 
 	respondJSON(w, http.StatusOK, true, "", "Chat cleared")
+}
+
+func handleChatHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	sessionID := getSessionToken(r)
+	if sessionID == "" {
+		respondJSON(w, http.StatusBadRequest, false, "Not authenticated", "")
+		return
+	}
+
+	sessionMu.RLock()
+	s, ok := sessions[sessionID]
+	var msgs []ChatMessage
+	if ok {
+		msgs = make([]ChatMessage, len(s.Messages))
+		copy(msgs, s.Messages)
+	}
+	sessionMu.RUnlock()
+
+	if msgs == nil {
+		msgs = []ChatMessage{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"success":  true,
+		"messages": msgs,
+	})
 }
 
 func handleChatSend(w http.ResponseWriter, r *http.Request) {

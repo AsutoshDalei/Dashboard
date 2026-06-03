@@ -272,6 +272,7 @@ func registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/chat/prompts/add", requireAuth(handleChatPromptsAdd))
 	mux.HandleFunc("/api/chat/prompts/delete", requireAuth(handleChatPromptsDelete))
 	mux.HandleFunc("/api/chat/clear", requireAuth(handleChatClear))
+	mux.HandleFunc("/api/chat/history", requireAuth(handleChatHistory))
 	mux.HandleFunc("/api/chat/skill", requireAuth(handleChatSkill))
 }
 

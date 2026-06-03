@@ -565,8 +565,53 @@
             }
         });
 
+        async function loadHistory() {
+            try {
+                const resp = await fetch('/api/chat/history');
+                const data = await resp.json();
+                if (data.success && data.messages) {
+                    for (const msg of data.messages) {
+                        const div = document.createElement('div');
+                        div.className = 'chat-message ' + msg.role;
+                        const header = document.createElement('div');
+                        header.className = 'chat-message-header';
+                        header.textContent = msg.role === 'user' ? 'You' : 'Assistant';
+                        const bubble = document.createElement('div');
+                        bubble.className = 'chat-message-bubble';
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'chat-msg-content';
+                        contentDiv.innerHTML = renderMarkdown(msg.content);
+                        bubble.appendChild(contentDiv);
+                        if (msg.role === 'assistant') {
+                            const copyBtn = document.createElement('button');
+                            copyBtn.className = 'chat-copy-btn';
+                            copyBtn.textContent = 'Copy';
+                            copyBtn.addEventListener('click', async () => {
+                                try {
+                                    await navigator.clipboard.writeText(msg.content);
+                                    copyBtn.textContent = 'Copied';
+                                    setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+                                } catch (e) { copyBtn.textContent = 'Failed'; }
+                            });
+                            bubble.appendChild(copyBtn);
+                        }
+                        div.appendChild(header);
+                        div.appendChild(bubble);
+                        messagesEl.appendChild(div);
+                    }
+                    if (data.messages.length > 0) {
+                        emptyState.style.display = 'none';
+                        messagesEl.scrollTop = messagesEl.scrollHeight;
+                    }
+                }
+            } catch (e) {
+                showToast('Failed to load chat history');
+            }
+        }
+
         loadSkill();
         loadPrompts();
+        loadHistory();
     </script>
     <script src="/static/sidebar.js" defer></script>
 </body>

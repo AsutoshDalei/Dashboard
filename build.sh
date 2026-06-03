@@ -15,11 +15,12 @@ mkdir -p pi_bundle/data
 cp templates/email_body.tmpl pi_bundle/templates/email_body.tmpl
 cp templates/coverletter.tex.tmpl pi_bundle/templates/coverletter.tex.tmpl
 
-# Clean macOS artifacts from bundle
+# Clean macOS artifacts and stale tarball from bundle
 find pi_bundle -name '.DS_Store' -delete
+rm -f pi_bundle/pi_bundle.tar.gz
 
-# Create clean tar.gz (no hidden files, no mac metadata, no warnings on Linux)
-tar -czf pi_bundle.tar.gz \
+# Create clean tar.gz outside pi_bundle/ so it doesn't nest itself
+COPYFILE_DISABLE=1 tar -czf pi_bundle.tar.gz \
     --exclude='.DS_Store' \
     --exclude='._*' \
     --exclude='__MACOSX' \
