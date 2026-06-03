@@ -18,6 +18,15 @@ cp templates/coverletter.tex.tmpl pi_bundle/templates/coverletter.tex.tmpl
 # Clean macOS artifacts from bundle
 find pi_bundle -name '.DS_Store' -delete
 
+# Create clean tar.gz (no hidden files, no mac metadata, no warnings on Linux)
+tar -czf pi_bundle.tar.gz \
+    --exclude='.DS_Store' \
+    --exclude='._*' \
+    --exclude='__MACOSX' \
+    -C pi_bundle \
+    .
+mv pi_bundle.tar.gz pi_bundle/
+
 echo ""
 echo "Build successful!"
 echo ""
@@ -33,4 +42,4 @@ echo "  - templates/              (editable runtime templates)"
 echo ""
 echo "Optional: Copy your resume PDF to pi_bundle/ if you want it attached to emails."
 echo ""
-echo "To deploy: zip the pi_bundle folder and transfer to your Pi Zero 2 W."
+echo "Bundle archive: pi_bundle/pi_bundle.tar.gz"
