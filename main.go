@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -276,6 +277,8 @@ func registerRoutes(mux *http.ServeMux) {
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	log.SetFlags(0)
+	log.SetOutput(slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer())
 
 	if err := godotenv.Load(".env"); err != nil {
 		if err = godotenv.Load("../.env"); err != nil {
@@ -335,7 +338,10 @@ func main() {
 	registerRoutes(mux)
 	handler := withRequestID(withSecurityHeaders(mux))
 
-	port := "5001"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "5001"
+	}
 	srv := &http.Server{
 		Addr:              ":" + port,
 		Handler:           handler,
@@ -653,7 +659,7 @@ func respondJSON(w http.ResponseWriter, status int, success bool, errMessage, me
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
-	resp := map[string]interface{}{
+	resp := map[string]any{
 		"success": success,
 	}
 	if errMessage != "" {

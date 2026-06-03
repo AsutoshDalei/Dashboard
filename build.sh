@@ -5,17 +5,18 @@ set -e
 
 echo "Building pi_portfolio for Raspberry Pi Zero 2 W..."
 
-# The Raspberry Pi Zero 2 W features a 64-bit quad-core ARM Cortex-A53 processor.
-# Below compiles to a statically-linked 64-bit ARM binary.
-# Note: If your Pi installation is 32-bit (legacy Raspberry Pi OS), 
-# change GOARCH=arm64 to GOARCH=arm and add GOARM=7.
+BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-GOOS=linux GOARCH=arm64 go build -o pi_bundle/pi_portfolio_arm64
-go build -o pi_bundle/pi_portfolio_normal
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w -X main.buildTime=$BUILD_TIME -X main.commitHash=$COMMIT_HASH" -o pi_bundle/pi_portfolio_arm64
+go build -ldflags="-s -w -X main.buildTime=$BUILD_TIME -X main.commitHash=$COMMIT_HASH" -o pi_bundle/pi_portfolio_normal
 mkdir -p pi_bundle/templates
 mkdir -p pi_bundle/data
 cp templates/email_body.tmpl pi_bundle/templates/email_body.tmpl
 cp templates/coverletter.tex.tmpl pi_bundle/templates/coverletter.tex.tmpl
+
+# Clean macOS artifacts from bundle
+find pi_bundle -name '.DS_Store' -delete
 
 echo ""
 echo "Build successful!"

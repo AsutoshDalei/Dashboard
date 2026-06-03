@@ -20,10 +20,10 @@ const openRouterEndpoint = "https://openrouter.ai/api/v1/chat/completions"
 const maxQueryRows = 500
 const queryTimeout = 15 * time.Second
 
-func resolveOpenRouterModels() []string {
-	raw := strings.TrimSpace(os.Getenv("OPENROUTER_MODEL"))
+func resolveModels(primaryEnv, fallbackEnv string) []string {
+	raw := strings.TrimSpace(os.Getenv(primaryEnv))
 	if raw == "" {
-		raw = strings.TrimSpace(os.Getenv("OPENROUTER_MODELS"))
+		raw = strings.TrimSpace(os.Getenv(fallbackEnv))
 	}
 	if raw == "" {
 		return nil
@@ -36,6 +36,10 @@ func resolveOpenRouterModels() []string {
 		}
 	}
 	return out
+}
+
+func resolveOpenRouterModels() []string {
+	return resolveModels("OPENROUTER_MODEL", "OPENROUTER_MODELS")
 }
 
 const applicationsSchemaDoc = `You are a PostgreSQL query generator for a personal job-application tracker.
@@ -209,7 +213,7 @@ func validateReadOnlySQL(sql string) error {
 	return nil
 }
 
-func normalizeRowValue(v interface{}) interface{} {
+func normalizeRowValue(v any) any {
 	switch val := v.(type) {
 	case nil:
 		return nil
@@ -225,7 +229,7 @@ func normalizeRowValue(v interface{}) interface{} {
 func respondQueryError(w http.ResponseWriter, status int, sqlText, errMessage string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"success": false,
 		"sql":     sqlText,
 		"error":   errMessage,
@@ -236,7 +240,7 @@ func respondQueryErrorInternal(w http.ResponseWriter, r *http.Request, status in
 	slog.Error("tracker query", "err", logErr, "request_id", requestIDFrom(r), "sql", sqlText)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"success":    false,
 		"sql":        sqlText,
 		"error":      "Query execution failed. Check server logs.",
@@ -343,7 +347,7 @@ func handleApplicationsQuery(w http.ResponseWriter, r *http.Request) {
 		columns[i] = string(fd.Name)
 	}
 
-	out := make([][]interface{}, 0)
+	out := make([][]any, 0)
 	truncated := false
 	for rows.Next() {
 		if len(out) >= maxQueryRows {
@@ -366,7 +370,7 @@ func handleApplicationsQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"success":   true,
 		"sql":       sqlText,
 		"columns":   columns,

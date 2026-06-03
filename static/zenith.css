@@ -1242,6 +1242,33 @@ input, select, textarea {
     }
 }
 
+.chat-input-hint {
+    font-size: 11px;
+    color: var(--on-surface-muted);
+    text-align: right;
+    padding: 0 var(--space-xs);
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.toast {
+    position: fixed;
+    bottom: var(--space-xl);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface-container);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-sm) var(--space-lg);
+    font-size: 13px;
+    color: var(--on-surface);
+    z-index: 200;
+    box-shadow: var(--shadow-lg);
+    transition: opacity 0.3s ease;
+    max-width: 90vw;
+    text-align: center;
+}
+
 /* ========================================
    13. Tool-Specific Styles
    ======================================== */

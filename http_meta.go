@@ -36,6 +36,10 @@ func withSecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;")
+		if r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 		next.ServeHTTP(w, r)
 	})
 }
@@ -52,7 +56,6 @@ func requestIDFrom(r *http.Request) string {
 	return ""
 }
 
-// respondJSONAPI logs logErr (if non-nil) and returns clientErr to the client, with request_id on failure.
 func respondJSONAPI(w http.ResponseWriter, r *http.Request, status int, success bool, clientErr, message string, logErr error) {
 	if logErr != nil {
 		slog.Error("api", "err", logErr, "request_id", requestIDFrom(r), "path", r.URL.Path, "status", status)
@@ -68,7 +71,7 @@ func respondJSONWithRequestID(w http.ResponseWriter, status int, success bool, e
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
-	resp := map[string]interface{}{
+	resp := map[string]any{
 		"success": success,
 	}
 	if errMessage != "" {

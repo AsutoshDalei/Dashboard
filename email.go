@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"mime/multipart"
 	"net/smtp"
 	"net/textproto"
@@ -14,7 +16,6 @@ import (
 	"golang.org/x/oauth2"
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
-	"context"
 )
 
 type EmailTemplateData struct {
@@ -78,15 +79,17 @@ func buildEmailMessage(fromEmail, toEmail, name, company string) ([]byte, error)
 		return nil, fmt.Errorf("failed to build email body: %w", err)
 	}
 
-	resumeFilename := os.Getenv("RESUME_FILENAME")
-	if resumeFilename == "" {
-		resumeFilename = "ASUTOSH_DALEI_RESUME.pdf"
+	resumePath := os.Getenv("RESUME_PATH")
+	if resumePath == "" {
+		resumeFilename := os.Getenv("RESUME_FILENAME")
+		if resumeFilename == "" {
+			resumeFilename = "ASUTOSH_DALEI_RESUME.pdf"
+		}
+		resumePath = filepath.Join("..", resumeFilename)
+		if _, err := os.Stat(resumePath); os.IsNotExist(err) {
+			resumePath = resumeFilename
+		}
 	}
-	resumePath := filepath.Join("..", resumeFilename) // It expects to be in the parent dir locally, or same dir in prod if run from root. We will use absolute or relative to execution. Let's just use the filename if not found in "..". 
-
-    if _, err := os.Stat(resumePath); os.IsNotExist(err) {
-        resumePath = resumeFilename // try current directory
-    }
 
 	buf := new(bytes.Buffer)
 	writer := multipart.NewWriter(buf)
@@ -137,7 +140,7 @@ func buildEmailMessage(fromEmail, toEmail, name, company string) ([]byte, error)
 		}
 		attachmentPart.Write(chunkedFile.Bytes())
 	} else {
-		fmt.Printf("Warning: Resume not found at %s\n", resumePath)
+		slog.Warn("Resume not found", "path", resumePath)
 	}
 
 	writer.Close()

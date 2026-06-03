@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,14 +15,88 @@ import (
 	"sync"
 	"time"
 
-	_ "embed"
+	"github.com/ledongthuc/pdf"
 )
-
-//go:embed humanizer.txt
-var humanizerPrompt string
 
 const chatPromptsFile = "data/chat_prompts.json"
 const chatTimeout = 60 * time.Second
+
+const maxSessionHistory = 50
+const maxSessions = 100
+const maxMessageLen = 5000
+const rateLimitPerMinute = 30
+
+var resumeText string
+
+func init() {
+	loadResumeText()
+	loadPrompts()
+}
+
+func loadResumeText() {
+	paths := []string{
+		"ASUTOSH_DALEI_RESUME.pdf",
+		filepath.Join("..", "ASUTOSH_DALEI_RESUME.pdf"),
+		filepath.Join("pi_bundle", "ASUTOSH_DALEI_RESUME.pdf"),
+	}
+	for _, p := range paths {
+		text, err := extractPDFText(p)
+		if err == nil {
+			resumeText = text
+			slog.Info("Resume loaded", "path", p, "length", len(text))
+			return
+		}
+	}
+	slog.Warn("No resume PDF found; chat will operate without resume context")
+	resumeText = ""
+}
+
+func extractPDFText(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		return "", err
+	}
+
+	reader, err := pdf.NewReader(f, stat.Size())
+	if err != nil {
+		return "", err
+	}
+
+	var buf strings.Builder
+	for i := 1; i <= reader.NumPage(); i++ {
+		page := reader.Page(i)
+		text, err := page.GetPlainText(nil)
+		if err != nil {
+			continue
+		}
+		buf.WriteString(text)
+		buf.WriteString("\n")
+	}
+	return strings.TrimSpace(buf.String()), nil
+}
+
+func buildSystemPrompt() string {
+	prompt := "You are a job application assistant helping the user draft responses to application questions. "
+	prompt += "Your primary goal is to produce short, human-sounding, personalized answers grounded in the user's actual resume. "
+	prompt += "Never use stilted, corporate, or AI-sounding language — every response must sound like it was written by a real person. "
+	prompt += "Keep responses to 2–3 short paragraphs unless asked for more detail.\n\n"
+
+	if resumeText != "" {
+		prompt += "=== USER'S RESUME ===\n"
+		prompt += resumeText
+		prompt += "\n=== END RESUME ===\n\n"
+	}
+
+	prompt += "Use the resume above to tailor your answers. If the user asks a question that cannot be answered from the resume, "
+	prompt += "politely say so and suggest rephrasing."
+	return prompt
+}
 
 type ChatMessage struct {
 	Role    string `json:"role"`
@@ -49,7 +123,10 @@ type ChatSendRequest struct {
 }
 
 type chatSession struct {
-	Messages []ChatMessage
+	Messages   []ChatMessage
+	lastAccess time.Time
+	rateCount  int
+	rateReset  time.Time
 }
 
 var (
@@ -59,10 +136,6 @@ var (
 	sessionMu sync.RWMutex
 	sessions  = make(map[string]*chatSession)
 )
-
-func init() {
-	loadPrompts()
-}
 
 func loadPrompts() {
 	promptMu.Lock()
@@ -74,12 +147,12 @@ func loadPrompts() {
 			promptStore.Prompts = []DefaultPrompt{}
 			return
 		}
-		log.Printf("Error reading prompts file: %v", err)
+		slog.Warn("Error reading prompts file", "err", err)
 		return
 	}
 
 	if err := json.Unmarshal(data, promptStore); err != nil {
-		log.Printf("Error parsing prompts file: %v", err)
+		slog.Warn("Error parsing prompts file", "err", err)
 		promptStore.Prompts = []DefaultPrompt{}
 	}
 }
@@ -138,21 +211,31 @@ func pruneChatSessions(validTokens map[string]bool) {
 	sessionMu.Unlock()
 }
 
+func checkRateLimit(s *chatSession) bool {
+	now := time.Now()
+	if now.After(s.rateReset) {
+		s.rateCount = 0
+		s.rateReset = now.Add(time.Minute)
+	}
+	s.rateCount++
+	return s.rateCount <= rateLimitPerMinute
+}
+
 func handleChatTool(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := templates.ExecuteTemplate(w, "chat.html", nil); err != nil {
-		log.Printf("Template rendering error: %v", err)
+		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
 func handleChatSkill(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"success": true,
 		"skill": SkillInfo{
-			Name:        "Humanizer",
-			Description: "Expert writing editor that removes AI patterns and makes text sound naturally human-written.",
+			Name:        "Application Assistant",
+			Description: "Drafts short, human-sounding job application responses grounded in your resume.",
 		},
 	})
 }
@@ -167,7 +250,7 @@ func handleChatPrompts(w http.ResponseWriter, r *http.Request) {
 	defer promptMu.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"success": true,
 		"prompts": promptStore.Prompts,
 	})
@@ -206,7 +289,7 @@ func handleChatPromptsAdd(w http.ResponseWriter, r *http.Request) {
 	promptStore.Prompts = append(promptStore.Prompts, p)
 	if err := savePrompts(); err != nil {
 		promptMu.Unlock()
-		log.Printf("Error saving prompts: %v", err)
+		slog.Error("Error saving prompts", "err", err)
 		respondJSON(w, http.StatusInternalServerError, false, "Failed to save prompt", "")
 		return
 	}
@@ -214,7 +297,7 @@ func handleChatPromptsAdd(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"success": true,
 		"prompt":  p,
 	})
@@ -250,7 +333,7 @@ func handleChatPromptsDelete(w http.ResponseWriter, r *http.Request) {
 	promptStore.Prompts = newPrompts
 	if err := savePrompts(); err != nil {
 		promptMu.Unlock()
-		log.Printf("Error saving prompts: %v", err)
+		slog.Error("Error saving prompts", "err", err)
 		respondJSON(w, http.StatusInternalServerError, false, "Failed to delete prompt", "")
 		return
 	}
@@ -271,7 +354,7 @@ func handleChatClear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sessionMu.Lock()
-	sessions[sessionID] = &chatSession{Messages: []ChatMessage{}}
+	sessions[sessionID] = &chatSession{Messages: []ChatMessage{}, lastAccess: time.Now()}
 	sessionMu.Unlock()
 
 	respondJSON(w, http.StatusOK, true, "", "Chat cleared")
@@ -294,6 +377,10 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 		respondJSON(w, http.StatusBadRequest, false, "Message is required", "")
 		return
 	}
+	if len(req.Message) > maxMessageLen {
+		respondJSON(w, http.StatusBadRequest, false, fmt.Sprintf("Message too long (max %d characters)", maxMessageLen), "")
+		return
+	}
 
 	sessionID := getSessionToken(r)
 	if sessionID == "" {
@@ -304,30 +391,49 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 	sessionMu.Lock()
 	s, ok := sessions[sessionID]
 	if !ok {
-		s = &chatSession{Messages: []ChatMessage{}}
+		if len(sessions) >= maxSessions {
+			sessionMu.Unlock()
+			respondJSON(w, http.StatusServiceUnavailable, false, "Too many active sessions. Clear your chat and try again.", "")
+			return
+		}
+		s = &chatSession{Messages: []ChatMessage{}, lastAccess: time.Now()}
 		sessions[sessionID] = s
 	}
+	s.lastAccess = time.Now()
 
-	history := make([]ChatMessage, len(s.Messages))
-	copy(history, s.Messages)
+	if !checkRateLimit(s) {
+		sessionMu.Unlock()
+		respondJSON(w, http.StatusTooManyRequests, false, "Rate limit exceeded. Please wait before sending another message.", "")
+		return
+	}
+
+	history := make([]ChatMessage, 0, len(s.Messages))
+	if len(s.Messages) > maxSessionHistory {
+		start := len(s.Messages) - maxSessionHistory
+		history = append(history, s.Messages[start:]...)
+	} else {
+		history = append(history, s.Messages...)
+	}
 	s.Messages = append(s.Messages, ChatMessage{Role: "user", Content: req.Message})
 	sessionMu.Unlock()
 
+	systemPrompt := buildSystemPrompt()
+
 	messages := []ChatMessage{
-		{Role: "system", Content: humanizerPrompt},
+		{Role: "system", Content: systemPrompt},
 	}
 	messages = append(messages, history...)
 	messages = append(messages, ChatMessage{Role: "user", Content: req.Message})
 
 	apiKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY"))
 	if apiKey == "" {
-		respondJSON(w, http.StatusBadGateway, false, "OpenRouter is not configured. Set OPENROUTER_API_KEY.", "")
+		respondJSON(w, http.StatusInternalServerError, false, "OpenRouter is not configured. Set OPENROUTER_API_KEY.", "")
 		return
 	}
 
 	models := resolveChatModels()
 	if len(models) == 0 {
-		respondJSON(w, http.StatusBadGateway, false, "OpenRouter is not configured. Set OPENROUTER_CHAT_MODEL or OPENROUTER_MODEL.", "")
+		respondJSON(w, http.StatusInternalServerError, false, "OpenRouter is not configured. Set OPENROUTER_CHAT_MODEL or OPENROUTER_MODEL.", "")
 		return
 	}
 
@@ -379,6 +485,12 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 	for scanner.Scan() {
+		select {
+		case <-r.Context().Done():
+			return
+		default:
+		}
+
 		line := scanner.Text()
 
 		if line == "" {
@@ -407,7 +519,7 @@ func handleChatSend(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-for _, choice := range streamResp.Choices {
+		for _, choice := range streamResp.Choices {
 			content := choice.Delta.Content
 			if content == "" {
 				continue
@@ -453,7 +565,7 @@ for _, choice := range streamResp.Choices {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Printf("Error reading stream: %v", err)
+		slog.Warn("Error reading stream", "err", err)
 	}
 
 	assistantContent := fullContent.String()
@@ -471,21 +583,7 @@ for _, choice := range streamResp.Choices {
 }
 
 func resolveChatModels() []string {
-	raw := strings.TrimSpace(os.Getenv("OPENROUTER_CHAT_MODEL"))
-	if raw == "" {
-		raw = strings.TrimSpace(os.Getenv("OPENROUTER_MODEL"))
-	}
-	if raw == "" {
-		return nil
-	}
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if trimmed := strings.TrimSpace(p); trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	return out
+	return resolveModels("OPENROUTER_CHAT_MODEL", "OPENROUTER_MODEL")
 }
 
 func toOpenRouterMessages(src []ChatMessage) []openRouterMessage {

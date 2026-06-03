@@ -14,27 +14,27 @@
             </div>
             <nav class="sidebar-nav">
                 <a href="/dashboard" class="nav-link">
-                    <span class="nav-icon">◉</span>
+                    <span class="nav-icon" aria-hidden="true">◉</span>
                     Dashboard
                 </a>
                 <a href="/tools/email" class="nav-link">
-                    <span class="nav-icon">📧</span>
+                    <span class="nav-icon" aria-hidden="true">📧</span>
                     Email Tool
                 </a>
                 <a href="/tools/cover-letter" class="nav-link">
-                    <span class="nav-icon">📄</span>
+                    <span class="nav-icon" aria-hidden="true">📄</span>
                     Cover Letter Generator
                 </a>
                 <a href="/tools/clipboard" class="nav-link">
-                    <span class="nav-icon">📋</span>
+                    <span class="nav-icon" aria-hidden="true">📋</span>
                     Clipboard
                 </a>
                 <a href="/tools/tracker" class="nav-link">
-                    <span class="nav-icon">📊</span>
+                    <span class="nav-icon" aria-hidden="true">📊</span>
                     Job Tracker
                 </a>
                 <a href="/tools/chat" class="nav-link active">
-                    <span class="nav-icon">💬</span>
+                    <span class="nav-icon" aria-hidden="true">💬</span>
                     Chat
                 </a>
             </nav>
@@ -59,8 +59,8 @@
         <main class="main-content">
             <div class="chat-wrapper">
                 <div class="chat-skill-bar">
-                    <span class="chat-skill-tag">⚡ Humanizer</span>
-                    <span class="chat-skill-desc" id="skillDesc">Expert writing editor that removes AI patterns and makes text sound naturally human-written.</span>
+                    <span class="chat-skill-tag">📋 Application Assistant</span>
+                    <span class="chat-skill-desc" id="skillDesc">Drafts short, human-sounding job application responses grounded in your resume.</span>
                     <button class="btn btn-ghost" id="promptsToggle" title="Toggle prompts">Prompts</button>
                 </div>
 
@@ -71,12 +71,12 @@
                 <div class="chat-messages" id="chatMessages">
                     <div class="chat-empty-state" id="emptyState">
                         <div class="chat-empty-state-icon">💬</div>
-                        <p class="chat-empty-state-text">Send text to the Humanizer and receive a natural, human-sounding rewrite.</p>
+                        <p class="chat-empty-state-text">Ask me to draft a job application response based on your resume.</p>
                     </div>
                 </div>
 
                 <div class="chat-input-row">
-                    <textarea class="chat-input" id="chatInput" placeholder="Paste your AI-generated text here to humanize it..." rows="1"></textarea>
+                    <textarea class="chat-input" id="chatInput" placeholder="e.g. Draft a response for 'Why do you want to work at Google?'" rows="1"></textarea>
                     <div class="chat-input-actions">
                         <button class="btn btn-primary" id="sendBtn">
                             <span class="btn-text">Send</span>
@@ -86,6 +86,7 @@
                         <button class="btn btn-ghost" id="clearBtn" title="Clear chat">✕</button>
                     </div>
                 </div>
+                <div class="chat-input-hint">Enter to send · Shift+Enter for new line</div>
             </div>
         </main>
     </div>
@@ -101,6 +102,7 @@
                 <label class="form-label" for="promptContent">Prompt Text</label>
                 <textarea id="promptContent" class="form-input" placeholder="The prompt text that will be sent..." rows="3" style="resize:vertical;font-family:inherit;"></textarea>
             </div>
+            <div id="promptError" class="status-message" style="display:none;"></div>
             <div style="display:flex;gap:var(--space-sm);justify-content:flex-end;">
                 <button class="btn btn-ghost" id="promptCancelBtn">Cancel</button>
                 <button class="btn btn-primary" id="promptSaveBtn">
@@ -110,6 +112,8 @@
             </div>
         </div>
     </div>
+
+    <div id="toast" class="toast" style="display:none;"></div>
 
     <script>
         let prompts = [];
@@ -126,6 +130,8 @@
         let promptModal = document.getElementById('promptModal');
         let promptTitle = document.getElementById('promptTitle');
         let promptContent = document.getElementById('promptContent');
+        let promptError = document.getElementById('promptError');
+        let toastEl = document.getElementById('toast');
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -133,28 +139,44 @@
             return div.innerHTML;
         }
 
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.style.display = 'block';
+            toastEl.style.opacity = '1';
+            setTimeout(() => {
+                toastEl.style.opacity = '0';
+                setTimeout(() => { toastEl.style.display = 'none'; }, 300);
+            }, 3000);
+        }
+
         function renderMarkdown(text) {
             let html = escapeHtml(text);
-            html = html.replace(/### (.+)/g, '<h3>$1</h3>');
-            html = html.replace(/## (.+)/g, '<h2>$1</h2>');
-            html = html.replace(/# (.+)/g, '<h1>$1</h1>');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
             html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            html = html.replace(/^(- )(.+)/gm, '<li>$2</li>');
-            html = html.replace(/(<li>.*<\/li>(?:\n?))+(\n<ul>|$)/g, (m) => {
-                const items = m.replace(/\n?$/, '');
-                return '<ul>' + items + '</ul>';
-            });
-            html = html.replace(/^&gt; (.+)/gm, '<blockquote>$1</blockquote>');
+            html = html.replace(/^(\d+)\. (.+)$/gm, '<li value="$1">$2</li>');
+            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/((?:<li.*>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
             html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
-            html = html.replace(/\n---\n/g, '\n<hr>\n');
+            html = html.replace(/^---$/gm, '<hr>');
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
             html = html.replace(/\n/g, '<br>');
             html = html.replace(/<li><br>/g, '<li>');
             html = html.replace(/<br><\/li>/g, '</li>');
             html = html.replace(/<br><\/ul>/g, '</ul>');
             html = html.replace(/<ul><br>/g, '<ul>');
             html = html.replace(/<\/ul><br><ul>/g, '');
+            html = html.replace(/<br><\/blockquote>/g, '</blockquote>');
+            html = html.replace(/<blockquote><br>/g, '<blockquote>');
+            html = html.replace(/<br><\/h1>/g, '</h1>');
+            html = html.replace(/<br><\/h2>/g, '</h2>');
+            html = html.replace(/<br><\/h3>/g, '</h3>');
+            html = html.replace(/<br><hr>/g, '<hr>');
+            html = html.replace(/<hr><br>/g, '<hr>');
             return html;
         }
 
@@ -166,7 +188,7 @@
 
             const header = document.createElement('div');
             header.className = 'chat-message-header';
-            header.textContent = role === 'user' ? 'You' : 'Humanizer';
+            header.textContent = role === 'user' ? 'You' : 'Assistant';
 
             const bubble = document.createElement('div');
             bubble.className = 'chat-message-bubble';
@@ -176,11 +198,6 @@
                 const cursor = document.createElement('span');
                 cursor.className = 'chat-cursor';
                 bubble.appendChild(cursor);
-            } else if (role === 'assistant') {
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'chat-msg-content';
-                contentDiv.innerHTML = renderMarkdown(content);
-                bubble.appendChild(contentDiv);
             } else {
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'chat-msg-content';
@@ -196,6 +213,7 @@
 
         let rafToken = null;
         let pendingToken = '';
+        let scrollThrottle = null;
 
         function flushToken() {
             rafToken = null;
@@ -229,16 +247,18 @@
         }
 
         messagesEl.addEventListener('scroll', () => {
-            if (streaming) {
+            if (!streaming) return;
+            if (scrollThrottle) scrollThrottle = null;
+            scrollThrottle = setTimeout(() => {
+                const lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child[data-streaming]');
+                if (!lastMsg) return;
                 const threshold = messagesEl.scrollHeight - messagesEl.clientHeight - 60;
                 if (messagesEl.scrollTop < threshold) {
-                    const lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child[data-streaming]');
-                    if (lastMsg) lastMsg.dataset.userScrolled = 'true';
+                    lastMsg.dataset.userScrolled = 'true';
                 } else {
-                    const lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child[data-streaming]');
-                    if (lastMsg) delete lastMsg.dataset.userScrolled;
+                    delete lastMsg.dataset.userScrolled;
                 }
-            }
+            }, 100);
         });
 
         function finalizeMessage(fullContent) {
@@ -300,6 +320,7 @@
                 if (!resp.ok) {
                     const errData = await resp.json().catch(() => ({}));
                     addMessage('assistant', 'Error: ' + (errData.error || 'Request failed'));
+                    showToast(errData.error || 'Request failed');
                     streaming = false;
                     stopBtn.style.display = 'none';
                     sendBtn.classList.remove('loading');
@@ -341,7 +362,9 @@
                                 finalizeMessage(fullContent);
                                 return;
                             }
-                        } catch (e) {}
+                        } catch (e) {
+                            showToast('Error parsing response');
+                        }
                     }
                 }
 
@@ -362,6 +385,7 @@
                     return;
                 }
                 addMessage('assistant', 'Error: ' + (e.message || 'Connection failed'));
+                showToast(e.message || 'Connection failed');
                 streaming = false;
                 stopBtn.style.display = 'none';
                 sendBtn.classList.remove('loading');
@@ -388,8 +412,13 @@
                 abortController.abort();
             }
             try {
-                await fetch('/api/chat/clear', { method: 'POST' });
-            } catch (e) {}
+                const resp = await fetch('/api/chat/clear', { method: 'POST' });
+                if (!resp.ok) {
+                    showToast('Failed to clear chat');
+                }
+            } catch (e) {
+                showToast('Failed to clear chat');
+            }
             messagesEl.querySelectorAll('.chat-message').forEach(el => el.remove());
             emptyState.style.display = 'flex';
             streaming = false;
@@ -402,7 +431,7 @@
 
         chatInput.addEventListener('input', () => {
             chatInput.style.height = 'auto';
-            chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 240) + 'px';
         });
 
         async function loadSkill() {
@@ -411,8 +440,12 @@
                 const data = await resp.json();
                 if (data.success && data.skill) {
                     document.getElementById('skillDesc').textContent = data.skill.description;
+                } else {
+                    showToast('Failed to load skill info');
                 }
-            } catch (e) {}
+            } catch (e) {
+                showToast('Failed to load skill info');
+            }
         }
 
         async function loadPrompts() {
@@ -422,8 +455,12 @@
                 if (data.success) {
                     prompts = data.prompts || [];
                     renderPrompts();
+                } else {
+                    showToast('Failed to load prompts');
                 }
-            } catch (e) {}
+            } catch (e) {
+                showToast('Failed to load prompts');
+            }
         }
 
         function renderPrompts() {
@@ -458,8 +495,12 @@
                 if (data.success) {
                     prompts = prompts.filter(x => x.id !== id);
                     renderPrompts();
+                } else {
+                    showToast(data.error || 'Failed to delete prompt');
                 }
-            } catch (e) {}
+            } catch (e) {
+                showToast('Failed to delete prompt');
+            }
         }
 
         promptsToggle.addEventListener('click', () => {
@@ -469,6 +510,7 @@
         function showPromptModal() {
             promptTitle.value = '';
             promptContent.value = '';
+            promptError.style.display = 'none';
             promptModal.classList.add('show');
             promptTitle.focus();
         }
@@ -480,13 +522,25 @@
             if (e.target === promptModal) promptModal.classList.remove('show');
         });
 
+        promptContent.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('promptSaveBtn').click();
+            }
+        });
+
         document.getElementById('promptSaveBtn').addEventListener('click', async () => {
             const title = promptTitle.value.trim();
             const content = promptContent.value.trim();
-            if (!title || !content) return;
+            if (!title || !content) {
+                promptError.textContent = 'Title and content are required';
+                promptError.style.display = 'block';
+                return;
+            }
 
             const btn = document.getElementById('promptSaveBtn');
             btn.classList.add('loading');
+            promptError.style.display = 'none';
 
             try {
                 const resp = await fetch('/api/chat/prompts/add', {
@@ -499,8 +553,14 @@
                     prompts.push(data.prompt);
                     renderPrompts();
                     promptModal.classList.remove('show');
+                } else {
+                    promptError.textContent = data.error || 'Failed to save prompt';
+                    promptError.style.display = 'block';
                 }
-            } catch (e) {} finally {
+            } catch (e) {
+                promptError.textContent = 'Failed to save prompt';
+                promptError.style.display = 'block';
+            } finally {
                 btn.classList.remove('loading');
             }
         });

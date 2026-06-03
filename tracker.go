@@ -172,14 +172,14 @@ func handleApplicationsCheck(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if app == nil {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"success": true,
 			"exists":  false,
 			"query":   company,
 		})
 		return
 	}
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"success":       true,
 		"exists":        true,
 		"id":            app.ID,
@@ -204,7 +204,7 @@ func handleApplicationsSuggest(w http.ResponseWriter, r *http.Request) {
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	if query == "" {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"success":     true,
 			"suggestions": []CompanySuggestion{},
 		})
@@ -277,7 +277,7 @@ LIMIT $2`
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"success":     true,
 		"suggestions": suggestions,
 	})
@@ -439,7 +439,7 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 		invalidateStatsCache()
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"success":        true,
 			"action":         "created",
 			"row":            inserted,
@@ -501,7 +501,7 @@ RETURNING id, organization, job_role, location, contacts, applied_dates, remarks
 
 	invalidateStatsCache()
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"success":        true,
 		"action":         "updated",
 		"row":            patched,
@@ -807,7 +807,7 @@ SELECT
 var (
 	statsCacheMu    sync.Mutex
 	statsCacheUntil time.Time
-	statsCacheBody  map[string]interface{}
+	statsCacheBody  map[string]any
 )
 
 func invalidateStatsCache() {
@@ -827,7 +827,7 @@ func decodeJSONIntMap(raw []byte) (map[string]int, error) {
 	if len(raw) == 0 || string(raw) == "null" {
 		return map[string]int{}, nil
 	}
-	var tmp map[string]interface{}
+	var tmp map[string]any
 	if err := json.Unmarshal(raw, &tmp); err != nil {
 		return nil, err
 	}
@@ -934,7 +934,7 @@ func handleApplicationsStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"success":             true,
 		"stats":               stats,
 		"activity_logs_ok":    actErr == nil,
@@ -1036,7 +1036,7 @@ func handleApplicationsTimeline(w http.ResponseWriter, r *http.Request) {
 	buckets := bucketTimeline(activityRows, freq)
 
 	w.Header().Set("Content-Type", "application/json")
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"success":             true,
 		"freq":                freq,
 		"buckets":             buckets,
@@ -1141,7 +1141,7 @@ func handleApplicationsContribution(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"success":             true,
 		"month":               monthParam,
 		"days":                days,

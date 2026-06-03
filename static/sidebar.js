@@ -29,3 +29,9 @@
         if (window.innerWidth > 768) close();
     });
 })();
+
+window.escapeHtml = function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+};

@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -45,12 +45,12 @@ func loadClipboardItems() {
 			clipboardStore.Items = []ClipboardItem{}
 			return
 		}
-		log.Printf("Error reading clipboard file: %v", err)
+		slog.Warn("Error reading clipboard file", "err", err)
 		return
 	}
 
 	if err := json.Unmarshal(data, clipboardStore); err != nil {
-		log.Printf("Error parsing clipboard file: %v", err)
+		slog.Warn("Error parsing clipboard file", "err", err)
 		clipboardStore.Items = []ClipboardItem{}
 	}
 }
@@ -77,7 +77,7 @@ func saveClipboardItems() error {
 func handleClipboardTool(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := templates.ExecuteTemplate(w, "clipboard.html", nil); err != nil {
-		log.Printf("Template rendering error: %v", err)
+		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -122,7 +122,7 @@ func handleGetClipboardItems(w http.ResponseWriter, r *http.Request) {
 	defer clipboardMu.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"success": true,
 		"items":   clipboardStore.Items,
 	})
@@ -158,14 +158,14 @@ func handleAddClipboardItem(w http.ResponseWriter, r *http.Request) {
 	clipboardStore.Items = append([]ClipboardItem{item}, clipboardStore.Items...)
 
 	if err := saveClipboardItems(); err != nil {
-		log.Printf("Error saving clipboard: %v", err)
+		slog.Error("Error saving clipboard", "err", err)
 		respondJSON(w, http.StatusInternalServerError, false, "Failed to save item", "")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"success": true,
 		"item":    item,
 	})
@@ -193,7 +193,7 @@ func handleDeleteClipboardItem(w http.ResponseWriter, r *http.Request, itemID st
 	clipboardStore.Items = newItems
 
 	if err := saveClipboardItems(); err != nil {
-		log.Printf("Error saving clipboard: %v", err)
+		slog.Error("Error saving clipboard", "err", err)
 		respondJSON(w, http.StatusInternalServerError, false, "Failed to delete item", "")
 		return
 	}
@@ -241,14 +241,14 @@ func handleMoveClipboardItem(w http.ResponseWriter, r *http.Request, itemID stri
 	if target >= 0 && target < len(clipboardStore.Items) {
 		clipboardStore.Items[idx], clipboardStore.Items[target] = clipboardStore.Items[target], clipboardStore.Items[idx]
 		if err := saveClipboardItems(); err != nil {
-			log.Printf("Error saving clipboard: %v", err)
+slog.Error("Error saving clipboard", "err", err)
 			respondJSON(w, http.StatusInternalServerError, false, "Failed to reorder item", "")
 			return
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"success": true,
 		"items":   clipboardStore.Items,
 	})
