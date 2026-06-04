@@ -46,6 +46,9 @@ jobs:
       - name: Inject Gmail API token
         run: echo "${{ secrets.GMAIL_TOKEN_JSON }}" > staging/token.json
 
+      - name: Copy resume PDF
+        run: cp pi_bundle/ASUTOSH_DALEI_RESUME.pdf staging/
+
       - name: Create tarball
         run: tar -czf myapp-linux-arm64.tar.gz -C staging .
 

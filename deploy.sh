@@ -27,13 +27,19 @@ release_json=$(curl -sSfL \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/$REPO/releases/latest")
 
-tag=$(echo "$release_json" | jq -r '.tag_name')
+tag=$(echo "$release_json" | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
 echo "Latest release: $tag"
 
-asset_url=$(echo "$release_json" \
-  | jq -r --arg name "$ASSET" '.assets[] | select(.name == $name) | .url')
+asset_url=$(echo "$release_json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for a in data.get('assets', []):
+    if a['name'] == '$ASSET':
+        print(a['url'])
+        break
+")
 
-if [ -z "$asset_url" ] || [ "$asset_url" = "null" ]; then
+if [ -z "$asset_url" ]; then
   echo "ERROR: Asset '$ASSET' not found in release $tag"
   exit 1
 fi
