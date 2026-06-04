@@ -36,7 +36,7 @@ jobs:
           cp templates/email_body.tmpl staging/templates/
           cp templates/coverletter.tex.tmpl staging/templates/
           echo '{"prompts":[]}' > staging/data/chat_prompts.json
-          echo '{"items":[]}' > staging/clipboard_items.json
+          cp pi_bundle/clipboard_items.json staging/
 
       - name: Inject production .env
         run: echo "${{ secrets.PROD_ENV_FILE }}" > staging/.env

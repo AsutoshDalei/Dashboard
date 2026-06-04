@@ -3,7 +3,6 @@ pi_bundle/.DS_Store
 pi_bundle/.env
 pi_bundle/credentials.json
 pi_bundle/token.json
-pi_bundle/clipboard_items.json
 pi_bundle/pi_portfolio_*
 pi_bundle/*.zip
 pi_bundle/*.tar.gz
