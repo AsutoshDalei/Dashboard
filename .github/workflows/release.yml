@@ -1,0 +1,60 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.7'
+
+      - name: Compute short SHA
+        id: vars
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Cross-compile for linux/arm64
+        run: |
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          COMMIT_HASH="${{ steps.vars.outputs.sha_short }}"
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
+            -ldflags="-s -w -X main.buildTime=$BUILD_TIME -X main.commitHash=$COMMIT_HASH" \
+            -o staging/pi_portfolio_arm64
+
+      - name: Prepare staging directory
+        run: |
+          mkdir -p staging/templates staging/data
+          cp templates/email_body.tmpl staging/templates/
+          cp templates/coverletter.tex.tmpl staging/templates/
+          echo '{"prompts":[]}' > staging/data/chat_prompts.json
+          echo '{"items":[]}' > staging/clipboard_items.json
+
+      - name: Inject production .env
+        run: echo "${{ secrets.PROD_ENV_FILE }}" > staging/.env
+
+      - name: Inject Google OAuth credentials
+        run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > staging/credentials.json
+
+      - name: Inject Gmail API token
+        run: echo "${{ secrets.GMAIL_TOKEN_JSON }}" > staging/token.json
+
+      - name: Create tarball
+        run: tar -czf myapp-linux-arm64.tar.gz -C staging .
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release-${{ github.run_number }}-${{ steps.vars.outputs.sha_short }}
+          name: "Release ${{ github.run_number }} (${{ steps.vars.outputs.sha_short }})"
+          files: myapp-linux-arm64.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
