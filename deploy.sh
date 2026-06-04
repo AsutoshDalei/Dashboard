@@ -9,21 +9,25 @@ REPO="AsutoshDalei/Dashboard"
 ASSET="myapp-linux-arm64.tar.gz"
 DEST="${1:-pi_portfolio}"
 
-GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TOKEN_FILE="$SCRIPT_DIR/.github_token"
 
-if [ -z "$GITHUB_TOKEN" ]; then
-  echo "ERROR: GITHUB_TOKEN is required."
-  echo "Create a PAT (repo scope or contents:read) at:"
-  echo "  https://github.com/settings/tokens"
-  echo ""
-  echo "Usage: GITHUB_TOKEN=ghp_xxx $0 [dest_dir]"
+# Priority: env var > .github_token file
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  TOKEN="$GITHUB_TOKEN"
+elif [ -f "$TOKEN_FILE" ]; then
+  TOKEN=$(cat "$TOKEN_FILE" | tr -d '[:space:]')
+else
+  echo "ERROR: No GitHub token found."
+  echo "Set it once: echo 'ghp_xxx' > '$TOKEN_FILE'"
+  echo "Or pass per-run: GITHUB_TOKEN=ghp_xxx $0"
   exit 1
 fi
 
 echo "Fetching latest release for $REPO ..."
 
 release_json=$(curl -sSfL \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/$REPO/releases/latest")
 
@@ -49,7 +53,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 echo "Downloading $ASSET ..."
 curl -sSfL \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Accept: application/octet-stream" \
   -o "$tmpdir/$ASSET" \
   "$asset_url"
