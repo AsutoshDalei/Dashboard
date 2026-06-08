@@ -235,7 +235,7 @@ func callOllama(system, user, model, host string) (string, error) {
 		host = os.Getenv("OLLAMA_HOST")
 	}
 	if host == "" {
-		host = "172.16.7.108"
+		return "", fmt.Errorf("OLLAMA_HOST not configured in .env")
 	}
 	if !strings.Contains(host, ":") {
 		host = host + ":11434"
@@ -244,7 +244,7 @@ func callOllama(system, user, model, host string) (string, error) {
 		model = os.Getenv("OLLAMA_MODEL")
 	}
 	if model == "" {
-		model = "gemma4:e2b"
+		return "", fmt.Errorf("OLLAMA_MODEL not configured in .env")
 	}
 
 	url := fmt.Sprintf("http://%s/api/chat", host)
@@ -283,6 +283,8 @@ func callOllama(system, user, model, host string) (string, error) {
 		return "", fmt.Errorf("failed to read Ollama response: %w", err)
 	}
 
+	slog.Debug("ollama raw response", "body", string(body))
+
 	var parsed ollamaResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		return "", fmt.Errorf("Ollama returned non-JSON (status %d): %s", resp.StatusCode, string(body))
@@ -290,21 +292,40 @@ func callOllama(system, user, model, host string) (string, error) {
 	if parsed.Error != "" {
 		return "", fmt.Errorf("Ollama error: %s", parsed.Error)
 	}
+	if parsed.Message.Content == "" {
+		return "", fmt.Errorf("Ollama returned empty content (status %d): %s", resp.StatusCode, string(body))
+	}
 	return parsed.Message.Content, nil
 }
 
 func extractJSON(raw string) string {
 	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
 	if strings.HasPrefix(raw, "```") {
 		lines := strings.SplitN(raw, "\n", 2)
 		if len(lines) == 2 {
-			raw = strings.TrimSpace(lines[1])
+			first := strings.TrimSpace(lines[0])
+			if first == "```" || first == "```json" || first == "```json\n" {
+				raw = strings.TrimSpace(lines[1])
+			}
 		}
 	}
 	if idx := strings.LastIndex(raw, "```"); idx >= 0 {
 		raw = strings.TrimSpace(raw[:idx])
 	}
-	return raw
+	raw = strings.TrimSpace(raw)
+	if len(raw) > 0 && raw[0] == '{' {
+		return raw
+	}
+	if idx := strings.Index(raw, "{"); idx >= 0 {
+		raw = raw[idx:]
+		if end := strings.LastIndex(raw, "}"); end >= 0 {
+			raw = raw[:end+1]
+		}
+	}
+	return strings.TrimSpace(raw)
 }
 
 func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*AnalyzeResponse, error) {
@@ -320,7 +341,13 @@ func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*Analyze
 		return nil, fmt.Errorf("LLM analysis failed: %w", err)
 	}
 
+	slog.Debug("analyze llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
+
 	raw = extractJSON(raw)
+	if raw == "" {
+		return nil, fmt.Errorf("LLM returned empty response after extraction")
+	}
+
 	var resp AnalyzeResponse
 	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, raw)
@@ -334,6 +361,13 @@ func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*Analyze
 	}
 
 	return &resp, nil
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
 }
 
 func GenerateTailoredResume(jobDescription string, score float64, keywords []string, recommendations string, chatHistory []ChatMsg, provider, model, ollamaHost, companyName string) (*GenerateResponse, error) {
