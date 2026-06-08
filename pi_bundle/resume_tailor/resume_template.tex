@@ -1,0 +1,135 @@
+\documentclass[9pt]{article}
+
+\usepackage[a4paper,scale=0.915,top=0.35in,bottom=0.35in]{geometry}
+\usepackage{cmap}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\renewcommand{\familydefault}{\sfdefault}
+\input{glyphtounicode}
+\pdfgentounicode=1
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1pt}
+
+\titleformat{\section}{\small\bfseries}{}{0em}{}[\titlerule]
+\titlespacing*{\section}{0pt}{4pt}{2pt}
+
+\setlist[itemize]{noitemsep, topsep=1pt, leftmargin=*}
+
+\newcommand{\namesize}{\fontsize{20}{22}\selectfont}    
+\newcommand{\headersize}{\fontsize{10}{12}\selectfont}
+
+\begin{document}
+\pagestyle{empty}
+
+% HEADER
+\begin{center}
+    {\bfseries \color{black} \namesize
+    \href{https://asutoshdalei.github.io/AsutoshDalei/}{Asutosh Dalei}}\\[6pt]
+    {\headersize
+    College Park, Maryland |
+    \href{mailto:asutoshdalei@gmail.com}{asutoshdalei@gmail.com} |
+    \href{https://www.linkedin.com/in/asutosh-dalei2212}{LinkedIn} |
+    \href{https://github.com/AsutoshDalei}{GitHub} |
+    \href{https://scholar.google.com/citations?user=ZTEw6iQAAAAJ&hl=en&oi=sra}{Google Scholar} |
+    +1 240 432 1563}
+\end{center}
+\vspace{-7pt}
+
+% SECTION 1: WORK EXPERIENCE
+\section*{WORK EXPERIENCE}
+
+\textbf{Machine Learning Engineering Intern} \hfill \textit{June 2025 -- Present}\\
+Nokia -- Sunnyvale, California
+\begin{itemize}
+    \item \textbf{Knowledge Layer \& RAG Architecture:}
+    \begin{itemize}
+        \item Designed and built the \textbf{``Knowledge Layer'',} a retrieval engine for querying complex technical documentation by unifying Vector Search (OpenSearch), relational metadata (PostgreSQL), and graph traversal (Neo4j).
+        \item Benchmarked 4+ SOTA embedding models against a \textbf{validation corpus of 700+ technical manuals}; selected \textbf{Embedding Gemma} for best semantic recall and built a custom sentence-aware chunking pipeline to optimize ingestion.
+        \item Built a \textbf{Multimodal RAG pipeline} to index unstructured tables and figures using a joint vector space with \textbf{Jina Embeddings V4} and \textbf{OpenAI CLIP}, enabling text-to-visual retrieval.
+        \item Added a re-ranking stage with \textbf{Qwen3 Reranker-8B} (cross-encoder), which measurably improved context precision in retrieved chunks.
+        \item Building an agentic retrieval framework with the \textbf{Google Agent Development Kit} to automate multi-step information gathering across the knowledge base.
+    \end{itemize}
+\end{itemize}
+\textit{Stack: Docker, Kafka, PostgreSQL, OpenSearch, Neo4j, MinIO, FastAPI, Python, GCP, AG2, vLLM.}
+
+\vspace{2pt}
+
+\textbf{Data Scientist} \hfill \textit{January 2022 -- August 2024}\\
+Maruti Suzuki (R\&D Division) -- Bengaluru, India
+\begin{itemize}
+    \item \textbf{Battery Health Prediction (Predictive Maintenance):}
+    \begin{itemize}
+        \item Built an \textbf{LSTM-based} time-series classifier on telematics data to predict lead-acid battery failure in connected vehicles. Trained on imbalanced sensor data using \textbf{focal cross-entropy loss}.
+        \item Designed a \textbf{14-day sliding window} aggregation layer over raw predictions to suppress sensor noise and cut false positives before alerts reach the field.
+        \item Deployed across \textbf{100K+ connected vehicles} with \textbf{98\% field-validated accuracy}, reducing warranty claims and roadside failures. Work resulted in a published patent (No.~202411040338).
+    \end{itemize}
+    \item \textbf{MLOps \& Training Cost Reduction:}
+    \begin{itemize}
+        \item Audited a legacy training pipeline burning \textbf{\$4,000/month} in GPU compute. Profiled bottlenecks and migrated Random Forest workloads to optimized multi-core CPU execution, eliminating unnecessary GPU spend.
+        \item Integrated \textbf{Optuna} for automated hyperparameter search, cutting per-experiment wall time and total cloud compute costs.
+    \end{itemize}
+\end{itemize}
+
+\vspace{3pt}
+% SECTION 2: EDUCATION
+\section*{EDUCATION}
+
+\textbf{Master of Science, Data Science} \hfill \textbf{\textit{GPA: 3.967 / 4.0}}\\
+University of Maryland, College Park \hfill \textit{August 2024 -- May 2026}
+\begin{itemize}
+    \item Relevant Coursework: Advanced Machine Learning, Natural Language Processing, Probability \& Statistics, Data Representation \& Modelling, Big Data Systems, Cloud Computing.
+\end{itemize}
+\vspace{3pt}
+
+\textbf{Bachelor of Technology, Electrical and Electronics Engineering} \hfill \textit{GPA: 9.1 / 10}\\
+Vellore Institute of Technology, Vellore \hfill \textit{2018 -- 2022}
+
+\vspace{2pt}
+
+% SECTION 3: RESEARCH \& PATENTS
+\section*{RESEARCH \& PATENTS}
+
+\textbf{Patent -- Automobile Battery Health Prediction System (No.~202411040338)}
+\begin{itemize}
+    \item \textbf{Primary ML contributor} on a patented system for predicting remaining useful life of lead-acid batteries using telematics sensor data and LSTM-based deep learning, now deployed in production across Maruti Suzuki's connected vehicle fleet.
+\end{itemize}
+
+\textbf{\href{https://www.nature.com/articles/s41598-025-30120-3}{Molecular Signatures and ML-driven Stress Biomarkers for Rainbow Trout Aquaculture}}~--~\textit{Nature Scientific Reports}, 2025
+\begin{itemize}
+    \item Built \textbf{predictive models on genomic data} to identify stress biomarkers in rainbow trout; contributed model design, feature selection across high-dimensional gene expression datasets, and analysis of markers tied to environmental stress response.
+\end{itemize}
+
+% SECTION 4: SKILLS
+\section*{TECHNICAL SKILLS}
+\begin{itemize}
+    \item \textbf{ML \& AI:} PyTorch, TensorFlow, HuggingFace, Transformers, LLM Fine-Tuning (SFT, RLHF, LoRA, PEFT), RAG, Agentic AI, LangChain, LLM Evaluation, Structured Output Enforcement, Inference Optimization, Model Serving (vLLM, SGLang).
+    \item \textbf{Experiment Tracking \& MLOps:} MLflow, Optuna, Weights \& Biases, Jenkins CI/CD, GitHub Actions.
+    \item \textbf{Languages:} Python, GoLang, R, SQL.
+    \item \textbf{Distributed \& Data Systems:} Kafka, FastAPI,  Docker, Kubernetes.
+    \item \textbf{Cloud \& Infrastructure:} GCP, Azure, Linux, Git.
+    \item \textbf{Databases:} PostgreSQL, MongoDB, MySQL, OpenSearch, Neo4j.
+\end{itemize}
+
+\vspace{-1pt}
+
+% SECTION 5: Projects
+\section*{PROJECTS}
+\textbf{Agentic RAG over Enterprise Knowledge Graphs}
+\begin{itemize}
+    \item Designed a enterprise-ready modular agentic  framework (\textbf{AG2}) for natural-language querying over enterprise knowledge graphs spanning \textbf{Ab Initio} workflows. Deployed on \textbf{Kubernetes}, served via \textbf{Vertex AI}, with \textbf{ZeRank2} re-ranking for retrieval precision.
+\end{itemize}
+\textbf{Spatiotemporal Modeling of Telematics Data Gaps}
+\begin{itemize}
+    \item Traced recurring multi-hour data dropouts (5\% of telematics records) to regional network dead zones. Built an ML pipeline using Random Forests for anomaly classification and \textbf{GRU over Spatiotemporal Sequences} to map affected geographic clusters.
+    \item Improved data collection completeness by \textbf{15\%} across connected vehicle fleet.
+\end{itemize}
+\end{document}

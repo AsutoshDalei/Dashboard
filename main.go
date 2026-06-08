@@ -233,6 +233,7 @@ func init() {
 		slog.Error("Error parsing templates", "err", err)
 		os.Exit(1)
 	}
+	initResumeTailor()
 }
 
 func registerRoutes(mux *http.ServeMux) {
@@ -274,6 +275,13 @@ func registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/chat/clear", requireAuth(handleChatClear))
 	mux.HandleFunc("/api/chat/history", requireAuth(handleChatHistory))
 	mux.HandleFunc("/api/chat/skill", requireAuth(handleChatSkill))
+
+	mux.HandleFunc("/tools/resume", requireAuth(handleResumeTool))
+	mux.HandleFunc("/api/resume/analyze", requireAuth(handleResumeAnalyze))
+	mux.HandleFunc("/api/resume/generate", requireAuth(handleResumeGenerate))
+	mux.HandleFunc("/api/resume/reanalyze", requireAuth(handleResumeReanalyze))
+	mux.HandleFunc("/api/resume/chat", requireAuth(handleResumeChat))
+	mux.HandleFunc("/api/resume/compile", requireAuth(handleResumeCompile))
 }
 
 func main() {
@@ -670,4 +678,192 @@ func respondJSON(w http.ResponseWriter, status int, success bool, errMessage, me
 		resp["message"] = message
 	}
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func handleResumeTool(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := templates.ExecuteTemplate(w, "resume.html", nil); err != nil {
+		slog.Error("Template rendering error", "err", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
+func handleResumeAnalyze(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		respondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req AnalyzeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, http.StatusBadRequest, false, "Invalid JSON payload", "")
+		return
+	}
+
+	if req.JobDescription == "" {
+		respondJSON(w, http.StatusBadRequest, false, "Job description is required", "")
+		return
+	}
+
+	provider := req.Provider
+	if provider == "" {
+		provider = "ollama"
+	}
+
+	result, err := AnalyzeResume(req.JobDescription, provider, req.Model, req.OllamaHost)
+	if err != nil {
+		respondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+
+	respondJSONWithData(w, http.StatusOK, true, "", "", result)
+}
+
+func respondJSONWithData(w http.ResponseWriter, status int, success bool, errMessage, message string, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	resp := map[string]any{
+		"success": success,
+	}
+	if errMessage != "" {
+		resp["error"] = errMessage
+	}
+	if message != "" {
+		resp["message"] = message
+	}
+	if data != nil {
+		resp["data"] = data
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
+func handleResumeGenerate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		respondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req GenerateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, http.StatusBadRequest, false, "Invalid JSON payload", "")
+		return
+	}
+
+	if req.JobDescription == "" {
+		respondJSON(w, http.StatusBadRequest, false, "Job description is required", "")
+		return
+	}
+
+	provider := req.Provider
+	if provider == "" {
+		provider = "ollama"
+	}
+
+	result, err := GenerateTailoredResume(
+		req.JobDescription, req.Score, req.Keywords, req.Recommendations,
+		req.ChatHistory, provider, req.Model, req.OllamaHost, req.CompanyName,
+	)
+	if err != nil {
+		respondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+
+	respondJSONWithData(w, http.StatusOK, true, "", "", result)
+}
+
+func handleResumeReanalyze(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		respondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req struct {
+		LatexSource    string `json:"latex_source"`
+		JobDescription string `json:"job_description"`
+		Provider       string `json:"provider"`
+		Model          string `json:"model"`
+		OllamaHost     string `json:"ollama_host"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, http.StatusBadRequest, false, "Invalid JSON payload", "")
+		return
+	}
+
+	if req.LatexSource == "" || req.JobDescription == "" {
+		respondJSON(w, http.StatusBadRequest, false, "latex_source and job_description are required", "")
+		return
+	}
+
+	provider := req.Provider
+	if provider == "" {
+		provider = "ollama"
+	}
+
+	result, err := ReanalyzeResume(req.LatexSource, req.JobDescription, provider, req.Model, req.OllamaHost)
+	if err != nil {
+		respondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+
+	respondJSONWithData(w, http.StatusOK, true, "", "", result)
+}
+
+func handleResumeChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		respondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req ChatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, http.StatusBadRequest, false, "Invalid JSON payload", "")
+		return
+	}
+
+	if req.Message == "" || req.CurrentLatex == "" {
+		respondJSON(w, http.StatusBadRequest, false, "message and current_latex are required", "")
+		return
+	}
+
+	provider := req.Provider
+	if provider == "" {
+		provider = "ollama"
+	}
+
+	result, err := ChatRefine(req.Message, req.ChatHistory, req.CurrentLatex, req.JobDescription, provider, req.Model, req.OllamaHost)
+	if err != nil {
+		respondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+
+	respondJSONWithData(w, http.StatusOK, true, "", "", result)
+}
+
+func handleResumeCompile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		respondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req struct {
+		LatexSource string `json:"latex_source"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, http.StatusBadRequest, false, "Invalid JSON payload", "")
+		return
+	}
+
+	if req.LatexSource == "" {
+		respondJSON(w, http.StatusBadRequest, false, "latex_source is required", "")
+		return
+	}
+
+	pdfData, err := CompileLatexToPDF(req.LatexSource)
+	if err != nil {
+		respondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Write(pdfData)
 }

@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Tailor - Asutosh's Portfolio</title>
+    <link rel="stylesheet" href="/static/zenith.css">
+    <style>
+        .resume-layout {
+            display: flex;
+            gap: 0;
+            height: calc(100vh - var(--topbar-height, 64px));
+            overflow: hidden;
+        }
+        .resume-left {
+            flex: 0 0 45%;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            border-right: 1px solid var(--border, #27272a);
+            padding: var(--space-lg);
+            gap: var(--space-md);
+        }
+        .resume-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--surface-lowest, #09090b);
+        }
+        .resume-right iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: white;
+        }
+        .resize-handle {
+            flex: 0 0 4px;
+            cursor: col-resize;
+            background: var(--border, #27272a);
+            transition: background 0.15s;
+        }
+        .resize-handle:hover,
+        .resize-handle.active {
+            background: var(--primary-container, #8a94ff);
+        }
+        .provider-row {
+            display: flex;
+            gap: var(--space-md);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .provider-radio {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--on-surface-variant, #a1a1aa);
+        }
+        .provider-radio input[type="radio"] {
+            accent-color: var(--primary-container, #8a94ff);
+        }
+        .provider-radio.active {
+            color: var(--on-surface, #fafafa);
+        }
+        .provider-config {
+            display: flex;
+            gap: var(--space-sm);
+            align-items: center;
+            flex-wrap: wrap;
+            font-size: 12px;
+        }
+        .provider-config input {
+            background: var(--surface-low, #0c0c0e);
+            border: 1px solid var(--border, #27272a);
+            border-radius: var(--radius-sm, 4px);
+            padding: 4px 8px;
+            color: var(--on-surface, #fafafa);
+            font-size: 12px;
+            width: 140px;
+        }
+        .provider-config label {
+            color: var(--on-surface-muted, #71717a);
+        }
+        .action-row {
+            display: flex;
+            gap: var(--space-sm);
+            flex-wrap: wrap;
+        }
+        .action-row .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            padding: var(--space-md);
+            background: var(--surface-container, #18181b);
+            border: 1px solid var(--border, #27272a);
+            border-radius: var(--radius-lg, 8px);
+        }
+        .score-badge {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary, #bec2ff);
+            line-height: 1;
+        }
+        .score-label {
+            font-size: 12px;
+            color: var(--on-surface-muted, #71717a);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .score-stars {
+            color: #facc15;
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+        .score-details {
+            flex: 1;
+        }
+        .keywords-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .keyword-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--surface-high, #27272a);
+            border-radius: var(--radius-full, 9999px);
+            font-size: 11px;
+            color: var(--on-surface-variant, #a1a1aa);
+        }
+        .analysis-box {
+            padding: var(--space-md);
+            background: var(--surface-container, #18181b);
+            border: 1px solid var(--border, #27272a);
+            border-radius: var(--radius-lg, 8px);
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--on-surface-variant, #a1a1aa);
+            white-space: pre-wrap;
+        }
+        .analysis-box strong {
+            color: var(--on-surface, #fafafa);
+        }
+        .chat-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            border-top: 1px solid var(--border, #27272a);
+            padding-top: var(--space-md);
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            padding: var(--space-sm) 0;
+            min-height: 80px;
+            max-height: 240px;
+        }
+        .chat-msg {
+            padding: 6px 10px;
+            border-radius: var(--radius-md, 6px);
+            font-size: 13px;
+            line-height: 1.5;
+            max-width: 90%;
+        }
+        .chat-msg.user {
+            background: var(--surface-high, #27272a);
+            color: var(--on-surface, #fafafa);
+            align-self: flex-end;
+        }
+        .chat-msg.assistant {
+            background: var(--surface-container, #18181b);
+            color: var(--on-surface-variant, #a1a1aa);
+            align-self: flex-start;
+            border: 1px solid var(--border, #27272a);
+        }
+        .chat-input-row {
+            display: flex;
+            gap: var(--space-sm);
+            align-items: flex-end;
+        }
+        .chat-input-row textarea {
+            flex: 1;
+            resize: none;
+            min-height: 36px;
+            max-height: 80px;
+            background: var(--surface-low, #0c0c0e);
+            border: 1px solid var(--border, #27272a);
+            border-radius: var(--radius-md, 6px);
+            padding: 8px 12px;
+            color: var(--on-surface, #fafafa);
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .chat-input-row textarea:focus {
+            outline: none;
+            border-color: var(--primary-container, #8a94ff);
+        }
+        .chat-input-row .btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .section-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--on-surface-muted, #71717a);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .empty-pdf-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--on-surface-muted, #71717a);
+            gap: var(--space-md);
+            text-align: center;
+            padding: var(--space-xl);
+        }
+        .empty-pdf-state .icon {
+            font-size: 48px;
+            opacity: 0.3;
+        }
+        .empty-pdf-state .text {
+            font-size: 14px;
+            max-width: 280px;
+            line-height: 1.5;
+        }
+        .company-input-row {
+            display: flex;
+            gap: var(--space-sm);
+            align-items: center;
+        }
+        .company-input-row input {
+            flex: 1;
+            background: var(--surface-low, #0c0c0e);
+            border: 1px solid var(--border, #27272a);
+            border-radius: var(--radius-sm, 4px);
+            padding: 8px 12px;
+            color: var(--on-surface, #fafafa);
+            font-size: 13px;
+        }
+        .company-input-row input:focus {
+            outline: none;
+            border-color: var(--primary-container, #8a94ff);
+        }
+        @media (max-width: 768px) {
+            .resume-layout {
+                flex-direction: column;
+                height: auto;
+            }
+            .resume-left {
+                flex: none;
+                border-right: none;
+                border-bottom: 1px solid var(--border, #27272a);
+                max-height: 50vh;
+            }
+            .resume-right {
+                min-height: 60vh;
+            }
+            .resize-handle {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-brand">Asutosh's Portfolio</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">◉</span>
+                    Dashboard
+                </a>
+                <a href="/tools/email" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">📧</span>
+                    Email Tool
+                </a>
+                <a href="/tools/cover-letter" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">📄</span>
+                    Cover Letter Generator
+                </a>
+                <a href="/tools/resume" class="nav-link active">
+                    <span class="nav-icon" aria-hidden="true">📝</span>
+                    Resume Tailor
+                </a>
+                <a href="/tools/clipboard" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">📋</span>
+                    Clipboard
+                </a>
+                <a href="/tools/tracker" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">📊</span>
+                    Job Tracker
+                </a>
+                <a href="/tools/chat" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">💬</span>
+                    Chat
+                </a>
+            </nav>
+        </aside>
+
+        <header class="topbar">
+            <button class="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="topbar-actions">
+                <a href="/logout" class="topbar-btn" title="Logout" aria-label="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </a>
+            </div>
+        </header>
+        <div class="sidebar-backdrop" aria-hidden="true"></div>
+
+        <main class="main-content" style="padding:0;max-width:none;">
+            <div class="resume-layout" id="resumeLayout">
+                <div class="resume-left" id="leftPane">
+                    <div>
+                        <div class="section-label">LLM Provider</div>
+                        <div class="provider-row">
+                            <label class="provider-radio active">
+                                <input type="radio" name="provider" value="ollama" checked>
+                                Ollama
+                            </label>
+                            <label class="provider-radio">
+                                <input type="radio" name="provider" value="openrouter">
+                                OpenRouter
+                            </label>
+                        </div>
+                        <div class="provider-config" id="ollamaConfig">
+                            <label>Host:</label>
+                            <input type="text" id="ollamaHost" value="172.16.7.108" placeholder="host:port">
+                            <label>Model:</label>
+                            <input type="text" id="ollamaModel" value="gemma4:e2b" placeholder="model name">
+                        </div>
+                        <div class="provider-config" id="openrouterConfig" style="display:none;">
+                            <span style="color:var(--on-surface-muted)">Using OPENROUTER_API_KEY from .env</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="section-label">Company Name</div>
+                        <div class="company-input-row">
+                            <input type="text" id="companyName" placeholder="e.g. Google, OpenAI, Stripe" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="section-label">Job Description</div>
+                        <textarea id="jobDescription" rows="6" style="width:100%;resize:vertical;min-height:100px;background:var(--surface-low,#0c0c0e);border:1px solid var(--border,#27272a);border-radius:var(--radius-md,6px);padding:8px 12px;color:var(--on-surface,#fafafa);font-size:13px;font-family:inherit;" placeholder="Paste the job description here..."></textarea>
+                    </div>
+
+                    <div class="action-row">
+                        <button type="button" id="analyzeBtn" class="btn btn-primary">
+                            <span class="btn-text">Analyze</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                        <button type="button" id="generateBtn" class="btn btn-light" disabled>
+                            <span class="btn-text">Generate</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                        <button type="button" id="downloadBtn" class="btn btn-ghost" disabled>
+                            <span class="btn-text">Download</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                    </div>
+
+                    <div id="statusMessage" class="status-message"></div>
+
+                    <div id="resultsArea" style="display:none;">
+                        <div class="score-display">
+                            <div>
+                                <div class="score-label">ATS Score</div>
+                                <div class="score-badge" id="scoreValue">-</div>
+                            </div>
+                            <div class="score-details">
+                                <div class="score-stars" id="scoreStars"></div>
+                                <div style="font-size:12px;color:var(--on-surface-muted);margin-top:2px;" id="scoreArchetype"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="section-label">Keywords</div>
+                            <div class="keywords-row" id="keywordsContainer"></div>
+                        </div>
+
+                        <div>
+                            <div class="section-label">Analysis</div>
+                            <div class="analysis-box" id="analysisText"></div>
+                        </div>
+
+                        <div>
+                            <div class="section-label">Recommendations</div>
+                            <div class="analysis-box" id="recommendationsText"></div>
+                        </div>
+
+                        <div class="chat-section">
+                            <div class="section-label">Chat — Suggest refinements</div>
+                            <div class="chat-messages" id="chatMessages"></div>
+                            <div class="chat-input-row">
+                                <textarea id="chatInput" rows="1" placeholder="Suggest a change to the resume..." style="flex:1;resize:none;min-height:36px;max-height:80px;background:var(--surface-low,#0c0c0e);border:1px solid var(--border,#27272a);border-radius:var(--radius-md,6px);padding:8px 12px;color:var(--on-surface,#fafafa);font-size:13px;font-family:inherit;"></textarea>
+                                <button type="button" id="chatSendBtn" class="btn btn-primary" disabled style="padding:8px 16px;font-size:13px;white-space:nowrap;">
+                                    <span class="btn-text">Send</span>
+                                    <div class="btn-loader"></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="resize-handle" id="resizeHandle"></div>
+
+                <div class="resume-right" id="rightPane">
+                    <div class="empty-pdf-state" id="emptyPdfState">
+                        <div class="icon">📄</div>
+                        <div class="text">Paste a job description on the left, click <strong>Analyze</strong>, then <strong>Generate</strong> to see your tailored resume preview here.</div>
+                    </div>
+                    <iframe id="pdfPreview" style="display:none;flex:1;width:100%;border:none;background:white;"></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentState = {
+            score: 0,
+            keywords: [],
+            analysis: '',
+            recommendations: '',
+            archetype: '',
+            modifiedLatex: '',
+            pdfBlob: null,
+            chatHistory: [],
+            companyName: '',
+            jobDescription: '',
+            provider: 'ollama',
+            model: 'gemma4:e2b',
+            ollamaHost: '172.16.7.108',
+            isGenerating: false,
+            isAnalyzing: false,
+            isChatting: false,
+        };
+
+        const $ = (id) => document.getElementById(id);
+
+        function showStatus(msg, type) {
+            const el = $('statusMessage');
+            el.textContent = msg;
+            el.className = 'status-message show ' + (type || '');
+        }
+
+        function hideStatus() {
+            $('statusMessage').className = 'status-message';
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = $(btnId);
+            if (loading) {
+                btn.classList.add('loading');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        function renderStars(score) {
+            const full = Math.floor(score);
+            const half = score - full >= 0.5;
+            let s = '';
+            for (let i = 0; i < 5; i++) {
+                if (i < full) s += '\u2605';
+                else if (i === full && half) s += '\u2605';
+                else s += '\u2606';
+            }
+            return s;
+        }
+
+        function showResults(data) {
+            currentState.score = data.score;
+            currentState.keywords = data.keywords || [];
+            currentState.analysis = data.analysis || '';
+            currentState.recommendations = data.recommendations || '';
+            currentState.archetype = data.archetype || '';
+
+            $('resultsArea').style.display = 'block';
+            $('scoreValue').textContent = data.score.toFixed(1) + '/5';
+            $('scoreStars').textContent = renderStars(data.score);
+            $('scoreArchetype').textContent = data.archetype || '';
+
+            const kw = $('keywordsContainer');
+            kw.innerHTML = '';
+            (data.keywords || []).forEach(k => {
+                const tag = document.createElement('span');
+                tag.className = 'keyword-tag';
+                tag.textContent = k;
+                kw.appendChild(tag);
+            });
+
+            $('analysisText').textContent = data.analysis || '';
+            $('recommendationsText').textContent = data.recommendations || '';
+
+            $('generateBtn').disabled = false;
+            $('chatSendBtn').disabled = false;
+        }
+
+        function showPdfPreview(pdfBlob) {
+            currentState.pdfBlob = pdfBlob;
+            const url = URL.createObjectURL(pdfBlob);
+            const iframe = $('pdfPreview');
+            iframe.src = url;
+            iframe.style.display = 'flex';
+            $('emptyPdfState').style.display = 'none';
+            $('downloadBtn').disabled = false;
+        }
+
+        function addChatMessage(role, content) {
+            const container = $('chatMessages');
+            const msg = document.createElement('div');
+            msg.className = 'chat-msg ' + role;
+            msg.textContent = content;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function handleAnalyze() {
+            const jd = $('jobDescription').value.trim();
+            if (!jd) {
+                showStatus('Please paste a job description.', 'error');
+                return;
+            }
+
+            currentState.jobDescription = jd;
+            currentState.companyName = $('companyName').value.trim();
+
+            hideStatus();
+            setLoading('analyzeBtn', true);
+            currentState.isAnalyzing = true;
+
+            try {
+                const resp = await fetch('/api/resume/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        job_description: jd,
+                        provider: currentState.provider,
+                        model: currentState.model,
+                        ollama_host: currentState.ollamaHost,
+                    }),
+                });
+
+                const result = await resp.json();
+                if (!resp.ok || !result.success) {
+                    showStatus('Error: ' + (result.error || 'Analysis failed'), 'error');
+                    return;
+                }
+
+                showResults(result.data);
+                showStatus('Analysis complete! Score: ' + result.data.score.toFixed(1) + '/5', 'success');
+            } catch (err) {
+                showStatus('Failed to connect: ' + err.message, 'error');
+            } finally {
+                setLoading('analyzeBtn', false);
+                currentState.isAnalyzing = false;
+            }
+        }
+
+        async function handleGenerate() {
+            if (!currentState.jobDescription) {
+                showStatus('Please analyze a job description first.', 'error');
+                return;
+            }
+
+            hideStatus();
+            setLoading('generateBtn', true);
+            currentState.isGenerating = true;
+
+            try {
+                const resp = await fetch('/api/resume/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        job_description: currentState.jobDescription,
+                        score: currentState.score,
+                        keywords: currentState.keywords,
+                        recommendations: currentState.recommendations,
+                        chat_history: currentState.chatHistory,
+                        provider: currentState.provider,
+                        model: currentState.model,
+                        ollama_host: currentState.ollamaHost,
+                        company_name: currentState.companyName,
+                    }),
+                });
+
+                const result = await resp.json();
+                if (!resp.ok || !result.success) {
+                    showStatus('Error: ' + (result.error || 'Generation failed'), 'error');
+                    return;
+                }
+
+                currentState.modifiedLatex = result.data.modified_latex;
+
+                const pdfResp = await fetch('/api/resume/compile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latex_source: result.data.modified_latex }),
+                });
+
+                if (!pdfResp.ok) {
+                    const errData = await pdfResp.json();
+                    showStatus('PDF compilation error: ' + (errData.error || 'Unknown'), 'error');
+                    return;
+                }
+
+                const pdfBlob = await pdfResp.blob();
+                showPdfPreview(pdfBlob);
+
+                let summary = result.data.changes_summary || 'Resume tailored successfully.';
+                if (result.data.skills_removed && result.data.skills_removed.length) {
+                    summary += ' Removed: ' + result.data.skills_removed.join(', ') + '.';
+                }
+                if (result.data.skills_added && result.data.skills_added.length) {
+                    summary += ' Added: ' + result.data.skills_added.join(', ') + '.';
+                }
+
+                addChatMessage('assistant', 'Tailored resume generated. ' + summary);
+
+                const reanalyzeResp = await fetch('/api/resume/reanalyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        latex_source: result.data.modified_latex,
+                        job_description: currentState.jobDescription,
+                        provider: currentState.provider,
+                        model: currentState.model,
+                        ollama_host: currentState.ollamaHost,
+                    }),
+                });
+
+                const reanalyzeResult = await reanalyzeResp.json();
+                if (reanalyzeResp.ok && reanalyzeResult.success) {
+                    const rd = reanalyzeResult.data;
+                    $('scoreValue').textContent = rd.new_score.toFixed(1) + '/5';
+                    $('scoreStars').textContent = renderStars(rd.new_score);
+                    currentState.score = rd.new_score;
+                    addChatMessage('assistant', 'Re-analysis score: ' + rd.new_score.toFixed(1) + '/5. ' + (rd.improvement || ''));
+                }
+
+                showStatus('Tailored resume generated! Score: ' + currentState.score.toFixed(1) + '/5', 'success');
+            } catch (err) {
+                showStatus('Failed: ' + err.message, 'error');
+            } finally {
+                setLoading('generateBtn', false);
+                currentState.isGenerating = false;
+            }
+        }
+
+        async function handleDownload() {
+            if (!currentState.pdfBlob) {
+                showStatus('No PDF to download. Generate a resume first.', 'error');
+                return;
+            }
+
+            const company = currentState.companyName || 'TAILORED';
+            const safe = company.replace(/ /g, '_').replace(/\//g, '_').replace(/\\/g, '_');
+            const url = URL.createObjectURL(currentState.pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ASUTOSH_DALEI_RESUME_' + safe + '.pdf';
+            document.body.appendChild(a);
+            a.click();
+            URL.revokeObjectURL(url);
+            a.remove();
+            showStatus('Resume downloaded!', 'success');
+        }
+
+        async function handleChatSend() {
+            const input = $('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            if (!currentState.modifiedLatex) {
+                showStatus('Generate a resume first before suggesting changes.', 'error');
+                return;
+            }
+
+            input.value = '';
+            hideStatus();
+            setLoading('chatSendBtn', true);
+            currentState.isChatting = true;
+
+            currentState.chatHistory.push({ role: 'user', content: msg });
+            addChatMessage('user', msg);
+
+            try {
+                const resp = await fetch('/api/resume/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: msg,
+                        chat_history: currentState.chatHistory,
+                        current_latex: currentState.modifiedLatex,
+                        job_description: currentState.jobDescription,
+                        provider: currentState.provider,
+                        model: currentState.model,
+                        ollama_host: currentState.ollamaHost,
+                    }),
+                });
+
+                const result = await resp.json();
+                if (!resp.ok || !result.success) {
+                    showStatus('Error: ' + (result.error || 'Chat failed'), 'error');
+                    currentState.chatHistory.push({ role: 'assistant', content: 'Error: ' + (result.error || 'Chat failed') });
+                    addChatMessage('assistant', 'Error: ' + (result.error || 'Chat failed'));
+                    return;
+                }
+
+                currentState.modifiedLatex = result.data.modified_latex;
+                currentState.chatHistory.push({ role: 'assistant', content: result.data.response_text });
+                addChatMessage('assistant', result.data.response_text);
+
+                if (result.data.changes_summary) {
+                    addChatMessage('assistant', 'Changes: ' + result.data.changes_summary);
+                }
+
+                const pdfResp = await fetch('/api/resume/compile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latex_source: result.data.modified_latex }),
+                });
+
+                if (pdfResp.ok) {
+                    const pdfBlob = await pdfResp.blob();
+                    showPdfPreview(pdfBlob);
+                }
+            } catch (err) {
+                showStatus('Failed: ' + err.message, 'error');
+            } finally {
+                setLoading('chatSendBtn', false);
+                currentState.isChatting = false;
+            }
+        }
+
+        document.querySelectorAll('input[name="provider"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                currentState.provider = this.value;
+                document.querySelectorAll('.provider-radio').forEach(el => el.classList.remove('active'));
+                this.closest('.provider-radio').classList.add('active');
+                $('ollamaConfig').style.display = this.value === 'ollama' ? 'flex' : 'none';
+                $('openrouterConfig').style.display = this.value === 'openrouter' ? 'block' : 'none';
+            });
+        });
+
+        $('ollamaHost').addEventListener('change', function() {
+            currentState.ollamaHost = this.value.trim();
+        });
+        $('ollamaModel').addEventListener('change', function() {
+            currentState.model = this.value.trim();
+        });
+
+        $('analyzeBtn').addEventListener('click', handleAnalyze);
+        $('generateBtn').addEventListener('click', handleGenerate);
+        $('downloadBtn').addEventListener('click', handleDownload);
+        $('chatSendBtn').addEventListener('click', handleChatSend);
+
+        $('chatInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleChatSend();
+            }
+        });
+
+        $('chatInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+        });
+
+        $('jobDescription').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 300) + 'px';
+        });
+
+        const leftPane = $('leftPane');
+        const resizeHandle = $('resizeHandle');
+        let isResizing = false;
+
+        resizeHandle.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            this.classList.add('active');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            const layout = $('resumeLayout');
+            const rect = layout.getBoundingClientRect();
+            let pct = ((e.clientX - rect.left) / rect.width) * 100;
+            pct = Math.max(25, Math.min(65, pct));
+            leftPane.style.flex = '0 0 ' + pct + '%';
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isResizing) {
+                isResizing = false;
+                resizeHandle.classList.remove('active');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+    </script>
+    <script src="/static/sidebar.js" defer></script>
+</body>
+</html>
