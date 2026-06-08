@@ -131,6 +131,10 @@ func initResumeTailor() {
 	reanalyzePromptTmpl = loadFile("prompts/REANALYZE_PROMPT.md")
 	chatPromptTmpl = loadFile("prompts/CHAT_PROMPT.md")
 
+	if masterResumeLatex != "" {
+		computeResumePlainText()
+	}
+
 	if masterResumeLatex == "" || systemPrompt == "" {
 		slog.Warn("resume tailor: missing core files; feature will be unavailable")
 	}
@@ -249,11 +253,17 @@ func callOllama(system, user, model, host string) (string, error) {
 	}
 
 	url := fmt.Sprintf("http://%s/api/chat", host)
+
+	combined := system + "\n\n" + user
+	slog.Warn("ollama prompt size", "chars", len(combined))
+	if len(combined) > 28000 {
+		slog.Warn("ollama prompt may exceed context window", "prompt_chars", len(combined))
+	}
+
 	reqBody := ollamaRequest{
 		Model: model,
 		Messages: []openRouterMessage{
-			{Role: "system", Content: system},
-			{Role: "user", Content: user},
+			{Role: "user", Content: combined},
 		},
 		Stream: false,
 	}
@@ -307,29 +317,18 @@ func extractJSON(raw string) string {
 	if raw == "" {
 		return ""
 	}
-	if strings.HasPrefix(raw, "```") {
-		lines := strings.SplitN(raw, "\n", 2)
-		if len(lines) == 2 {
-			first := strings.TrimSpace(lines[0])
-			if first == "```" || first == "```json" || first == "```json\n" {
-				raw = strings.TrimSpace(lines[1])
-			}
-		}
+
+	if idx := strings.Index(raw, "{"); idx > 0 {
+		raw = raw[idx:]
 	}
-	if idx := strings.LastIndex(raw, "```"); idx >= 0 {
-		raw = strings.TrimSpace(raw[:idx])
+	if idx := strings.LastIndex(raw, "}"); idx >= 0 {
+		raw = raw[:idx+1]
 	}
-	raw = strings.TrimSpace(raw)
-	if len(raw) > 0 && raw[0] == '{' {
+
+	if strings.HasPrefix(raw, "{") {
 		return raw
 	}
-	if idx := strings.Index(raw, "{"); idx >= 0 {
-		raw = raw[idx:]
-		if end := strings.LastIndex(raw, "}"); end >= 0 {
-			raw = raw[:end+1]
-		}
-	}
-	return strings.TrimSpace(raw)
+	return ""
 }
 
 func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*AnalyzeResponse, error) {
@@ -337,7 +336,7 @@ func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*Analyze
 		return nil, fmt.Errorf("resume tailor not initialized: missing template or prompt files")
 	}
 
-	userPrompt := strings.ReplaceAll(analyzePromptTmpl, "{{RESUME_LATEX}}", masterResumeLatex)
+	userPrompt := strings.ReplaceAll(analyzePromptTmpl, "{{RESUME_TEXT}}", resumePlainText)
 	userPrompt = strings.ReplaceAll(userPrompt, "{{JOB_DESCRIPTION}}", jobDescription)
 
 	raw, err := callLLM(systemPrompt, userPrompt, LLMProvider(provider), model, ollamaHost)
@@ -372,6 +371,74 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "..."
+}
+
+var resumePlainText string
+
+func computeResumePlainText() {
+	resumePlainText = stripLatex(masterResumeLatex)
+	slog.Info("resume plain text", "chars", len(resumePlainText), "latex_chars", len(masterResumeLatex))
+}
+
+func stripLatex(latex string) string {
+	s := latex
+	s = strings.ReplaceAll(s, "\\textbf{", "")
+	s = strings.ReplaceAll(s, "\\textit{", "")
+	s = strings.ReplaceAll(s, "\\href{", "")
+	s = strings.ReplaceAll(s, "\\section*{", "")
+	s = strings.ReplaceAll(s, "\\begin{itemize}", "")
+	s = strings.ReplaceAll(s, "\\end{itemize}", "")
+	s = strings.ReplaceAll(s, "\\begin{center}", "")
+	s = strings.ReplaceAll(s, "\\end{center}", "")
+	s = strings.ReplaceAll(s, "\\vspace{", "")
+	s = strings.ReplaceAll(s, "\\hfill", "")
+	s = strings.ReplaceAll(s, "\\namesize", "")
+	s = strings.ReplaceAll(s, "\\headersize", "")
+	s = strings.ReplaceAll(s, "\\em", "")
+	s = strings.ReplaceAll(s, "\\item", "\n-")
+	s = strings.ReplaceAll(s, "\\--", " - ")
+	s = strings.ReplaceAll(s, "\\%", "%")
+	s = strings.ReplaceAll(s, "\\$", "$")
+	s = strings.ReplaceAll(s, "\\&", "&")
+	s = strings.ReplaceAll(s, "\\textasciitilde{}", "~")
+	s = strings.ReplaceAll(s, "\\textasciicircum{}", "^")
+	s = strings.ReplaceAll(s, "\\textbackslash{}", "\\")
+	s = strings.ReplaceAll(s, "~--~", " -- ")
+
+	var out strings.Builder
+	inBraces := 0
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if ch == '{' {
+			inBraces++
+			continue
+		}
+		if ch == '}' {
+			if inBraces > 0 {
+				inBraces--
+			}
+			continue
+		}
+		if inBraces == 0 {
+			out.WriteByte(ch)
+		}
+	}
+	result := out.String()
+
+	result = strings.ReplaceAll(result, "  ", " ")
+	result = strings.ReplaceAll(result, "\n\n\n", "\n\n")
+	result = strings.ReplaceAll(result, "\n\n\n", "\n\n")
+
+	lines := strings.Split(result, "\n")
+	var clean []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" && !strings.HasPrefix(trimmed, "\\") {
+			clean = append(clean, trimmed)
+		}
+	}
+
+	return strings.TrimSpace(strings.Join(clean, "\n"))
 }
 
 func GenerateTailoredResume(jobDescription string, score float64, keywords []string, recommendations string, chatHistory []ChatMsg, provider, model, ollamaHost, companyName string) (*GenerateResponse, error) {
