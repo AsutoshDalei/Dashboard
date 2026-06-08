@@ -225,7 +225,8 @@ type ollamaRequest struct {
 
 type ollamaResponse struct {
 	Message struct {
-		Content string `json:"content"`
+		Content  string `json:"content"`
+		Thinking string `json:"thinking"`
 	} `json:"message"`
 	Error string `json:"error,omitempty"`
 }
@@ -291,6 +292,9 @@ func callOllama(system, user, model, host string) (string, error) {
 	}
 	if parsed.Error != "" {
 		return "", fmt.Errorf("Ollama error: %s", parsed.Error)
+	}
+	if parsed.Message.Content == "" && parsed.Message.Thinking != "" {
+		parsed.Message.Content = parsed.Message.Thinking
 	}
 	if parsed.Message.Content == "" {
 		return "", fmt.Errorf("Ollama returned empty content (status %d): %s", resp.StatusCode, string(body))

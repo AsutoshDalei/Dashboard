@@ -682,7 +682,19 @@ func respondJSON(w http.ResponseWriter, status int, success bool, errMessage, me
 
 func handleResumeTool(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := templates.ExecuteTemplate(w, "resume.html", nil); err != nil {
+	ollamaHost := os.Getenv("OLLAMA_HOST")
+	if ollamaHost == "" {
+		ollamaHost = "172.16.7.115"
+	}
+	ollamaModel := os.Getenv("OLLAMA_MODEL")
+	if ollamaModel == "" {
+		ollamaModel = "gemma4"
+	}
+	data := map[string]string{
+		"OllamaHost":  ollamaHost,
+		"OllamaModel": ollamaModel,
+	}
+	if err := templates.ExecuteTemplate(w, "resume.html", data); err != nil {
 		slog.Error("Template rendering error", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}

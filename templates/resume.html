@@ -373,9 +373,9 @@
                     </div>
                     <div class="provider-config" id="ollamaConfig" style="margin-top:8px;">
                         <label>Host:</label>
-                        <input type="text" id="ollamaHost" value="172.16.7.115" placeholder="host:port">
+                        <input type="text" id="ollamaHost" value="{{.OllamaHost}}" placeholder="host:port">
                         <label>Model:</label>
-                        <input type="text" id="ollamaModel" value="gemma4:e2b" placeholder="model name">
+                        <input type="text" id="ollamaModel" value="{{.OllamaModel}}" placeholder="model name">
                     </div>
                     <div class="provider-config" id="openrouterConfig" style="display:none;margin-top:8px;">
                         <span style="color:var(--on-surface-muted)">Using OPENROUTER_API_KEY from .env</span>
@@ -478,8 +478,8 @@ let currentState = {
     companyName: '',
     jobDescription: '',
     provider: 'ollama',
-    model: 'gemma4:e2b',
-    ollamaHost: '172.16.7.115',
+    model: document.getElementById('ollamaModel').value,
+    ollamaHost: document.getElementById('ollamaHost').value,
     isGenerating: false,
     isAnalyzing: false,
     isChatting: false,
