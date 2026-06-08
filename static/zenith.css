@@ -57,7 +57,8 @@
     
     /* Layout */
     --sidebar-width: 256px;
-    --topbar-height: 64px;
+    --sidebar-width-collapsed: 60px;
+    --topbar-height: 0px;
     --max-content-width: 1024px;
     
     /* Transitions */
@@ -210,23 +211,81 @@ input, select, textarea {
     display: flex;
     flex-direction: column;
     z-index: 50;
+    transition: width var(--transition-normal);
+    overflow: hidden;
+}
+
+.sidebar.collapsed {
+    width: var(--sidebar-width-collapsed);
 }
 
 .sidebar-header {
-    padding: var(--space-lg);
-    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+    min-height: 56px;
+    justify-content: space-between;
 }
 
 .sidebar-brand {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--on-surface);
     letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity var(--transition-fast);
 }
 
-.sidebar-nav {
-    flex: 1;
-    padding: 0 var(--space-md);
+.sidebar.collapsed .sidebar-brand {
+    opacity: 0;
+    width: 0;
+}
+
+.sidebar-toggle {
+    display: flex;
+    width: 32px;
+    height: 32px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border-radius: var(--radius-md);
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background var(--transition-fast), color var(--transition-fast);
+    border: none;
+    padding: 0;
+}
+
+.sidebar-toggle:hover {
+    background: var(--surface-high);
+    color: var(--on-surface);
+}
+
+.sidebar-toggle span {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 1px;
+    transition: transform var(--transition-fast);
+}
+
+.sidebar.collapsed .sidebar-toggle span:nth-child(1) {
+    transform: rotate(45deg) translate(2px, 2px);
+}
+
+.sidebar.collapsed .sidebar-toggle span:nth-child(2) {
+    opacity: 0;
+}
+
+.sidebar.collapsed .sidebar-toggle span:nth-child(3) {
+    transform: rotate(-45deg) translate(2px, -2px);
 }
 
 .nav-link {
@@ -1296,4 +1355,86 @@ input, select, textarea {
 .email-form-subtitle {
     font-size: 14px;
     color: var(--on-surface-variant);
+}
+
+/* ========================================
+   14. Collapsible Sidebar Overrides
+   ======================================== */
+.sidebar-nav {
+    flex: 1;
+    padding: 0 var(--space-sm);
+    overflow-y: auto;
+}
+
+.sidebar.collapsed .sidebar-nav {
+    padding: 0 6px;
+}
+
+.sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: var(--space-sm);
+    width: 48px;
+    margin: 0 auto var(--space-xs) auto;
+}
+
+.sidebar.collapsed .nav-text {
+    display: none;
+}
+
+.nav-text {
+    transition: opacity var(--transition-fast);
+    white-space: nowrap;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+    padding: var(--space-sm);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.sidebar-footer .nav-link {
+    margin-bottom: 0;
+}
+
+.sidebar.collapsed .sidebar-footer .nav-link {
+    width: 48px;
+    margin: 0 auto;
+}
+
+/* Main content without topbar */
+.main-content {
+    margin-left: var(--sidebar-width);
+    padding-top: 0;
+    min-height: 100vh;
+    min-width: 0;
+    width: 100%;
+    transition: margin-left var(--transition-normal);
+}
+
+.sidebar-collapsed .main-content {
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+/* Responsive: sidebar collapse on mobile uses overlay */
+@media (max-width: 768px) {
+    .sidebar:not(.collapsed) {
+        width: 256px;
+        transform: translateX(-100%);
+        transition: transform 200ms ease;
+        box-shadow: var(--shadow-lg);
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .sidebar.collapsed {
+        transform: translateX(0);
+        width: var(--sidebar-width-collapsed);
+    }
+    .main-content {
+        margin-left: 0;
+    }
+    .sidebar-collapsed .main-content {
+        margin-left: 0;
+    }
 }

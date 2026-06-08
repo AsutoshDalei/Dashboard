@@ -345,16 +345,16 @@ func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*Analyze
 		return nil, fmt.Errorf("LLM analysis failed: %w", err)
 	}
 
-	slog.Debug("analyze llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
+	slog.Warn("analyze llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
 
-	raw = extractJSON(raw)
-	if raw == "" {
-		return nil, fmt.Errorf("LLM returned empty response after extraction")
+	rawJSON := extractJSON(raw)
+	if rawJSON == "" {
+		return nil, fmt.Errorf("LLM returned empty response after extraction. Original: %s", truncate(raw, 500))
 	}
 
 	var resp AnalyzeResponse
-	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, raw)
+	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, rawJSON)
 	}
 
 	if resp.Score < 1 || resp.Score > 5 {
@@ -394,9 +394,14 @@ func GenerateTailoredResume(jobDescription string, score float64, keywords []str
 		return nil, fmt.Errorf("LLM generation failed: %w", err)
 	}
 
-	raw = extractJSON(raw)
+	slog.Warn("generate llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
+
+	rawJSON := extractJSON(raw)
+	if rawJSON == "" {
+		return nil, fmt.Errorf("LLM returned empty generate response. Original: %s", truncate(raw, 500))
+	}
 	var resp GenerateResponse
-	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, raw)
 	}
 
@@ -420,10 +425,15 @@ func ReanalyzeResume(modifiedLatex, jobDescription, provider, model, ollamaHost 
 		return nil, fmt.Errorf("LLM reanalysis failed: %w", err)
 	}
 
-	raw = extractJSON(raw)
+	slog.Warn("reanalyze llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
+
+	rawJSON := extractJSON(raw)
+	if rawJSON == "" {
+		return nil, fmt.Errorf("LLM returned empty reanalyze response. Original: %s", truncate(raw, 500))
+	}
 	var resp ReanalyzeResponse
-	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, raw)
+	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse LLM reanalyze response: %w\nRaw: %s", err, rawJSON)
 	}
 
 	if resp.NewScore < 1 || resp.NewScore > 5 {
@@ -450,10 +460,15 @@ func ChatRefine(message string, chatHistory []ChatMsg, currentLatex, jobDescript
 		return nil, fmt.Errorf("LLM chat failed: %w", err)
 	}
 
-	raw = extractJSON(raw)
+	slog.Warn("chat llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
+
+	rawJSON := extractJSON(raw)
+	if rawJSON == "" {
+		return nil, fmt.Errorf("LLM returned empty chat response. Original: %s", truncate(raw, 500))
+	}
 	var resp ChatResponse
-	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, raw)
+	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse LLM chat response: %w\nRaw: %s", err, rawJSON)
 	}
 
 	return &resp, nil
