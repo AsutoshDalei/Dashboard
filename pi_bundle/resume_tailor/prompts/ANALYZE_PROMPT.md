@@ -1,6 +1,6 @@
 ## Pipeline — ATS Match Analysis
 
-Analyze the master resume against the job description. Extract 15-20 keywords from the JD, score the match on 1-5, and provide analysis, recommendations, and archetype.
+Analyze the master resume against the job description. Extract 15-20 keywords from the JD, score the match on 1-5, and provide analysis, recommendations, and archetype. Be brutally honest — if the resume doesn't match, say so explicitly.
 
 ### Evaluation Dimensions
 
