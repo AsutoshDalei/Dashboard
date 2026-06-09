@@ -55,11 +55,10 @@ type ChatMsg struct {
 }
 
 type GenerateResponse struct {
-	ModifiedLatex   string           `json:"modified_latex"`
-	ExperienceEdits []ExperienceEdit `json:"experience_edits"`
-	ProjectReorder  []int            `json:"project_reorder"`
-	SkillsSwap      *SkillsSwap      `json:"skills_swap"`
-	ChangesSummary  string           `json:"changes_summary"`
+	ModifiedLatex  string `json:"modified_latex"`
+	SkillsToRemove []string `json:"skills_to_remove"`
+	SkillsToAdd    []string `json:"skills_to_add"`
+	ChangesSummary string `json:"changes_summary"`
 }
 
 type ExperienceEdit struct {
@@ -103,12 +102,11 @@ type SkillsSwap struct {
 }
 
 type ChatResponse struct {
-	ResponseText    string           `json:"response_text"`
-	ModifiedLatex   string           `json:"modified_latex"`
-	ExperienceEdits []ExperienceEdit `json:"experience_edits"`
-	ProjectReorder  []int            `json:"project_reorder"`
-	SkillsSwap      *SkillsSwap      `json:"skills_swap"`
-	ChangesSummary  string           `json:"changes_summary"`
+	ResponseText   string   `json:"response_text"`
+	ModifiedLatex  string   `json:"modified_latex"`
+	SkillsToRemove []string `json:"skills_to_remove"`
+	SkillsToAdd    []string `json:"skills_to_add"`
+	ChangesSummary string   `json:"changes_summary"`
 }
 
 type ReanalyzeResponse struct {
@@ -265,9 +263,11 @@ func callOpenRouterWithPrompt(system, user string) (string, error) {
 }
 
 type ollamaRequest struct {
-	Model    string            `json:"model"`
-	Messages []openRouterMessage `json:"messages"`
-	Stream   bool              `json:"stream"`
+	Model    string              `json:"model"`
+	Messages []openRouterMessage `json:"messages,omitempty"`
+	Prompt   string              `json:"prompt,omitempty"`
+	Stream   bool                `json:"stream"`
+	Format   *json.RawMessage    `json:"format,omitempty"`
 }
 
 type ollamaResponse struct {
@@ -275,7 +275,35 @@ type ollamaResponse struct {
 		Content  string `json:"content"`
 		Thinking string `json:"thinking"`
 	} `json:"message"`
-	Error string `json:"error,omitempty"`
+	Response string `json:"response"`
+	Error    string `json:"error,omitempty"`
+}
+
+var skillsOnlySchema = json.RawMessage(`{
+	"type": "object",
+	"properties": {
+		"skills_to_remove": {
+			"type": "array",
+			"items": {"type": "string"},
+			"description": "Skills from the resume that are irrelevant to this JD and should be removed"
+		},
+		"skills_to_add": {
+			"type": "array",
+			"items": {"type": "string"},
+			"description": "Skills from the JD that the candidate has and should be added to the resume"
+		},
+		"changes_summary": {
+			"type": "string",
+			"description": "One sentence summary of the changes made"
+		}
+	},
+	"required": ["skills_to_remove", "skills_to_add", "changes_summary"]
+}`)
+
+type SkillsOnlyEdits struct {
+	SkillsToRemove  []string `json:"skills_to_remove"`
+	SkillsToAdd     []string `json:"skills_to_add"`
+	ChangesSummary  string   `json:"changes_summary"`
 }
 
 func callOllama(system, user, model, host string) (string, error) {
@@ -355,6 +383,70 @@ func callOllama(system, user, model, host string) (string, error) {
 	return parsed.Message.Content, nil
 }
 
+func callOllamaStructured(prompt, model, host string, schema json.RawMessage) (string, error) {
+	if host == "" {
+		host = os.Getenv("OLLAMA_HOST")
+	}
+	if host == "" {
+		return "", fmt.Errorf("OLLAMA_HOST not configured in .env")
+	}
+	if !strings.Contains(host, ":") {
+		host = host + ":11434"
+	}
+	if model == "" {
+		model = os.Getenv("OLLAMA_MODEL")
+	}
+	if model == "" {
+		return "", fmt.Errorf("OLLAMA_MODEL not configured in .env")
+	}
+
+	url := fmt.Sprintf("http://%s/api/generate", host)
+	reqBody := ollamaRequest{
+		Model:  model,
+		Prompt: prompt,
+		Stream: false,
+		Format: &schema,
+	}
+
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode Ollama request: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return "", fmt.Errorf("failed to build Ollama request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 120 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("Ollama request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read Ollama response: %w", err)
+	}
+
+	var parsed ollamaResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return "", fmt.Errorf("Ollama returned non-JSON (status %d): %s", resp.StatusCode, string(body))
+	}
+	if parsed.Error != "" {
+		return "", fmt.Errorf("Ollama error: %s", parsed.Error)
+	}
+	if parsed.Response == "" {
+		return "", fmt.Errorf("Ollama returned empty structured response (status %d): %s", resp.StatusCode, string(body))
+	}
+	return parsed.Response, nil
+}
+
 func extractJSON(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -369,9 +461,47 @@ func extractJSON(raw string) string {
 	}
 
 	if strings.HasPrefix(raw, "{") {
+		raw = fixJSON(raw)
 		return raw
 	}
 	return ""
+}
+
+func fixJSON(s string) string {
+	if !strings.Contains(s, `"experience_edits":[`) {
+		return s
+	}
+
+	prefix := `"experience_edits":[`
+	idx := strings.Index(s, prefix)
+	if idx < 0 {
+		return s
+	}
+	start := idx + len(prefix)
+
+	depth := 0
+	for i := start; i < len(s); i++ {
+		switch s[i] {
+		case '[':
+			depth++
+		case ']':
+			depth--
+			if depth == 0 {
+				return s
+			}
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				if i+1 < len(s) && s[i+1] == ',' {
+					s = s[:i+1] + "]" + s[i+1:]
+					return s
+				}
+			}
+		}
+	}
+	return s
 }
 
 func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*AnalyzeResponse, error) {
@@ -490,42 +620,55 @@ func GenerateTailoredResume(jobDescription string, score float64, keywords []str
 	}
 
 	kwJSON, _ := json.Marshal(keywords)
-	chatJSON, _ := json.Marshal(chatHistory)
 
 	userPrompt := strings.ReplaceAll(generatePromptTmpl, "{{RESUME_LATEX}}", masterResumeLatex)
 	userPrompt = strings.ReplaceAll(userPrompt, "{{JOB_DESCRIPTION}}", jobDescription)
 	userPrompt = strings.ReplaceAll(userPrompt, "{{SCORE}}", fmt.Sprintf("%.1f", score))
 	userPrompt = strings.ReplaceAll(userPrompt, "{{KEYWORDS}}", string(kwJSON))
 	userPrompt = strings.ReplaceAll(userPrompt, "{{RECOMMENDATIONS}}", recommendations)
-	userPrompt = strings.ReplaceAll(userPrompt, "{{CHAT_HISTORY}}", string(chatJSON))
 
-	raw, err := callLLM(systemPrompt, userPrompt, LLMProvider(provider), model, ollamaHost)
-	if err != nil {
-		return nil, fmt.Errorf("LLM generation failed: %w", err)
-	}
-
-	slog.Warn("generate llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
-
-	rawJSON := extractJSON(raw)
-	if rawJSON == "" {
-		return nil, fmt.Errorf("LLM returned empty generate response. Original: %s", truncate(raw, 500))
-	}
-	var resp GenerateResponse
-	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
-		if synErr, ok := err.(*json.SyntaxError); ok {
-			ctx := rawJSON[max(0, synErr.Offset-40):min(len(rawJSON), int(synErr.Offset)+40)]
-			slog.Error("json syntax error", "offset", synErr.Offset, "context", ctx)
+	var edits SkillsOnlyEdits
+	if LLMProvider(provider) == ProviderOllama {
+		raw, err := callOllamaStructured(userPrompt, model, ollamaHost, skillsOnlySchema)
+		if err != nil {
+			return nil, fmt.Errorf("LLM generation failed: %w", err)
 		}
-		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw (first 2000): %s", err, truncate(raw, 2000))
+		slog.Warn("generate structured response", "raw", raw)
+		if err := json.Unmarshal([]byte(raw), &edits); err != nil {
+			return nil, fmt.Errorf("failed to parse structured response: %w\nRaw: %s", err, raw)
+		}
+	} else {
+		raw, err := callLLM(systemPrompt, userPrompt, LLMProvider(provider), model, ollamaHost)
+		if err != nil {
+			return nil, fmt.Errorf("LLM generation failed: %w", err)
+		}
+		slog.Warn("generate llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
+		rawJSON := extractJSON(raw)
+		if rawJSON == "" {
+			return nil, fmt.Errorf("LLM returned empty generate response. Original: %s", truncate(raw, 500))
+		}
+		if err := json.Unmarshal([]byte(rawJSON), &edits); err != nil {
+			return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw (first 2000): %s", err, truncate(raw, 2000))
+		}
 	}
 
-	resp.ModifiedLatex = applyAllEdits(masterResumeLatex, &resp)
+	resp := &GenerateResponse{
+		SkillsToRemove:  edits.SkillsToRemove,
+		SkillsToAdd:     edits.SkillsToAdd,
+		ChangesSummary:  edits.ChangesSummary,
+	}
 
 	if resp.ChangesSummary == "" {
-		resp.ChangesSummary = "Resume tailored"
+		resp.ChangesSummary = "Skills optimized"
 	}
 
-	return &resp, nil
+	resp.ModifiedLatex = masterResumeLatex
+	if len(resp.SkillsToRemove) > 0 || len(resp.SkillsToAdd) > 0 {
+		swap := &SkillsSwap{Remove: resp.SkillsToRemove, Add: resp.SkillsToAdd}
+		resp.ModifiedLatex = applySkillsSwap(masterResumeLatex, swap)
+	}
+
+	return resp, nil
 }
 
 func ReanalyzeResume(modifiedLatex, jobDescription, provider, model, ollamaHost string) (*ReanalyzeResponse, error) {
@@ -571,29 +714,49 @@ func ChatRefine(message string, chatHistory []ChatMsg, currentLatex, jobDescript
 	userPrompt = strings.ReplaceAll(userPrompt, "{{USER_MESSAGE}}", message)
 	userPrompt = strings.ReplaceAll(userPrompt, "{{CHAT_HISTORY}}", string(chatJSON))
 
-	raw, err := callLLM(systemPrompt, userPrompt, LLMProvider(provider), model, ollamaHost)
-	if err != nil {
-		return nil, fmt.Errorf("LLM chat failed: %w", err)
+	var edits SkillsOnlyEdits
+	if LLMProvider(provider) == ProviderOllama {
+		raw, err := callOllamaStructured(userPrompt, model, ollamaHost, skillsOnlySchema)
+		if err != nil {
+			return nil, fmt.Errorf("LLM chat failed: %w", err)
+		}
+		slog.Warn("chat structured response", "raw", raw)
+		if err := json.Unmarshal([]byte(raw), &edits); err != nil {
+			return nil, fmt.Errorf("failed to parse structured response: %w\nRaw: %s", err, raw)
+		}
+	} else {
+		raw, err := callLLM(systemPrompt, userPrompt, LLMProvider(provider), model, ollamaHost)
+		if err != nil {
+			return nil, fmt.Errorf("LLM chat failed: %w", err)
+		}
+		slog.Warn("chat llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
+		rawJSON := extractJSON(raw)
+		if rawJSON == "" {
+			return nil, fmt.Errorf("LLM returned empty chat response. Original: %s", truncate(raw, 500))
+		}
+		if err := json.Unmarshal([]byte(rawJSON), &edits); err != nil {
+			return nil, fmt.Errorf("failed to parse chat response: %w\nRaw (first 2000): %s", err, truncate(raw, 2000))
+		}
 	}
 
-	slog.Warn("chat llm response", "raw_len", len(raw), "raw_preview", truncate(raw, 200))
-
-	rawJSON := extractJSON(raw)
-	if rawJSON == "" {
-		return nil, fmt.Errorf("LLM returned empty chat response. Original: %s", truncate(raw, 500))
-	}
-	var resp ChatResponse
-	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM chat response: %w\nRaw (first 2000): %s", err, truncate(raw, 2000))
+	resp := &ChatResponse{
+		ResponseText:   "Applied your suggestions.",
+		SkillsToRemove: edits.SkillsToRemove,
+		SkillsToAdd:    edits.SkillsToAdd,
+		ChangesSummary: edits.ChangesSummary,
 	}
 
-	resp.ModifiedLatex = applyAllChatEdits(currentLatex, &resp)
-
-	if resp.ResponseText == "" {
-		resp.ResponseText = "Applied your suggestions."
+	resp.ModifiedLatex = currentLatex
+	if len(resp.SkillsToRemove) > 0 || len(resp.SkillsToAdd) > 0 {
+		swap := &SkillsSwap{Remove: resp.SkillsToRemove, Add: resp.SkillsToAdd}
+		resp.ModifiedLatex = applySkillsSwap(currentLatex, swap)
 	}
 
-	return &resp, nil
+	if resp.ChangesSummary != "" {
+		resp.ResponseText = resp.ChangesSummary
+	}
+
+	return resp, nil
 }
 
 func CompileLatexToPDF(latexSource string) ([]byte, error) {
@@ -652,39 +815,19 @@ func findSection(latex, sectionName string) string {
 }
 
 func applyAllEdits(latex string, edits *GenerateResponse) string {
-	result := latex
-
-	if edits.SkillsSwap != nil && (len(edits.SkillsSwap.Remove) > 0 || len(edits.SkillsSwap.Add) > 0) {
-		result = applySkillsSwap(result, edits.SkillsSwap)
+	if len(edits.SkillsToRemove) > 0 || len(edits.SkillsToAdd) > 0 {
+		swap := &SkillsSwap{Remove: edits.SkillsToRemove, Add: edits.SkillsToAdd}
+		return applySkillsSwap(latex, swap)
 	}
-
-	if len(edits.ExperienceEdits) > 0 {
-		result = applyExperienceEdits(result, edits.ExperienceEdits)
-	}
-
-	if len(edits.ProjectReorder) > 0 {
-		result = applyProjectReorder(result, edits.ProjectReorder)
-	}
-
-	return result
+	return latex
 }
 
 func applyAllChatEdits(latex string, edits *ChatResponse) string {
-	result := latex
-
-	if edits.SkillsSwap != nil && (len(edits.SkillsSwap.Remove) > 0 || len(edits.SkillsSwap.Add) > 0) {
-		result = applySkillsSwap(result, edits.SkillsSwap)
+	if len(edits.SkillsToRemove) > 0 || len(edits.SkillsToAdd) > 0 {
+		swap := &SkillsSwap{Remove: edits.SkillsToRemove, Add: edits.SkillsToAdd}
+		return applySkillsSwap(latex, swap)
 	}
-
-	if len(edits.ExperienceEdits) > 0 {
-		result = applyExperienceEdits(result, edits.ExperienceEdits)
-	}
-
-	if len(edits.ProjectReorder) > 0 {
-		result = applyProjectReorder(result, edits.ProjectReorder)
-	}
-
-	return result
+	return latex
 }
 
 func applySkillsSwap(latex string, swap *SkillsSwap) string {
