@@ -72,6 +72,31 @@ type MainItemEdit struct {
 	Rewrites map[string]string `json:"rewrites"`
 }
 
+func (m *MainItemEdit) UnmarshalJSON(data []byte) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	m.Rewrites = make(map[string]string)
+
+	for k, v := range raw {
+		if k == "rewrites" {
+			var inner map[string]string
+			if err := json.Unmarshal(v, &inner); err == nil {
+				for ik, iv := range inner {
+					m.Rewrites[ik] = iv
+				}
+			}
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err == nil {
+				m.Rewrites[k] = s
+			}
+		}
+	}
+	return nil
+}
+
 type SkillsSwap struct {
 	Remove []string `json:"remove"`
 	Add    []string `json:"add"`
@@ -371,7 +396,7 @@ func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*Analyze
 
 	var resp AnalyzeResponse
 	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, rawJSON)
+		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw (first 2000): %s", err, truncate(raw, 2000))
 	}
 
 	if resp.Score < 1 || resp.Score > 5 {
@@ -487,7 +512,11 @@ func GenerateTailoredResume(jobDescription string, score float64, keywords []str
 	}
 	var resp GenerateResponse
 	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, raw)
+		if synErr, ok := err.(*json.SyntaxError); ok {
+			ctx := rawJSON[max(0, synErr.Offset-40):min(len(rawJSON), int(synErr.Offset)+40)]
+			slog.Error("json syntax error", "offset", synErr.Offset, "context", ctx)
+		}
+		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw (first 2000): %s", err, truncate(raw, 2000))
 	}
 
 	resp.ModifiedLatex = applyAllEdits(masterResumeLatex, &resp)
@@ -520,7 +549,7 @@ func ReanalyzeResume(modifiedLatex, jobDescription, provider, model, ollamaHost 
 	}
 	var resp ReanalyzeResponse
 	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM reanalyze response: %w\nRaw: %s", err, rawJSON)
+		return nil, fmt.Errorf("failed to parse LLM reanalyze response: %w\nRaw (first 2000): %s", err, truncate(raw, 2000))
 	}
 
 	if resp.NewScore < 1 || resp.NewScore > 5 {
@@ -555,7 +584,7 @@ func ChatRefine(message string, chatHistory []ChatMsg, currentLatex, jobDescript
 	}
 	var resp ChatResponse
 	if err := json.Unmarshal([]byte(rawJSON), &resp); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM chat response: %w\nRaw: %s", err, rawJSON)
+		return nil, fmt.Errorf("failed to parse LLM chat response: %w\nRaw (first 2000): %s", err, truncate(raw, 2000))
 	}
 
 	resp.ModifiedLatex = applyAllChatEdits(currentLatex, &resp)
