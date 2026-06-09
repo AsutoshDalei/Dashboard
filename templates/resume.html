@@ -459,8 +459,8 @@ async function handleGenerate() {
         if(!pdfResp.ok){const e=await pdfResp.json();showStatus('PDF compilation error: '+(e.error||'Unknown'),'error');return;}
         const pdfBlob=await pdfResp.blob(); showPdfPreview(pdfBlob);
         let summary=result.data.changes_summary||'Resume tailored successfully.';
-        if(result.data.skills_removed&&result.data.skills_removed.length) summary+=' Removed: '+result.data.skills_removed.join(', ')+'.';
-        if(result.data.skills_added&&result.data.skills_added.length) summary+=' Added: '+result.data.skills_added.join(', ')+'.';
+        if(result.data.skills_swap&&result.data.skills_swap.remove&&result.data.skills_swap.remove.length) summary+=' Removed: '+result.data.skills_swap.remove.join(', ')+'.';
+        if(result.data.skills_swap&&result.data.skills_swap.add&&result.data.skills_swap.add.length) summary+=' Added: '+result.data.skills_swap.add.join(', ')+'.';
         addChatMessage('assistant','Tailored resume generated. '+summary);
         const reResp=await fetch('/api/resume/reanalyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({latex_source:result.data.modified_latex,job_description:currentState.jobDescription,provider:currentState.provider,model:currentState.model,ollama_host:currentState.ollamaHost})});
         const reResult=await reResp.json();

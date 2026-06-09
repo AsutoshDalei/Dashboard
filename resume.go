@@ -55,11 +55,35 @@ type ChatMsg struct {
 }
 
 type GenerateResponse struct {
-	ModifiedLatex   string   `json:"modified_latex"`
-	ChangesSummary  string   `json:"changes_summary"`
-	KeywordsInjected []string `json:"keywords_injected"`
-	SkillsRemoved   []string `json:"skills_removed"`
-	SkillsAdded     []string `json:"skills_added"`
+	ModifiedLatex   string           `json:"modified_latex"`
+	ExperienceEdits []ExperienceEdit `json:"experience_edits"`
+	ProjectReorder  []int            `json:"project_reorder"`
+	SkillsSwap      *SkillsSwap      `json:"skills_swap"`
+	ChangesSummary  string           `json:"changes_summary"`
+}
+
+type ExperienceEdit struct {
+	Company         string         `json:"company"`
+	MainItemReorder []int          `json:"main_item_reorder"`
+	MainItems       []MainItemEdit `json:"main_items"`
+}
+
+type MainItemEdit struct {
+	Rewrites map[string]string `json:"rewrites"`
+}
+
+type SkillsSwap struct {
+	Remove []string `json:"remove"`
+	Add    []string `json:"add"`
+}
+
+type ChatResponse struct {
+	ResponseText    string           `json:"response_text"`
+	ModifiedLatex   string           `json:"modified_latex"`
+	ExperienceEdits []ExperienceEdit `json:"experience_edits"`
+	ProjectReorder  []int            `json:"project_reorder"`
+	SkillsSwap      *SkillsSwap      `json:"skills_swap"`
+	ChangesSummary  string           `json:"changes_summary"`
 }
 
 type ReanalyzeResponse struct {
@@ -77,12 +101,6 @@ type ChatRequest struct {
 	Provider        string     `json:"provider"`
 	Model           string     `json:"model"`
 	OllamaHost      string     `json:"ollama_host"`
-}
-
-type ChatResponse struct {
-	ResponseText   string `json:"response_text"`
-	ModifiedLatex  string `json:"modified_latex"`
-	ChangesSummary string `json:"changes_summary"`
 }
 
 var (
@@ -472,8 +490,10 @@ func GenerateTailoredResume(jobDescription string, score float64, keywords []str
 		return nil, fmt.Errorf("failed to parse LLM response: %w\nRaw: %s", err, raw)
 	}
 
-	if resp.ModifiedLatex == "" {
-		return nil, fmt.Errorf("LLM returned empty modified_latex")
+	resp.ModifiedLatex = applyAllEdits(masterResumeLatex, &resp)
+
+	if resp.ChangesSummary == "" {
+		resp.ChangesSummary = "Resume tailored"
 	}
 
 	return &resp, nil
@@ -538,6 +558,12 @@ func ChatRefine(message string, chatHistory []ChatMsg, currentLatex, jobDescript
 		return nil, fmt.Errorf("failed to parse LLM chat response: %w\nRaw: %s", err, rawJSON)
 	}
 
+	resp.ModifiedLatex = applyAllChatEdits(currentLatex, &resp)
+
+	if resp.ResponseText == "" {
+		resp.ResponseText = "Applied your suggestions."
+	}
+
 	return &resp, nil
 }
 
@@ -581,4 +607,438 @@ func countWords(latexSource string) int {
 
 	words := strings.Fields(clean)
 	return len(words)
+}
+
+func findSection(latex, sectionName string) string {
+	start := strings.Index(latex, `\section*{`+sectionName+`}`)
+	if start < 0 {
+		return ""
+	}
+	remainder := latex[start:]
+	nextSection := strings.Index(remainder[1:], `\section*{`)
+	if nextSection < 0 {
+		return remainder
+	}
+	return remainder[:nextSection+1]
+}
+
+func applyAllEdits(latex string, edits *GenerateResponse) string {
+	result := latex
+
+	if edits.SkillsSwap != nil && (len(edits.SkillsSwap.Remove) > 0 || len(edits.SkillsSwap.Add) > 0) {
+		result = applySkillsSwap(result, edits.SkillsSwap)
+	}
+
+	if len(edits.ExperienceEdits) > 0 {
+		result = applyExperienceEdits(result, edits.ExperienceEdits)
+	}
+
+	if len(edits.ProjectReorder) > 0 {
+		result = applyProjectReorder(result, edits.ProjectReorder)
+	}
+
+	return result
+}
+
+func applyAllChatEdits(latex string, edits *ChatResponse) string {
+	result := latex
+
+	if edits.SkillsSwap != nil && (len(edits.SkillsSwap.Remove) > 0 || len(edits.SkillsSwap.Add) > 0) {
+		result = applySkillsSwap(result, edits.SkillsSwap)
+	}
+
+	if len(edits.ExperienceEdits) > 0 {
+		result = applyExperienceEdits(result, edits.ExperienceEdits)
+	}
+
+	if len(edits.ProjectReorder) > 0 {
+		result = applyProjectReorder(result, edits.ProjectReorder)
+	}
+
+	return result
+}
+
+func applySkillsSwap(latex string, swap *SkillsSwap) string {
+	skillsStart := strings.Index(latex, `\section*{TECHNICAL SKILLS}`)
+	if skillsStart < 0 {
+		slog.Warn("skills section not found in resume template")
+		return latex
+	}
+
+	skillsEnd := strings.Index(latex[skillsStart+1:], `\section*{`)
+	if skillsEnd < 0 {
+		skillsEnd = len(latex) - skillsStart - 1
+	}
+	skillsEnd = skillsStart + 1 + skillsEnd
+
+	skillsSection := latex[skillsStart:skillsEnd]
+	modified := skillsSection
+
+	for _, skill := range swap.Remove {
+		modified = removeSkill(modified, skill)
+	}
+	for _, skill := range swap.Add {
+		modified = addSkill(modified, skill)
+	}
+
+	return strings.Replace(latex, skillsSection, modified, 1)
+}
+
+func removeSkill(section, skill string) string {
+	skill = strings.TrimSpace(skill)
+	idx := strings.Index(section, skill)
+	for idx >= 0 {
+		before := idx
+		after := idx + len(skill)
+		for after < len(section) && (section[after] == ',' || section[after] == ' ' || section[after] == '.' || section[after] == ';') {
+			after++
+		}
+		section = section[:before] + section[after:]
+		idx = strings.Index(section, skill)
+	}
+	return section
+}
+
+func addSkill(section, skill string) string {
+	lastColon := strings.LastIndex(section, "{: ")
+	if lastColon < 0 {
+		return section
+	}
+	lineEnd := strings.Index(section[lastColon:], `} \\`)
+	if lineEnd < 0 {
+		lineEnd = strings.Index(section[lastColon:], `}`)
+	}
+	if lineEnd < 0 {
+		return section
+	}
+	lineEnd = lastColon + lineEnd
+	insert := section[lastColon : lastColon+3]
+	if !strings.HasSuffix(strings.TrimSpace(section[lastColon+3:lineEnd]), ".") {
+		insert += ", "
+	}
+	insert += skill + "."
+	section = section[:lastColon+3] + insert[3:] + section[lineEnd:]
+	return section
+}
+
+func applyExperienceEdits(latex string, edits []ExperienceEdit) string {
+	workStart := strings.Index(latex, `\section*{WORK EXPERIENCE}`)
+	if workStart < 0 {
+		slog.Warn("work experience section not found")
+		return latex
+	}
+	nextSection := strings.Index(latex[workStart+1:], `\section*{`)
+	if nextSection < 0 {
+		return latex
+	}
+	workEnd := workStart + 1 + nextSection
+	workSection := latex[workStart:workEnd]
+
+	for _, edit := range edits {
+		companyBlock := findCompanyBlock(workSection, edit.Company)
+		if companyBlock == "" {
+			slog.Warn("company not found in experience section", "company", edit.Company)
+			continue
+		}
+		modified := applyCompanyEdit(companyBlock, &edit)
+		workSection = strings.Replace(workSection, companyBlock, modified, 1)
+	}
+
+	return strings.Replace(latex, latex[workStart:workEnd], workSection, 1)
+}
+
+func findCompanyBlock(section, company string) string {
+	patterns := []string{
+		company + " --",
+		company + " (R&D Division) --",
+		company + " (R\\&D Division) --",
+	}
+	var matchIdx int = -1
+	for _, p := range patterns {
+		idx := strings.Index(section, p)
+		if idx >= 0 && (matchIdx < 0 || idx < matchIdx) {
+			matchIdx = idx
+		}
+	}
+	if matchIdx < 0 {
+		return ""
+	}
+
+	blockStart := strings.LastIndex(section[:matchIdx], `\textbf{`)
+	if blockStart < 0 {
+		blockStart = matchIdx
+	}
+	blockEnd := len(section)
+	nextCompany := strings.Index(section[matchIdx+len(company)+3:], `\\`)
+	if nextCompany >= 0 {
+		candidate := matchIdx + len(company) + 3 + nextCompany
+		vspace := strings.Index(section[candidate:], `\vspace{`)
+		if vspace >= 0 {
+			blockEnd = candidate + vspace
+		}
+	}
+
+	return section[blockStart:blockEnd]
+}
+
+func applyCompanyEdit(block string, edit *ExperienceEdit) string {
+	itemsStart := strings.Index(block, `\begin{itemize}`)
+	if itemsStart < 0 {
+		return block
+	}
+	itemsEnd := strings.LastIndex(block, `\end{itemize}`)
+	if itemsEnd < 0 {
+		return block
+	}
+	itemsEnd += len(`\end{itemize}`)
+
+	itemsContent := block[itemsStart:itemsEnd]
+	beforeItems := block[:itemsStart]
+	afterItems := block[itemsEnd:]
+
+	mainItems := splitMainItems(itemsContent)
+	if len(mainItems) == 0 {
+		return block
+	}
+
+	if len(edit.MainItemReorder) > 0 && len(edit.MainItemReorder) <= len(mainItems) {
+		reordered := make([]string, len(mainItems))
+		for i, idx := range edit.MainItemReorder {
+			if idx >= 0 && idx < len(mainItems) {
+				reordered[i] = mainItems[idx]
+			} else {
+				reordered[i] = mainItems[i]
+			}
+		}
+		for i := range reordered {
+			if reordered[i] == "" {
+				reordered[i] = mainItems[i]
+			}
+		}
+		mainItems = reordered
+	}
+
+	for i, item := range mainItems {
+		if i < len(edit.MainItems) && len(edit.MainItems[i].Rewrites) > 0 {
+			mainItems[i] = applyRewrites(item, edit.MainItems[i].Rewrites)
+		}
+	}
+
+	rebuilt := beforeItems
+	for i, item := range mainItems {
+		if i == 0 {
+			rebuilt += `\begin{itemize}` + "\n"
+		}
+		rebuilt += strings.TrimPrefix(item, `\begin{itemize}`)
+		if i == len(mainItems)-1 {
+			if !strings.HasSuffix(rebuilt, "\n") {
+				rebuilt += "\n"
+			}
+			rebuilt += `\end{itemize}`
+		}
+	}
+	rebuilt += afterItems
+
+	return rebuilt
+}
+
+func splitMainItems(itemsBlock string) []string {
+	itemsBlock = strings.TrimSpace(itemsBlock)
+	itemsBlock = strings.TrimPrefix(itemsBlock, `\begin{itemize}`)
+	itemsBlock = strings.TrimSuffix(itemsBlock, `\end{itemize}`)
+	itemsBlock = strings.TrimSpace(itemsBlock)
+
+	var items []string
+	depth := 0
+	start := -1
+	pos := 0
+
+	for pos < len(itemsBlock) {
+		itemIdx := strings.Index(itemsBlock[pos:], `\item `)
+		beginIdx := strings.Index(itemsBlock[pos:], `\begin{itemize}`)
+		endIdx := strings.Index(itemsBlock[pos:], `\end{itemize}`)
+
+		next := len(itemsBlock)
+		var kind string
+		if itemIdx >= 0 && pos+itemIdx < next {
+			next = pos + itemIdx
+			kind = "item"
+		}
+		if beginIdx >= 0 && pos+beginIdx < next {
+			next = pos + beginIdx
+			kind = "begin"
+		}
+		if endIdx >= 0 && pos+endIdx < next {
+			next = pos + endIdx
+			kind = "end"
+		}
+
+		if kind == "" {
+			break
+		}
+
+		switch kind {
+		case "item":
+			if depth == 0 {
+				if start >= 0 {
+					items = append(items, strings.TrimSpace(itemsBlock[start:next]))
+				}
+				start = next
+			}
+			pos = next + len(`\item `)
+		case "begin":
+			depth++
+			pos = next + len(`\begin{itemize}`)
+		case "end":
+			depth--
+			pos = next + len(`\end{itemize}`)
+		}
+	}
+
+	if start >= 0 {
+		items = append(items, strings.TrimSpace(itemsBlock[start:]))
+	}
+
+	return items
+}
+
+func applyRewrites(mainItem string, rewrites map[string]string) string {
+	innerStart := strings.Index(mainItem, `\begin{itemize}`)
+	if innerStart < 0 {
+		return mainItem
+	}
+	innerEnd := strings.LastIndex(mainItem, `\end{itemize}`)
+	if innerEnd < 0 {
+		return mainItem
+	}
+	innerEnd += len(`\end{itemize}`)
+
+	before := mainItem[:innerStart]
+	inner := mainItem[innerStart:innerEnd]
+	after := mainItem[innerEnd:]
+
+	subItems := splitSubItems(inner)
+
+	for idxStr, newText := range rewrites {
+		idx := 0
+		fmt.Sscanf(idxStr, "%d", &idx)
+		if idx >= 0 && idx < len(subItems) {
+			subItems[idx] = `\item ` + newText
+		}
+	}
+
+	rebuilt := before
+	for i, si := range subItems {
+		if i == 0 {
+			rebuilt += `\begin{itemize}` + "\n"
+		}
+		rebuilt += si + "\n"
+		if i == len(subItems)-1 {
+			rebuilt += `\end{itemize}`
+		}
+	}
+	rebuilt += after
+	return rebuilt
+}
+
+func splitSubItems(innerBlock string) []string {
+	innerBlock = strings.TrimSpace(innerBlock)
+	innerBlock = strings.TrimPrefix(innerBlock, `\begin{itemize}`)
+	innerBlock = strings.TrimSuffix(innerBlock, `\end{itemize}`)
+	innerBlock = strings.TrimSpace(innerBlock)
+
+	var items []string
+	rest := innerBlock
+	for {
+		itemIdx := strings.Index(rest, `\item `)
+		if itemIdx < 0 {
+			break
+		}
+		rest = rest[itemIdx:]
+		nextItem := strings.Index(rest[len(`\item `):], `\item `)
+		endItem := strings.Index(rest[len(`\item `):], `\end{itemize}`)
+		if nextItem < 0 {
+			if endItem >= 0 {
+				items = append(items, strings.TrimSpace(rest[:len(`\item `)+endItem]))
+			} else {
+				items = append(items, strings.TrimSpace(rest))
+			}
+			break
+		}
+		nextItem += len(`\item `)
+		if endItem >= 0 && endItem+len(`\end{itemize}`) < nextItem {
+			items = append(items, strings.TrimSpace(rest[:len(`\item `)+endItem+len(`\end{itemize}`)]))
+			break
+		}
+		items = append(items, strings.TrimSpace(rest[:nextItem]))
+		rest = rest[nextItem:]
+	}
+	return items
+}
+
+func applyProjectReorder(latex string, order []int) string {
+	projStart := strings.Index(latex, `\section*{PROJECTS}`)
+	if projStart < 0 {
+		return latex
+	}
+	remainder := latex[projStart:]
+	nextSection := strings.Index(remainder[1:], `\section*{`)
+	if nextSection < 0 {
+		return latex
+	}
+	projEnd := projStart + 1 + nextSection
+	projSection := latex[projStart:projEnd]
+
+	projects := splitProjects(projSection)
+	if len(projects) < 2 || len(order) < 2 {
+		return latex
+	}
+
+	reordered := make([]string, len(projects))
+	for i, idx := range order {
+		if idx >= 0 && idx < len(projects) {
+			reordered[i] = projects[idx]
+		} else {
+			reordered[i] = projects[i]
+		}
+	}
+	for i := range reordered {
+		if reordered[i] == "" {
+			reordered[i] = projects[i]
+		}
+	}
+
+	projHeader := projSection
+	if idx := strings.Index(projSection, `\textbf{`); idx >= 0 {
+		projHeader = projSection[:idx]
+	}
+
+	rebuilt := projHeader
+	for _, p := range reordered {
+		rebuilt += p + "\n\n"
+	}
+	rebuilt = strings.TrimSpace(rebuilt)
+
+	return strings.Replace(latex, projSection, rebuilt, 1)
+}
+
+func splitProjects(section string) []string {
+	var projects []string
+	rest := section
+	for {
+		itemIdx := strings.Index(rest, `\textbf{`)
+		if itemIdx < 0 {
+			break
+		}
+		rest = rest[itemIdx:]
+		nextItem := strings.Index(rest[len(`\textbf{`):], `\textbf{`)
+		if nextItem < 0 {
+			projects = append(projects, strings.TrimSpace(rest))
+			break
+		}
+		nextItem += len(`\textbf{`)
+		projects = append(projects, strings.TrimSpace(rest[:nextItem]))
+		rest = rest[nextItem:]
+	}
+	return projects
 }
