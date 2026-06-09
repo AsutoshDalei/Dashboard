@@ -55,10 +55,11 @@ type ChatMsg struct {
 }
 
 type GenerateResponse struct {
-	ModifiedLatex  string `json:"modified_latex"`
-	SkillsToRemove []string `json:"skills_to_remove"`
-	SkillsToAdd    []string `json:"skills_to_add"`
-	ChangesSummary string `json:"changes_summary"`
+	ModifiedLatex    string            `json:"modified_latex"`
+	SkillsToRemove   []string          `json:"skills_to_remove"`
+	SkillsToAdd      []string          `json:"skills_to_add"`
+	CategoryRewrites map[string]string `json:"category_rewrites"`
+	ChangesSummary   string            `json:"changes_summary"`
 }
 
 type ExperienceEdit struct {
@@ -102,11 +103,12 @@ type SkillsSwap struct {
 }
 
 type ChatResponse struct {
-	ResponseText   string   `json:"response_text"`
-	ModifiedLatex  string   `json:"modified_latex"`
-	SkillsToRemove []string `json:"skills_to_remove"`
-	SkillsToAdd    []string `json:"skills_to_add"`
-	ChangesSummary string   `json:"changes_summary"`
+	ResponseText     string            `json:"response_text"`
+	ModifiedLatex    string            `json:"modified_latex"`
+	SkillsToRemove   []string          `json:"skills_to_remove"`
+	SkillsToAdd      []string          `json:"skills_to_add"`
+	CategoryRewrites map[string]string `json:"category_rewrites"`
+	ChangesSummary   string            `json:"changes_summary"`
 }
 
 type ReanalyzeResponse struct {
@@ -285,12 +287,25 @@ var skillsOnlySchema = json.RawMessage(`{
 		"skills_to_remove": {
 			"type": "array",
 			"items": {"type": "string"},
-			"description": "Skills from the resume that are irrelevant to this JD and should be removed"
+			"description": "Individual skills to remove from their categories"
 		},
 		"skills_to_add": {
 			"type": "array",
 			"items": {"type": "string"},
-			"description": "Skills from the JD that the candidate has and should be added to the resume"
+			"description": "Individual skills to add to existing categories"
+		},
+		"category_rewrites": {
+			"type": "object",
+			"properties": {
+				"ML & AI": {"type": "string"},
+				"Experiment Tracking & MLOps": {"type": "string"},
+				"Languages": {"type": "string"},
+				"Distributed & Data Systems": {"type": "string"},
+				"Cloud & Infrastructure": {"type": "string"},
+				"Databases": {"type": "string"}
+			},
+			"additionalProperties": false,
+			"description": "Complete rewrites of entire category lines. Key is category name, value is the full text after the colon. Only include categories that need rewriting."
 		},
 		"changes_summary": {
 			"type": "string",
@@ -301,9 +316,10 @@ var skillsOnlySchema = json.RawMessage(`{
 }`)
 
 type SkillsOnlyEdits struct {
-	SkillsToRemove  []string `json:"skills_to_remove"`
-	SkillsToAdd     []string `json:"skills_to_add"`
-	ChangesSummary  string   `json:"changes_summary"`
+	SkillsToRemove   []string          `json:"skills_to_remove"`
+	SkillsToAdd      []string          `json:"skills_to_add"`
+	CategoryRewrites map[string]string `json:"category_rewrites"`
+	ChangesSummary   string            `json:"changes_summary"`
 }
 
 func callOllama(system, user, model, host string) (string, error) {
@@ -509,7 +525,7 @@ func AnalyzeResume(jobDescription, provider, model, ollamaHost string) (*Analyze
 		return nil, fmt.Errorf("resume tailor not initialized: missing template or prompt files")
 	}
 
-	userPrompt := strings.ReplaceAll(analyzePromptTmpl, "{{RESUME_TEXT}}", resumePlainText)
+	userPrompt := strings.ReplaceAll(analyzePromptTmpl, "{{RESUME_LATEX}}", masterResumeLatex)
 	userPrompt = strings.ReplaceAll(userPrompt, "{{JOB_DESCRIPTION}}", jobDescription)
 
 	raw, err := callLLM(systemPrompt, userPrompt, LLMProvider(provider), model, ollamaHost)
@@ -653,9 +669,10 @@ func GenerateTailoredResume(jobDescription string, score float64, keywords []str
 	}
 
 	resp := &GenerateResponse{
-		SkillsToRemove:  edits.SkillsToRemove,
-		SkillsToAdd:     edits.SkillsToAdd,
-		ChangesSummary:  edits.ChangesSummary,
+		SkillsToRemove:   edits.SkillsToRemove,
+		SkillsToAdd:      edits.SkillsToAdd,
+		CategoryRewrites: edits.CategoryRewrites,
+		ChangesSummary:   edits.ChangesSummary,
 	}
 
 	if resp.ChangesSummary == "" {
@@ -663,9 +680,12 @@ func GenerateTailoredResume(jobDescription string, score float64, keywords []str
 	}
 
 	resp.ModifiedLatex = masterResumeLatex
+	if len(resp.CategoryRewrites) > 0 {
+		resp.ModifiedLatex = applyCategoryRewrites(resp.ModifiedLatex, resp.CategoryRewrites)
+	}
 	if len(resp.SkillsToRemove) > 0 || len(resp.SkillsToAdd) > 0 {
 		swap := &SkillsSwap{Remove: resp.SkillsToRemove, Add: resp.SkillsToAdd}
-		resp.ModifiedLatex = applySkillsSwap(masterResumeLatex, swap)
+		resp.ModifiedLatex = applySkillsSwap(resp.ModifiedLatex, swap)
 	}
 
 	return resp, nil
@@ -740,16 +760,20 @@ func ChatRefine(message string, chatHistory []ChatMsg, currentLatex, jobDescript
 	}
 
 	resp := &ChatResponse{
-		ResponseText:   "Applied your suggestions.",
-		SkillsToRemove: edits.SkillsToRemove,
-		SkillsToAdd:    edits.SkillsToAdd,
-		ChangesSummary: edits.ChangesSummary,
+		ResponseText:     "Applied your suggestions.",
+		SkillsToRemove:   edits.SkillsToRemove,
+		SkillsToAdd:      edits.SkillsToAdd,
+		CategoryRewrites: edits.CategoryRewrites,
+		ChangesSummary:   edits.ChangesSummary,
 	}
 
 	resp.ModifiedLatex = currentLatex
+	if len(resp.CategoryRewrites) > 0 {
+		resp.ModifiedLatex = applyCategoryRewrites(resp.ModifiedLatex, resp.CategoryRewrites)
+	}
 	if len(resp.SkillsToRemove) > 0 || len(resp.SkillsToAdd) > 0 {
 		swap := &SkillsSwap{Remove: resp.SkillsToRemove, Add: resp.SkillsToAdd}
-		resp.ModifiedLatex = applySkillsSwap(currentLatex, swap)
+		resp.ModifiedLatex = applySkillsSwap(resp.ModifiedLatex, swap)
 	}
 
 	if resp.ChangesSummary != "" {
@@ -769,8 +793,23 @@ func CompileLatexToPDF(latexSource string) ([]byte, error) {
 	}
 	defer os.RemoveAll(tempDir)
 
+	// Strip pdfTeX-only primitives that crash Tectonic
+	clean := latexSource
+	var cleanedLines []string
+	for _, line := range strings.Split(clean, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, `\pdfgentounicode`) {
+			continue
+		}
+		if strings.HasPrefix(trimmed, `\input{glyphtounicode}`) {
+			continue
+		}
+		cleanedLines = append(cleanedLines, line)
+	}
+	clean = strings.Join(cleanedLines, "\n")
+
 	texPath := filepath.Join(tempDir, "resume.tex")
-	if err := os.WriteFile(texPath, []byte(latexSource), 0o644); err != nil {
+	if err := os.WriteFile(texPath, []byte(clean), 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write tex file: %w", err)
 	}
 
@@ -815,19 +854,48 @@ func findSection(latex, sectionName string) string {
 }
 
 func applyAllEdits(latex string, edits *GenerateResponse) string {
+	result := latex
+	if len(edits.CategoryRewrites) > 0 {
+		result = applyCategoryRewrites(result, edits.CategoryRewrites)
+	}
 	if len(edits.SkillsToRemove) > 0 || len(edits.SkillsToAdd) > 0 {
 		swap := &SkillsSwap{Remove: edits.SkillsToRemove, Add: edits.SkillsToAdd}
-		return applySkillsSwap(latex, swap)
+		result = applySkillsSwap(result, swap)
 	}
-	return latex
+	return result
 }
 
 func applyAllChatEdits(latex string, edits *ChatResponse) string {
+	result := latex
+	if len(edits.CategoryRewrites) > 0 {
+		result = applyCategoryRewrites(result, edits.CategoryRewrites)
+	}
 	if len(edits.SkillsToRemove) > 0 || len(edits.SkillsToAdd) > 0 {
 		swap := &SkillsSwap{Remove: edits.SkillsToRemove, Add: edits.SkillsToAdd}
-		return applySkillsSwap(latex, swap)
+		result = applySkillsSwap(result, swap)
 	}
-	return latex
+	return result
+}
+
+func applyCategoryRewrites(latex string, rewrites map[string]string) string {
+	result := latex
+	for category, newList := range rewrites {
+		latexName := strings.ReplaceAll(category, "&", `\&`)
+		pattern := `\textbf{` + latexName + `:}`
+		idx := strings.Index(result, pattern)
+		if idx < 0 {
+			continue
+		}
+		lineStart := idx
+		lineEnd := strings.Index(result[lineStart:], "\n")
+		if lineEnd < 0 {
+			lineEnd = len(result) - lineStart
+		}
+		lineEnd = lineStart + lineEnd
+		newLine := `    \item \textbf{` + latexName + `:} ` + newList
+		result = result[:lineStart] + newLine + result[lineEnd:]
+	}
+	return result
 }
 
 func applySkillsSwap(latex string, swap *SkillsSwap) string {

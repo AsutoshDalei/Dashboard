@@ -1,22 +1,44 @@
-## Pipeline — Análisis de Match
+## Pipeline — ATS Match Analysis
 
-Given the master resume text and job description below, evaluate the match.
+Analyze the master resume against the job description. Extract 15-20 keywords from the JD, score the match on 1-5, and provide analysis, recommendations, and archetype.
 
-### What to evaluate:
-1. **Score (1-5):** Match con CV, North Star alignment, Comp, Cultural signals, Red flags
-2. **Keywords:** Extract 15-20 key terms from the JD for ATS
-3. **Analysis:** 2-3 sentence match quality assessment
-4. **Recommendations:** 2-3 sentence actionable tailoring suggestions
-5. **Archetype:** Classify into: AI Platform/LLMOps, Agentic/Automation, Technical AI PM, AI Solutions Architect, AI Forward Deployed, AI Transformation
+### Evaluation Dimensions
 
-**Score guide:** 4.5+ Strong, 4.0-4.4 Good, 3.5-3.9 Decent, Below 3.5 Weak.
+**Match con CV:** Skills, experience, proof points alignment. Map each JD requirement to exact lines from the resume. Identify gaps with mitigation: is it a hard blocker or nice-to-have? Can adjacent experience cover it?
 
-Return ONLY valid JSON: {"score":N,"keywords":[],"analysis":"","recommendations":"","archetype":""}
+**North Star alignment:** How well the role fits the candidate's target archetypes.
 
-## Master Resume
+**Comp:** Salary vs market.
 
-{{RESUME_TEXT}}
+**Cultural signals:** Company culture, growth, stability, remote policy.
+
+**Red flags:** Blockers, warnings (negative adjustments).
+
+### Score Table
+
+| Dimension | Score |
+|-----------|-------|
+| Match con CV | X/5 |
+| North Star alignment | X/5 |
+| Comp | X/5 |
+| Cultural signals | X/5 |
+| Red flags | -X (if any) |
+| **Global** | **X/5** |
+
+### Archetype Detection
+
+Classify into: AI Platform/LLMOps, Agentic/Automation, Technical AI PM, AI Solutions Architect, AI Forward Deployed, AI Transformation (or hybrid of 2).
+
+## Master Resume (LaTeX)
+
+```latex
+{{RESUME_LATEX}}
+```
 
 ## Job Description
 
+```
 {{JOB_DESCRIPTION}}
+```
+
+Return ONLY valid JSON: {"score":N,"keywords":[],"analysis":"","recommendations":"","archetype":""}

@@ -56,8 +56,8 @@
     --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.5);
     
     /* Layout */
-    --sidebar-width: 256px;
-    --sidebar-width-collapsed: 60px;
+    --sidebar-width: 205px;
+    --sidebar-width-collapsed: 48px;
     --topbar-height: 0px;
     --max-content-width: 1024px;
     
