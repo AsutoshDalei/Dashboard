@@ -1,599 +1,128 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Tracker - Asutosh's Portfolio</title>
-    <link rel="stylesheet" href="/static/zenith.css">
+    <title>Job Tracker - pi_dashboard</title>
+    <link rel="stylesheet" href="/static/output.css">
     <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
     <style>
-        .tracker-stats {
-            display: grid;
-            grid-template-columns: repeat(12, minmax(0, 1fr));
-            gap: var(--space-md);
-            margin-bottom: var(--space-xl);
-        }
-        .tracker-stat.col-3 { grid-column: span 3; }
-        .tracker-stat.col-4 { grid-column: span 4; }
-        @media (max-width: 1024px) {
-            .tracker-stat.col-3,
-            .tracker-stat.col-4 { grid-column: span 6; }
-        }
-        @media (max-width: 640px) {
-            .tracker-stat.col-3,
-            .tracker-stat.col-4 { grid-column: span 12; }
-        }
-
-        .tracker-stat {
-            background: rgba(24, 24, 27, 0.5);
-            border: 1px solid #27272a;
-            border-radius: var(--radius-lg);
-            padding: var(--space-md) var(--space-lg);
-        }
-        .tracker-stat .label {
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--on-surface-muted);
-            margin-bottom: var(--space-xs);
-        }
-        .tracker-stat .value {
-            font-size: 26px;
-            font-weight: 700;
-            color: var(--on-surface);
-            letter-spacing: -0.02em;
-        }
-        .tracker-stat .sub {
-            font-size: 12px;
-            color: var(--on-surface-variant);
-            margin-top: 2px;
-        }
-        .tracker-stat .sub.success { color: var(--success); }
-        .tracker-stat .sub.error { color: var(--error); }
-
-        .tracker-card {
-            background: rgba(24, 24, 27, 0.5);
-            border: 1px solid #27272a;
-            border-radius: var(--radius-lg);
-            padding: var(--space-xl);
-            margin-bottom: var(--space-xl);
-            min-width: 0;
-        }
-        .tracker-card h2 {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: var(--space-xs);
-            color: var(--on-surface);
-        }
-        .tracker-card p.sub {
-            font-size: 13px;
-            color: var(--on-surface-variant);
-            margin-bottom: var(--space-lg);
-        }
-
-        .lookup-row {
-            display: flex;
-            gap: var(--space-md);
-            align-items: stretch;
-            position: relative;
-        }
-        .lookup-row .form-input { flex: 1; }
-        .lookup-suggestions {
-            position: absolute;
-            top: calc(100% + 4px);
-            left: 0;
-            right: 0;
-            border: 1px solid #27272a;
-            background: #09090b;
-            border-radius: var(--radius-md);
-            z-index: 15;
-            display: none;
-            overflow: hidden;
-        }
-        .lookup-suggestions.show { display: block; }
-        .lookup-suggestion {
-            width: 100%;
-            text-align: left;
-            padding: 10px 12px;
-            color: var(--on-surface);
-            border-top: 1px solid #18181b;
-            background: transparent;
-            font-size: 14px;
-        }
-        .lookup-suggestion:first-child { border-top: 0; }
-        .lookup-suggestion:hover {
-            background: #18181b;
-        }
-        .lookup-result {
-            margin-top: var(--space-md);
-            padding: var(--space-md) var(--space-lg);
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            border: 1px solid #27272a;
-            background: #09090b;
-            color: var(--on-surface-variant);
-            display: none;
-        }
-        .lookup-result.show { display: block; }
-        .lookup-result.found { border-color: rgba(34, 197, 94, 0.4); }
-        .lookup-result.empty { border-color: rgba(113, 113, 122, 0.4); }
-        .lookup-result strong { color: var(--on-surface); }
-        .lookup-result .pill {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: var(--radius-full);
-            font-size: 11px;
-            font-weight: 600;
-            margin-left: var(--space-sm);
-            background: var(--surface-high);
-            color: var(--on-surface-variant);
-        }
-        .lookup-result .pill.applied { background: rgba(138, 148, 255, 0.2); color: var(--primary); }
-        .lookup-result .pill.rejected { background: var(--error-soft); color: var(--error); }
-        .lookup-result .pill.interview { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-        .lookup-result .pill.offer,
-        .lookup-result .pill.accepted { background: rgba(34, 197, 94, 0.2); color: var(--success); }
-        .lookup-actions {
-            margin-top: var(--space-md);
-            display: flex;
-            gap: var(--space-sm);
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .lookup-actions .form-select {
-            width: auto;
-            min-width: 180px;
-        }
-        .lookup-inline-status {
-            font-size: 12px;
-            color: var(--on-surface-variant);
-        }
-        .lookup-inline-status.success { color: var(--success); }
-        .lookup-inline-status.error { color: var(--error); }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: var(--space-md);
-        }
-        @media (max-width: 700px) {
-            .form-grid { grid-template-columns: 1fr; }
-        }
-        .form-grid .full { grid-column: 1 / -1; }
-
-        .upsert-hint {
-            margin-top: var(--space-sm);
-            font-size: 12px;
-            color: var(--on-surface-variant);
-            min-height: 16px;
-        }
-        .upsert-hint.exists { color: var(--primary); }
-
-        .freq-tabs {
-            display: inline-flex;
-            background: #09090b;
-            border: 1px solid #27272a;
-            border-radius: var(--radius-md);
-            padding: 4px;
-            gap: 2px;
-        }
-        .freq-tab {
-            padding: 6px 14px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--on-surface-variant);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-        .freq-tab:hover { color: var(--on-surface); }
-        .freq-tab.active {
-            background: var(--surface-high);
-            color: var(--on-surface);
-        }
-
-        .timeline-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--space-lg);
-        }
-        .timeline-controls {
-            display: flex;
-            gap: var(--space-sm);
-            align-items: center;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        .timeline-legend {
-            display: flex;
-            gap: var(--space-md);
-            font-size: 12px;
-            color: var(--on-surface-variant);
-        }
-        .timeline-legend .swatch {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 2px;
-            margin-right: 6px;
-            vertical-align: middle;
-        }
-        .swatch.apps { background: var(--primary-container); }
-        .swatch.companies { background: #52525b; }
-
-        .chart-wrap {
-            width: 100%;
-            max-width: 100%;
-            overflow-x: hidden;
-            overflow-y: hidden;
-            height: 300px;
-            box-sizing: border-box;
-            padding-bottom: var(--space-sm);
-            position: relative;
-        }
-        .chart-wrap.chart-wrap--busy {
-            opacity: 0.55;
-            pointer-events: none;
-        }
-        .chart-wrap > .empty-chart {
-            height: 260px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: var(--space-md);
-            box-sizing: border-box;
-        }
-        .chart-svg { display: block; }
-        .chart-svg .grid-line { stroke: #27272a; stroke-dasharray: 2 3; }
-        .chart-svg text { fill: var(--on-surface-muted); font-size: 10px; font-family: inherit; }
-        .chart-svg .axis-label { fill: var(--on-surface-variant); font-size: 11px; }
-        .chart-svg .bar-apps { fill: var(--primary-container); }
-        .chart-svg .bar-cos { fill: #52525b; }
-        .chart-svg .bar-apps:hover, .chart-svg .bar-cos:hover { opacity: 0.85; }
-        .chart-svg .line-apps {
-            fill: none;
-            stroke: var(--primary-container);
-            stroke-width: 2;
-            stroke-linejoin: round;
-            stroke-linecap: round;
-        }
-        .chart-svg .line-cos {
-            fill: none;
-            stroke: #71717a;
-            stroke-width: 2;
-            stroke-linejoin: round;
-            stroke-linecap: round;
-        }
-        .chart-svg .line-point-apps { fill: var(--primary-container); }
-        .chart-svg .line-point-cos { fill: #71717a; }
-
-        .empty-chart {
-            text-align: center;
-            padding: var(--space-2xl);
-            color: var(--on-surface-muted);
-            font-size: 14px;
-        }
-        .chart-tooltip {
-            position: absolute;
-            display: none;
-            pointer-events: none;
-            background: #09090b;
-            border: 1px solid #27272a;
-            color: var(--on-surface);
-            font-size: 12px;
-            border-radius: var(--radius-sm);
-            padding: 6px 8px;
-            white-space: nowrap;
-            z-index: 20;
-            transform: translate(-50%, calc(-100% - 8px));
-        }
-
-        #upsertForm .form-grid .form-group { margin-bottom: 0; }
-        .submit-row {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: var(--space-md);
-        }
-
-        #queryInput {
-            min-height: 88px;
-            resize: vertical;
-            font-family: inherit;
-        }
-        .query-sql {
-            margin-top: var(--space-md);
-            padding: var(--space-md);
-            border: 1px solid #27272a;
-            border-radius: var(--radius-md);
-            background: #09090b;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 12px;
-            color: var(--on-surface-variant);
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .query-error {
-            margin-top: var(--space-md);
-            padding: var(--space-md);
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            background: var(--error-soft);
-            border-radius: var(--radius-md);
-            color: var(--error);
-            font-size: 13px;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .query-result-wrap {
-            margin-top: var(--space-md);
-            overflow-x: auto;
-            border: 1px solid #27272a;
-            border-radius: var(--radius-md);
-        }
-        .query-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        .query-table th,
-        .query-table td {
-            text-align: left;
-            padding: 8px 10px;
-            border-bottom: 1px solid #27272a;
-            white-space: nowrap;
-            color: var(--on-surface);
-        }
-        .query-table th {
-            color: var(--on-surface-variant);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.05em;
-            background: rgba(9, 9, 11, 0.6);
-            position: sticky;
-            top: 0;
-        }
-        .query-table tr:last-child td { border-bottom: 0; }
-        .query-empty {
-            padding: var(--space-md);
-            color: var(--on-surface-muted);
-            font-size: 13px;
-        }
-
-        .contribution-toolbar {
-            display: flex;
-            align-items: center;
-            gap: var(--space-md);
-            margin-bottom: var(--space-md);
-            flex-wrap: wrap;
-        }
-        .contribution-toolbar label {
-            font-size: 13px;
-            color: var(--on-surface-variant);
-        }
-        .contribution-toolbar .form-select {
-            min-width: 200px;
-            width: auto;
-            max-width: 100%;
-        }
-        .contribution-weekdays {
-            display: grid;
-            grid-template-columns: repeat(7, minmax(24px, 1fr));
-            gap: 8px;
-            margin-bottom: 8px;
-            font-size: 10px;
-            color: var(--on-surface-muted);
-            text-align: center;
-        }
-        .contribution-grid {
-            display: grid;
-            grid-template-columns: repeat(7, minmax(24px, 1fr));
-            grid-auto-rows: minmax(24px, 1fr);
-            gap: 8px;
-            max-width: 100%;
-        }
-        .contribution-cell {
-            width: 100%;
-            height: 100%;
-            min-height: 24px;
-            border-radius: 3px;
-            min-width: 0;
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
-            line-height: 1;
-            user-select: none;
-            cursor: pointer;
-        }
-        .contribution-cell--pad {
-            visibility: hidden;
-            pointer-events: none;
-        }
-        .contribution-level-0 {
-            background: rgba(20, 83, 45, 0.22);
-            border: 1px solid rgba(22, 101, 52, 0.45);
-        }
-        .contribution-level-1 { background: #14532d; border: 1px solid transparent; }
-        .contribution-level-2 { background: #166534; border: 1px solid transparent; }
-        .contribution-level-3 { background: #15803d; border: 1px solid transparent; }
-        .contribution-level-4 { background: #22c55e; border: 1px solid transparent; }
-        .contribution-legend {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: var(--space-md);
-            font-size: 11px;
-            color: var(--on-surface-muted);
-            flex-wrap: wrap;
-        }
-        .contribution-swatch {
-            width: 11px;
-            height: 11px;
-            border-radius: 2px;
-            display: inline-block;
-        }
-        .contribution-loading,
-        .contribution-error {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: var(--space-lg);
-            color: var(--on-surface-muted);
-            font-size: 13px;
-        }
-        .contribution-error { color: var(--error); }
-        .contribution-pop {
-            margin-top: var(--space-sm);
-            display: none;
-            width: fit-content;
-            padding: 6px 10px;
-            border: 1px solid #27272a;
-            border-radius: var(--radius-sm);
-            background: #09090b;
-            color: var(--on-surface);
-            font-size: 12px;
-        }
-        .contribution-pop.show {
-            display: inline-flex;
-        }
-        @media (max-width: 900px) {
-            .contribution-weekdays,
-            .contribution-grid {
-                grid-template-columns: repeat(7, minmax(20px, 1fr));
-                gap: 6px;
-            }
-            .contribution-grid {
-                grid-auto-rows: minmax(20px, 1fr);
-            }
-            .contribution-cell {
-                min-height: 20px;
-                font-size: 9px;
-            }
-        }
-        @media (max-width: 560px) {
-            .contribution-weekdays,
-            .contribution-grid {
-                grid-template-columns: repeat(7, minmax(16px, 1fr));
-                gap: 4px;
-            }
-            .contribution-grid {
-                grid-auto-rows: minmax(16px, 1fr);
-            }
-            .contribution-cell {
-                min-height: 16px;
-                font-size: 8px;
-            }
-            .contribution-weekdays {
-                font-size: 9px;
-                margin-bottom: 6px;
-            }
-        }
+    :root {
+        --surface-lowest:#09090b;--surface-low:#0c0c0e;--surface:#09090b;
+        --surface-container:#18181b;--surface-high:#27272a;--surface-highest:#3f3f46;
+        --on-surface:#fafafa;--on-surface-variant:#a1a1aa;--on-surface-muted:#71717a;
+        --primary:#bec2ff;--primary-container:#8a94ff;--on-primary-container:#18181b;
+        --outline:#52525b;--outline-variant:#27272a;--border:#27272a;
+        --success:#22c55e;--success-soft:rgba(34,197,94,0.12);
+        --error:#ef4444;--error-soft:rgba(239,68,68,0.12);
+        --space-xs:4px;--space-sm:8px;--space-md:16px;--space-lg:24px;--space-xl:32px;--space-2xl:48px;
+        --radius-sm:4px;--radius-md:6px;--radius-lg:8px;--radius-xl:12px;--radius-full:9999px;
+        --transition-fast:150ms ease;--transition-normal:200ms ease;
+    }
+    .tracker-stats{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--space-md);margin-bottom:var(--space-xl)}
+    .tracker-stat{background:rgba(24,24,27,.5);border:1px solid #27272a;border-radius:var(--radius-lg);padding:var(--space-md) var(--space-lg)}
+    .tracker-stat.col-3{grid-column:span 3}.tracker-stat.col-4{grid-column:span 4}
+    @media(max-width:1024px){.tracker-stat.col-3,.tracker-stat.col-4{grid-column:span 6}}
+    @media(max-width:640px){.tracker-stat.col-3,.tracker-stat.col-4{grid-column:span 12}}
+    .tracker-stat .label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--on-surface-muted);margin-bottom:var(--space-xs)}
+    .tracker-stat .value{font-size:26px;font-weight:700;color:var(--on-surface);letter-spacing:-.02em}
+    .tracker-stat .sub{font-size:12px;color:var(--on-surface-variant);margin-top:2px}
+    .tracker-stat .sub.success{color:var(--success)}.tracker-stat .sub.error{color:var(--error)}
+    .tracker-card{background:rgba(24,24,27,.5);border:1px solid #27272a;border-radius:var(--radius-lg);padding:var(--space-xl);margin-bottom:var(--space-xl);min-width:0}
+    .lookup-row{display:flex;gap:var(--space-md);align-items:stretch;position:relative}
+    .lookup-suggestions{position:absolute;top:calc(100%+4px);left:0;right:0;border:1px solid #27272a;background:#09090b;border-radius:var(--radius-md);z-index:15;display:none;overflow:hidden}
+    .lookup-suggestions.show{display:block}
+    .lookup-suggestion{width:100%;text-align:left;padding:10px 12px;color:var(--on-surface);border-top:1px solid #18181b;background:transparent;font-size:14px}
+    .lookup-suggestion:first-child{border-top:0}.lookup-suggestion:hover{background:#18181b}
+    .lookup-result{margin-top:var(--space-md);padding:var(--space-md) var(--space-lg);border-radius:var(--radius-md);font-size:14px;border:1px solid #27272a;background:#09090b;color:var(--on-surface-variant);display:none}
+    .lookup-result.show{display:block}.lookup-result.found{border-color:rgba(34,197,94,.4)}.lookup-result.empty{border-color:rgba(113,113,122,.4)}
+    .lookup-result strong{color:var(--on-surface)}
+    .lookup-result .pill{display:inline-block;padding:2px 8px;border-radius:var(--radius-full);font-size:11px;font-weight:600;margin-left:var(--space-sm);background:var(--surface-high);color:var(--on-surface-variant)}
+    .lookup-result .pill.applied{background:rgba(138,148,255,.2);color:var(--primary)}
+    .lookup-result .pill.rejected{background:var(--error-soft);color:var(--error)}
+    .lookup-result .pill.interview{background:rgba(245,158,11,.2);color:#f59e0b}
+    .lookup-result .pill.offer,.lookup-result .pill.accepted{background:rgba(34,197,94,.2);color:var(--success)}
+    .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-md)}
+    @media(max-width:700px){.form-grid{grid-template-columns:1fr}}
+    .form-grid .full{grid-column:1/-1}
+    .freq-tabs{display:inline-flex;background:#09090b;border:1px solid #27272a;border-radius:var(--radius-md);padding:4px;gap:2px}
+    .freq-tab{padding:6px 14px;font-size:13px;font-weight:500;color:var(--on-surface-variant);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition-fast)}
+    .freq-tab:hover{color:var(--on-surface)}.freq-tab.active{background:var(--surface-high);color:var(--on-surface)}
+    .chart-wrap{width:100%;max-width:100%;overflow-x:hidden;overflow-y:hidden;height:300px;box-sizing:border-box;padding-bottom:var(--space-sm);position:relative}
+    .chart-wrap.chart-wrap--busy{opacity:.55;pointer-events:none}
+    .chart-svg{display:block}.chart-svg .grid-line{stroke:#27272a;stroke-dasharray:2 3}
+    .chart-svg text{fill:var(--on-surface-muted);font-size:10px;font-family:inherit}
+    .chart-svg .bar-apps{fill:var(--primary-container)}.chart-svg .bar-cos{fill:#52525b}
+    .chart-svg .line-apps{fill:none;stroke:var(--primary-container);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+    .chart-svg .line-cos{fill:none;stroke:#71717a;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+    .chart-tooltip{position:absolute;display:none;pointer-events:none;background:#09090b;border:1px solid #27272a;color:var(--on-surface);font-size:12px;border-radius:var(--radius-sm);padding:6px 8px;white-space:nowrap;z-index:20;transform:translate(-50%,calc(-100% - 8px))}
+    .contribution-grid{display:grid;grid-template-columns:repeat(7,minmax(24px,1fr));grid-auto-rows:minmax(24px,1fr);gap:8px;max-width:100%}
+    .contribution-cell{width:100%;height:100%;min-height:24px;border-radius:3px;min-width:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:rgba(255,255,255,.9);cursor:pointer}
+    .contribution-cell--pad{visibility:hidden;pointer-events:none}
+    .contribution-level-0{background:rgba(20,83,45,.22);border:1px solid rgba(22,101,52,.45)}
+    .contribution-level-1{background:#14532d;border:1px solid transparent}
+    .contribution-level-2{background:#166534;border:1px solid transparent}
+    .contribution-level-3{background:#15803d;border:1px solid transparent}
+    .contribution-level-4{background:#22c55e;border:1px solid transparent}
+    .query-table{width:100%;border-collapse:collapse;font-size:13px}
+    .query-table th,.query-table td{text-align:left;padding:8px 10px;border-bottom:1px solid #27272a;white-space:nowrap;color:var(--on-surface)}
+    .query-table th{color:var(--on-surface-variant);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.05em;background:rgba(9,9,11,.6);position:sticky;top:0}
+    .query-table tr:last-child td{border-bottom:0}
     </style>
 </head>
-<body>
-    <div class="dashboard-layout">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" aria-expanded="false">
-                    <span></span><span></span><span></span>
-                </button>
-                <span class="sidebar-brand">Asutosh's Portfolio</span>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="/dashboard" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">◉</span>
-                    <span class="nav-text">Dashboard</span>
-                </a>
-                <a href="/tools/email" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📧</span>
-                    <span class="nav-text">Email Tool</span>
-                </a>
-                <a href="/tools/cover-letter" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📄</span>
-                    <span class="nav-text">Cover Letter Generator</span>
-                </a>
-                <a href="/tools/resume" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📝</span>
-                    <span class="nav-text">Resume Tailor</span>
-                </a>
-                <a href="/tools/clipboard" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📋</span>
-                    <span class="nav-text">Clipboard</span>
-                </a>
-                <a href="/tools/tracker" class="nav-link active">
-                    <span class="nav-icon" aria-hidden="true">📊</span>
-                    <span class="nav-text">Job Tracker</span>
-                </a>
-                <a href="/tools/chat" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">💬</span>
-                    <span class="nav-text">Chat</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <a href="/logout" class="nav-link" title="Logout">
-                    <span class="nav-icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    </span>
-                    <span class="nav-text">Logout</span>
-                </a>
-            </div>
-        </aside>
-        <div class="sidebar-backdrop" aria-hidden="true"></div>
-
-        <main class="main-content">
-            <div class="content-wrapper">
-                <header class="page-header">
-                    <h1 class="page-title">Job Tracker</h1>
-                    <p class="page-subtitle">Track companies, applications, and your job-hunt momentum over time.</p>
+<body class="bg-surface text-on-surface antialiased min-h-screen">
+    <div class="dashboard-layout flex min-h-screen">
+        {{template "sidebar" "tracker"}}
+        <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200">
+            <div class="content-wrapper max-w-6xl mx-auto px-6 py-8">
+                <header class="page-header mb-8">
+                    <h1 class="page-title text-2xl font-bold text-on-surface">Job Tracker</h1>
+                    <p class="page-subtitle text-on-surface-muted mt-1">Track companies, applications, and your job-hunt momentum over time.</p>
                 </header>
 
                 <section class="tracker-stats" id="statsGrid">
                     <div class="tracker-stat col-3"><div class="label">Companies</div><div class="value" id="statCompanies">—</div><div class="sub" id="statCompaniesSub">distinct organizations</div></div>
                     <div class="tracker-stat col-3"><div class="label">Applications</div><div class="value" id="statApps">—</div><div class="sub" id="statAppsSub">total submitted</div></div>
-                    <div class="tracker-stat col-3"><div class="label">Applied Companies</div><div class="value" id="statApplied">—</div><div class="sub success" id="statAppliedSub">— % of companies</div></div>
-                    <div class="tracker-stat col-3"><div class="label">Rejected Companies</div><div class="value" id="statRejected">—</div><div class="sub error" id="statRejectedSub">— % of companies</div></div>
-                    <div class="tracker-stat col-4"><div class="label">Today Activity</div><div class="value" id="statTodayCompanies">—</div><div class="sub" id="statTodaySub">applications added: —</div></div>
-                    <div class="tracker-stat col-4"><div class="label">This Week Activity</div><div class="value" id="statWeekCompanies">—</div><div class="sub" id="statWeekSub">applications added: —</div></div>
-                    <div class="tracker-stat col-4"><div class="label">Avg / Company</div><div class="value" id="statAvg">—</div><div class="sub" id="statAvgSub">top: —</div></div>
+                    <div class="tracker-stat col-3"><div class="label">Applied</div><div class="value" id="statApplied">—</div><div class="sub success" id="statAppliedSub">— % of companies</div></div>
+                    <div class="tracker-stat col-3"><div class="label">Rejected</div><div class="value" id="statRejected">—</div><div class="sub error" id="statRejectedSub">— % of companies</div></div>
+                    <div class="tracker-stat col-4"><div class="label">Today</div><div class="value" id="statTodayCompanies">—</div><div class="sub" id="statTodaySub">apps: —</div></div>
+                    <div class="tracker-stat col-4"><div class="label">This Week</div><div class="value" id="statWeekCompanies">—</div><div class="sub" id="statWeekSub">apps: —</div></div>
+                    <div class="tracker-stat col-4"><div class="label">Avg/Company</div><div class="value" id="statAvg">—</div><div class="sub" id="statAvgSub">top: —</div></div>
                 </section>
 
                 <section class="tracker-card">
-                    <h2>Quick Lookup</h2>
-                    <p class="sub">Check whether you've already applied to a company.</p>
+                    <h2 class="text-lg font-semibold text-on-surface mb-1">Quick Lookup</h2>
+                    <p class="text-sm text-on-surface-muted mb-6">Check whether you've already applied to a company.</p>
                     <div class="lookup-row">
-                        <input type="text" id="lookupInput" class="form-input" placeholder="Type a company name (e.g. Adobe)" autocomplete="off">
+                        <input type="text" id="lookupInput" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="Type a company name (e.g. Adobe)" autocomplete="off">
                         <div id="lookupSuggestions" class="lookup-suggestions"></div>
                     </div>
                     <div id="lookupResult" class="lookup-result"></div>
                 </section>
 
                 <section class="tracker-card">
-                    <h2>Add / Update Company</h2>
-                    <p class="sub">If the organization already exists, the count you enter will be added to the existing total.</p>
+                    <h2 class="text-lg font-semibold text-on-surface mb-1">Add / Update Company</h2>
+                    <p class="text-sm text-on-surface-muted mb-6">If the organization already exists, the count you enter will be added to the existing total.</p>
                     <form id="upsertForm">
-                        <div class="submit-row">
-                            <button type="submit" id="upsertBtn" class="btn btn-primary">
-                                <span class="btn-text">Save</span>
-                                <div class="btn-loader"></div>
+                        <div class="flex justify-end mb-4">
+                            <button type="submit" id="upsertBtn" class="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
+                                <span>Save</span>
+                                <span class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></span>
                             </button>
                         </div>
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="org">Organization *</label>
-                                <input type="text" id="org" name="organization" class="form-input" required autocomplete="off">
-                                <div class="upsert-hint" id="upsertHint">&nbsp;</div>
+                            <div class="form-group mb-4">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="org">Organization *</label>
+                                <input type="text" id="org" name="organization" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" required autocomplete="off">
+                                <div class="text-xs text-on-surface-muted mt-1 min-h-[16px]" id="upsertHint">&nbsp;</div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label" for="count">Applications to add *</label>
-                                <input type="number" id="count" name="count" class="form-input" min="1" value="1" required>
+                            <div class="form-group mb-4">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="count">Applications to add *</label>
+                                <input type="number" id="count" name="count" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm" min="1" value="1" required>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label" for="status">Status</label>
-                                <select id="status" name="status" class="form-select">
+                            <div class="form-group mb-4">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="status">Status</label>
+                                <select id="status" name="status" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm">
                                     <option value="Applied" selected>Applied</option>
                                     <option value="Rejected">Rejected</option>
                                     <option value="Interview">Interview</option>
@@ -601,887 +130,399 @@
                                     <option value="Accepted">Accepted</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label" for="category">Category</label>
-                                <select id="category" name="category" class="form-select">
+                            <div class="form-group mb-4">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="category">Category</label>
+                                <select id="category" name="category" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm">
                                     <option value="Fulltime" selected>Fulltime</option>
                                     <option value="Internship">Internship</option>
                                     <option value="Contract">Contract</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label" for="appliedDates">Applied Date</label>
-                                <input type="date" id="appliedDates" name="applied_dates" class="form-input">
+                            <div class="form-group mb-4">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="appliedDates">Applied Date</label>
+                                <input type="date" id="appliedDates" name="applied_dates" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm">
                             </div>
-                            <div class="form-group">
-                                <label class="form-label" for="location">Location</label>
-                                <input type="text" id="location" name="location" class="form-input" autocomplete="off">
+                            <div class="form-group mb-4">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="location">Location</label>
+                                <input type="text" id="location" name="location" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
+                            </div>
+                            <div class="form-group mb-4 full">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="jobRole">Job Role / Posting URL</label>
+                                <input type="text" id="jobRole" name="job_role" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
+                            </div>
+                            <div class="form-group mb-4">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="contacts">Contacts</label>
+                                <input type="text" id="contacts" name="contacts" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
+                            </div>
+                            <div class="form-group mb-4">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="usernamePassword">Username / Notes</label>
+                                <input type="text" id="usernamePassword" name="username_password" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
                             </div>
                             <div class="form-group full">
-                                <label class="form-label" for="jobRole">Job Role / Posting URL</label>
-                                <input type="text" id="jobRole" name="job_role" class="form-input" autocomplete="off">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="contacts">Contacts</label>
-                                <input type="text" id="contacts" name="contacts" class="form-input" autocomplete="off">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="usernamePassword">Username / Notes</label>
-                                <input type="text" id="usernamePassword" name="username_password" class="form-input" autocomplete="off">
-                            </div>
-                            <div class="form-group full">
-                                <label class="form-label" for="remarks">Remarks</label>
-                                <input type="text" id="remarks" name="remarks" class="form-input" autocomplete="off">
+                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="remarks">Remarks</label>
+                                <input type="text" id="remarks" name="remarks" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
                             </div>
                         </div>
-                        <div id="upsertStatus" class="status-message"></div>
+                        <div id="upsertStatus" class="mt-4 px-4 py-3 rounded-lg text-sm hidden"></div>
                     </form>
                 </section>
 
                 <section class="tracker-card">
-                    <div class="timeline-header">
-                        <div>
-                            <h2 style="margin-bottom:4px;">Timeline</h2>
-                            <p class="sub" style="margin:0;">Application activity and active companies over time.</p>
-                        </div>
-                        <div class="timeline-controls">
-                            <div class="freq-tabs" id="freqTabs">
-                                <div class="freq-tab" data-freq="day">Day</div>
-                                <div class="freq-tab" data-freq="week">Week</div>
-                                <div class="freq-tab active" data-freq="month">Month</div>
-                            </div>
-                            <div class="freq-tabs" id="chartModeTabs">
-                                <div class="freq-tab active" data-mode="bars">Bars</div>
-                                <div class="freq-tab" data-mode="line">Smooth line</div>
-                            </div>
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+                        <div><h2 class="text-lg font-semibold text-on-surface mb-1">Timeline</h2><p class="text-sm text-on-surface-muted">Application activity and active companies over time.</p></div>
+                        <div class="flex gap-2 items-center flex-wrap">
+                            <div class="freq-tabs" id="freqTabs"><div class="freq-tab" data-freq="day">Day</div><div class="freq-tab" data-freq="week">Week</div><div class="freq-tab active" data-freq="month">Month</div></div>
+                            <div class="freq-tabs" id="chartModeTabs"><div class="freq-tab active" data-mode="bars">Bars</div><div class="freq-tab" data-mode="line">Smooth line</div></div>
                         </div>
                     </div>
-                    <div class="timeline-legend">
-                        <span><span class="swatch apps"></span>Applications</span>
-                        <span><span class="swatch companies"></span>Companies</span>
+                    <div class="flex gap-4 text-xs text-on-surface-variant mb-4">
+                        <span><span class="inline-block w-2.5 h-2.5 rounded bg-primary-container mr-1.5 align-middle"></span>Applications</span>
+                        <span><span class="inline-block w-2.5 h-2.5 rounded bg-[#52525b] mr-1.5 align-middle"></span>Companies</span>
                     </div>
-                    <div class="chart-wrap" id="chartWrap" style="margin-top: var(--space-md);">
-                        <div class="empty-chart">Loading…</div>
-                    </div>
+                    <div class="chart-wrap" id="chartWrap"><div class="empty-chart text-center py-12 text-on-surface-muted text-sm">Loading…</div></div>
                 </section>
 
                 <section class="tracker-card">
-                    <h2>Applications by day</h2>
-                    <p class="sub">Contribution-style activity heatmap for one calendar month. Weeks start on Sunday (GitHub-style).</p>
-                    <div class="contribution-toolbar">
-                        <label for="contributionMonth">Month</label>
-                        <select id="contributionMonth" class="form-select" aria-label="Select month"></select>
+                    <h2 class="text-lg font-semibold text-on-surface mb-1">Applications by day</h2>
+                    <p class="text-sm text-on-surface-muted mb-6">Contribution-style activity heatmap. Weeks start on Sunday.</p>
+                    <div class="flex items-center gap-4 mb-4 flex-wrap">
+                        <label class="text-sm text-on-surface-variant" for="contributionMonth">Month</label>
+                        <select id="contributionMonth" class="px-3 py-1.5 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none text-sm min-w-[200px]" aria-label="Select month"></select>
                     </div>
-                    <div class="contribution-weekdays" aria-hidden="true">
-                        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-                    </div>
-                    <div id="contributionGrid" class="contribution-grid">
-                        <div class="contribution-loading">Loading…</div>
-                    </div>
-                    <div id="contributionPop" class="contribution-pop" aria-live="polite"></div>
-                    <div class="contribution-legend" aria-label="Intensity from fewer to more applications">
+                    <div class="grid grid-cols-7 gap-2 mb-2 text-[10px] text-on-surface-muted text-center"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+                    <div id="contributionGrid" class="contribution-grid"><div class="text-center py-8 text-on-surface-muted text-sm col-span-7">Loading…</div></div>
+                    <div id="contributionPop" class="mt-1 hidden w-fit px-2.5 py-1.5 border border-outline rounded bg-surface text-on-surface text-xs"></div>
+                    <div class="flex items-center gap-1.5 mt-4 text-[11px] text-on-surface-muted flex-wrap">
                         <span>Less</span>
-                        <span class="contribution-swatch contribution-level-0" title="No applications"></span>
-                        <span class="contribution-swatch contribution-level-1" title="Low"></span>
-                        <span class="contribution-swatch contribution-level-2" title=""></span>
-                        <span class="contribution-swatch contribution-level-3" title=""></span>
-                        <span class="contribution-swatch contribution-level-4" title="High"></span>
+                        <span class="w-2.5 h-2.5 rounded contribution-level-0 inline-block"></span>
+                        <span class="w-2.5 h-2.5 rounded contribution-level-1 inline-block"></span>
+                        <span class="w-2.5 h-2.5 rounded contribution-level-2 inline-block"></span>
+                        <span class="w-2.5 h-2.5 rounded contribution-level-3 inline-block"></span>
+                        <span class="w-2.5 h-2.5 rounded contribution-level-4 inline-block"></span>
                         <span>More</span>
                     </div>
                 </section>
 
                 <section class="tracker-card">
-                    <div class="timeline-header">
-                        <div>
-                            <h2 style="margin-bottom:4px;">Query your data</h2>
-                            <p class="sub" style="margin:0;">Ask in plain English or run a raw SELECT. Read-only.</p>
-                        </div>
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+                        <div><h2 class="text-lg font-semibold text-on-surface mb-1">Query your data</h2><p class="text-sm text-on-surface-muted">Ask in plain English or run a raw SELECT. Read-only.</p></div>
                         <div class="freq-tabs" id="queryModeTabs">
                             <div class="freq-tab active" data-mode="nl">Natural language</div>
                             <div class="freq-tab" data-mode="sql">Raw SQL</div>
                         </div>
                     </div>
-                    <textarea id="queryInput" class="form-input" rows="3" placeholder="e.g. top 10 companies by application count"></textarea>
-                    <div class="submit-row" style="margin-top: var(--space-md); margin-bottom: 0;">
-                        <button type="button" id="queryRunBtn" class="btn btn-primary">
-                            <span class="btn-text">Run</span>
-                            <div class="btn-loader"></div>
+                    <textarea id="queryInput" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm resize-vertical min-h-[88px]" rows="3" placeholder="e.g. top 10 companies by application count"></textarea>
+                    <div class="flex justify-end mt-4">
+                        <button type="button" id="queryRunBtn" class="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
+                            <span>Run</span>
+                            <span class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></span>
                         </button>
                     </div>
-                    <div id="queryGeneratedSQL" class="query-sql" hidden></div>
-                    <div id="queryError" class="query-error" hidden></div>
-                    <div id="queryResult" class="query-result-wrap" hidden></div>
+                    <div id="queryGeneratedSQL" class="mt-4 px-4 py-3 rounded-lg bg-surface border border-outline font-mono text-xs text-on-surface-variant whitespace-pre-wrap break-words hidden"></div>
+                    <div id="queryError" class="mt-4 px-4 py-3 rounded-lg bg-error-soft text-error text-sm hidden"></div>
+                    <div id="queryResult" class="mt-4 overflow-x-auto border border-outline rounded-lg hidden"></div>
                 </section>
             </div>
         </main>
     </div>
 
     <script>
-        const $ = (id) => document.getElementById(id);
+    const $ = (id) => document.getElementById(id);
+    function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function fmtNum(n) { if(n===null||n===undefined)return'—';return new Intl.NumberFormat().format(n); }
+    function fmtPct(n) { if(n===null||n===undefined)return'—';return n.toFixed(1)+'%'; }
+    function debounce(fn, ms) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }; }
 
-        function fmtNum(n) {
-            if (n === null || n === undefined) return '—';
-            return new Intl.NumberFormat().format(n);
+    async function fetchJson(url, options) {
+        const res = await fetch(url, options);
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        const text = await res.text();
+        if (!ct.includes('application/json')) {
+            if (res.status === 401) throw new Error('Session expired.');
+            throw new Error('Unexpected response.');
         }
-        function fmtPct(n) {
-            if (n === null || n === undefined) return '—';
-            return n.toFixed(1) + '%';
+        let data;
+        try { data = JSON.parse(text); } catch { throw new Error('Invalid server response.'); }
+        if (!res.ok || data.success === false) {
+            const err = new Error(data.error || `Request failed (${res.status})`);
+            err.payload = data; throw err;
         }
-        function debounce(fn, ms) {
-            let t;
-            return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-        }
-        async function fetchJson(url, options) {
-            const res = await fetch(url, options);
-            const contentType = (res.headers.get('content-type') || '').toLowerCase();
-            const text = await res.text();
-            if (!contentType.includes('application/json')) {
-                if (res.status === 401) throw new Error('Session expired. Please log in again.');
-                throw new Error('Unexpected response from server. Please refresh and try again.');
-            }
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch {
-                throw new Error('Invalid server response. Please refresh and try again.');
-            }
-            if (!res.ok || data.success === false) {
-                const err = new Error(data.error || `Request failed (${res.status})`);
-                err.payload = data;
-                throw err;
-            }
-            return data;
-        }
+        return data;
+    }
 
-        async function loadStats() {
-            try {
-                const data = await fetchJson('/api/applications/stats');
-                const s = data.stats;
-                $('statCompanies').textContent = fmtNum(s.companies);
-                $('statApps').textContent = fmtNum(s.applications);
-                $('statApplied').textContent = fmtNum(s.applied);
-                $('statAppliedSub').textContent = fmtPct(s.applied_pct) + ' of companies';
-                $('statRejected').textContent = fmtNum(s.rejected);
-                $('statRejectedSub').textContent = fmtPct(s.rejected_pct) + ' of companies';
-                if (data.activity_logs_ok === false) {
-                    const msg = data.activity_logs_error || 'Activity data unavailable';
-                    $('statTodayCompanies').textContent = '—';
-                    $('statTodaySub').textContent = msg;
-                    $('statTodaySub').classList.remove('success', 'error');
-                    $('statWeekCompanies').textContent = '—';
-                    $('statWeekSub').textContent = msg;
-                    $('statWeekSub').classList.remove('success', 'error');
-                } else {
-                    $('statTodayCompanies').textContent = `${fmtNum(s.today_companies)} companies`;
-                    $('statTodaySub').textContent = `applications added: ${fmtNum(s.today_applications)}`;
-                    $('statWeekCompanies').textContent = `${fmtNum(s.week_companies)} companies`;
-                    $('statWeekSub').textContent = `applications added: ${fmtNum(s.week_applications)}`;
-                }
-                $('statAvg').textContent = (s.avg_per_company || 0).toFixed(1);
-                $('statAvgSub').textContent = s.top_company ? `top: ${s.top_company} (${s.max_per_company})` : '—';
-            } catch (err) {
-                console.error('stats error', err);
-            }
-        }
+    async function loadStats() {
+        try {
+            const data = await fetchJson('/api/applications/stats');
+            const s = data.stats;
+            $('statCompanies').textContent = fmtNum(s.companies);
+            $('statApps').textContent = fmtNum(s.applications);
+            $('statApplied').textContent = fmtNum(s.applied);
+            $('statAppliedSub').textContent = fmtPct(s.applied_pct) + ' of companies';
+            $('statRejected').textContent = fmtNum(s.rejected);
+            $('statRejectedSub').textContent = fmtPct(s.rejected_pct) + ' of companies';
+            $('statTodayCompanies').textContent = fmtNum(s.today_companies) + ' companies';
+            $('statTodaySub').textContent = 'apps: ' + fmtNum(s.today_applications);
+            $('statWeekCompanies').textContent = fmtNum(s.week_companies) + ' companies';
+            $('statWeekSub').textContent = 'apps: ' + fmtNum(s.week_applications);
+            $('statAvg').textContent = (s.avg_per_company || 0).toFixed(1);
+            $('statAvgSub').textContent = s.top_company ? 'top: ' + s.top_company + ' (' + s.max_per_company + ')' : '—';
+        } catch (err) { console.error('stats', err); }
+    }
 
-        async function checkCompany(name) {
-            return fetchJson('/api/applications/check?company=' + encodeURIComponent(name));
-        }
-        async function suggestCompanies(q) {
-            return fetchJson('/api/applications/suggest?q=' + encodeURIComponent(q) + '&limit=3');
-        }
+    async function checkCompany(name) { return fetchJson('/api/applications/check?company=' + encodeURIComponent(name)); }
+    async function suggestCompanies(q) { return fetchJson('/api/applications/suggest?q=' + encodeURIComponent(q) + '&limit=3'); }
 
-        const lookupInput = $('lookupInput');
-        const lookupResult = $('lookupResult');
-        const lookupSuggestions = $('lookupSuggestions');
-        const runSuggestions = debounce(async (val) => {
-            const q = (val || '').trim();
-            if (!q) {
-                lookupSuggestions.classList.remove('show');
-                lookupSuggestions.innerHTML = '';
-                return;
-            }
-            try {
-                const data = await suggestCompanies(q);
-                const list = (data.suggestions || []).slice(0, 3);
-                if (!list.length) {
-                    lookupSuggestions.classList.remove('show');
-                    lookupSuggestions.innerHTML = '';
-                    return;
-                }
-                lookupSuggestions.innerHTML = list.map((s) =>
-                    `<button type="button" class="lookup-suggestion" data-company="${escapeHtml(s.organization)}">${escapeHtml(s.organization)}</button>`
-                ).join('');
-                lookupSuggestions.classList.add('show');
-            } catch {
-                lookupSuggestions.classList.remove('show');
-                lookupSuggestions.innerHTML = '';
-            }
-        }, 220);
-        async function runLookupNow(val) {
-            if (!val) { lookupResult.classList.remove('show'); return; }
-            try {
-                const data = await checkCompany(val);
-                lookupResult.classList.remove('found', 'empty');
-                lookupResult.classList.add('show');
-                if (data.exists) {
-                    const status = data.status || '';
-                    const pillCls = status.toLowerCase() === 'applied' ? 'applied'
-                                  : status.toLowerCase() === 'rejected' ? 'rejected'
-                                  : status.toLowerCase() === 'interview' ? 'interview'
-                                  : status.toLowerCase() === 'offer' ? 'offer'
-                                  : status.toLowerCase() === 'accepted' ? 'accepted' : '';
-                    lookupResult.classList.add('found');
-                    lookupResult.innerHTML =
-                        `<strong>${escapeHtml(data.organization)}</strong> — `
-                        + `<strong>${data.count}</strong> application${data.count === 1 ? '' : 's'}`
-                        + (status ? ` <span class="pill ${pillCls}">${escapeHtml(status)}</span>` : '')
-                        + (data.applied_dates ? ` <span class="pill">last: ${escapeHtml(data.applied_dates)}</span>` : '')
-                        + `<div class="lookup-actions">`
-                        + `<select class="form-select" id="lookupStatusSelect">`
-                        + `<option value="Applied"${status === 'Applied' ? ' selected' : ''}>Applied</option>`
-                        + `<option value="Interview"${status === 'Interview' ? ' selected' : ''}>Interview</option>`
-                        + `<option value="Offer"${status === 'Offer' ? ' selected' : ''}>Offer</option>`
-                        + `<option value="Accepted"${status === 'Accepted' ? ' selected' : ''}>Accepted</option>`
-                        + `<option value="Rejected"${status === 'Rejected' ? ' selected' : ''}>Rejected</option>`
-                        + `</select>`
-                        + `<button type="button" class="btn btn-ghost" id="lookupUpdateBtn" data-org="${escapeHtml(data.organization)}">Update Status</button>`
-                        + `<span class="lookup-inline-status" id="lookupInlineStatus"></span>`
-                        + `</div>`;
-                } else {
-                    lookupResult.classList.add('empty');
-                    lookupResult.textContent = `No application logged for "${val}" yet.`;
-                }
-            } catch (err) {
-                lookupResult.classList.add('show', 'empty');
-                lookupResult.textContent = 'Lookup failed: ' + err.message;
-            }
-        }
-        const runLookup = debounce(runLookupNow, 300);
-
-        lookupInput.addEventListener('input', (e) => {
-            const value = e.target.value.trim();
-            runSuggestions(value);
-            runLookup(value);
-        });
-        lookupInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                lookupSuggestions.classList.remove('show');
-            }
-        });
-        lookupInput.addEventListener('blur', () => {
-            setTimeout(() => lookupSuggestions.classList.remove('show'), 120);
-        });
-        lookupInput.addEventListener('focus', () => {
-            const value = lookupInput.value.trim();
-            if (value) runSuggestions(value);
-        });
-        lookupSuggestions.addEventListener('click', (e) => {
-            const btn = e.target.closest('.lookup-suggestion');
-            if (!btn) return;
-            const company = btn.dataset.company || '';
-            lookupInput.value = company;
-            lookupSuggestions.classList.remove('show');
-            runLookup(company);
-        });
-        lookupResult.addEventListener('click', async (e) => {
-            const btn = e.target.closest('#lookupUpdateBtn');
-            if (!btn) return;
-            const select = $('lookupStatusSelect');
-            if (!select) return;
-            const org = btn.dataset.org;
-            if (!org) return;
-            const nextStatus = select.value;
-            const inlineStatus = $('lookupInlineStatus');
-            if (inlineStatus) {
-                inlineStatus.classList.remove('success', 'error');
-                inlineStatus.textContent = '';
-            }
-            btn.disabled = true;
-            btn.textContent = 'Updating...';
-            try {
-                await fetchJson('/api/applications', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        organization: org,
-                        count: 0,
-                        status: nextStatus,
-                    }),
-                });
-                await runLookupNow(org);
-                loadStats();
-                loadTimeline(currentFreq);
-                const inlineStatusAfter = $('lookupInlineStatus');
-                if (inlineStatusAfter) {
-                    inlineStatusAfter.classList.remove('error');
-                    inlineStatusAfter.classList.add('success');
-                    inlineStatusAfter.textContent = 'Status updated';
-                }
-            } catch (err) {
-                const inlineStatusAfter = $('lookupInlineStatus');
-                if (inlineStatusAfter) {
-                    inlineStatusAfter.classList.remove('success');
-                    inlineStatusAfter.classList.add('error');
-                    inlineStatusAfter.textContent = 'Update failed';
-                }
-                lookupResult.classList.add('show', 'empty');
-                lookupResult.textContent = 'Status update failed: ' + err.message;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Update Status';
-            }
-        });
-
-        const orgInput = $('org');
-        const upsertHint = $('upsertHint');
-        const countInput = $('count');
-        let lastOrgCheck = { name: '', exists: false, count: 0, status: '' };
-
-        const runOrgCheck = debounce(async (val) => {
-            if (!val) { upsertHint.textContent = '\u00A0'; upsertHint.classList.remove('exists'); lastOrgCheck = { name: '', exists: false, count: 0, status: '' }; return; }
-            try {
-                const data = await checkCompany(val);
-                if (data.exists) {
-                    lastOrgCheck = { name: data.organization, exists: true, count: data.count, status: data.status || '' };
-                    updateUpsertHint();
-                } else {
-                    lastOrgCheck = { name: val, exists: false, count: 0, status: '' };
-                    upsertHint.classList.remove('exists');
-                    upsertHint.textContent = `New company — will be inserted.`;
-                }
-            } catch {
-                upsertHint.textContent = '\u00A0';
-            }
-        }, 300);
-
-        function updateUpsertHint() {
-            if (!lastOrgCheck.exists) return;
-            const add = parseInt(countInput.value, 10) || 0;
-            upsertHint.classList.add('exists');
-            const statusDateNote = ' Existing status and first applied date stay unchanged, but additions still count in daily/weekly activity.';
-            upsertHint.textContent =
-                `${lastOrgCheck.name} already exists with ${lastOrgCheck.count} application(s). `
-                + `Submitting will set total to ${lastOrgCheck.count} + ${add} = ${lastOrgCheck.count + add}.${statusDateNote}`;
-        }
-
-        orgInput.addEventListener('input', (e) => runOrgCheck(e.target.value.trim()));
-        countInput.addEventListener('input', updateUpsertHint);
-
-        $('upsertForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = $('upsertBtn');
-            const status = $('upsertStatus');
-            status.classList.remove('show', 'success', 'error');
-            btn.classList.add('loading');
-
-            const selectedStatus = $('status').value;
-            const shouldPreserveRejected = lastOrgCheck.exists
-                && String(lastOrgCheck.status || '').toLowerCase() === 'rejected'
-                && String(selectedStatus || '').toLowerCase() === 'applied';
-            const payload = {
-                organization: $('org').value.trim(),
-                count: parseInt($('count').value, 10) || 1,
-                status: shouldPreserveRejected ? 'Rejected' : selectedStatus,
-                category: $('category').value,
-                applied_dates: $('appliedDates').value,
-                location: $('location').value,
-                job_role: $('jobRole').value,
-                contacts: $('contacts').value,
-                username_password: $('usernamePassword').value,
-                remarks: $('remarks').value,
-            };
-
-            try {
-                const data = await fetchJson('/api/applications', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
-                const verb = data.action === 'created' ? 'Created' : 'Updated';
-                status.classList.add('show', 'success');
-                status.textContent = `${verb} ${payload.organization}: ${data.previous_count} + ${data.added} = ${data.new_count}.`;
-                $('upsertForm').reset();
-                $('count').value = 1;
-                $('status').value = 'Applied';
-                $('category').value = 'Fulltime';
-                setDefaultAppliedDate();
-                upsertHint.textContent = '\u00A0';
-                upsertHint.classList.remove('exists');
-                lastOrgCheck = { name: '', exists: false, count: 0, status: '' };
-                loadStats();
-                loadTimeline(currentFreq);
-                const cm = $('contributionMonth');
-                loadContribution(cm && cm.value ? cm.value : undefined);
-            } catch (err) {
-                status.classList.add('show', 'error');
-                status.textContent = 'Failed: ' + err.message;
-            } finally {
-                btn.classList.remove('loading');
-            }
-        });
-
-        let currentFreq = 'month';
-        let currentChartMode = 'bars';
-        let latestTimelineBuckets = [];
-
-        document.querySelectorAll('#freqTabs .freq-tab').forEach((tab) => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('#freqTabs .freq-tab').forEach((t) => t.classList.remove('active'));
-                tab.classList.add('active');
-                currentFreq = tab.dataset.freq;
-                loadTimeline(currentFreq);
-            });
-        });
-        document.querySelectorAll('#chartModeTabs .freq-tab').forEach((tab) => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('#chartModeTabs .freq-tab').forEach((t) => t.classList.remove('active'));
-                tab.classList.add('active');
-                currentChartMode = tab.dataset.mode || 'bars';
-                renderChart($('chartWrap'), latestTimelineBuckets);
-            });
-        });
-
-        async function loadTimeline(freq) {
-            const wrap = $('chartWrap');
-            const hadChart = !!wrap.querySelector('.chart-svg');
-            if (hadChart) {
-                wrap.classList.add('chart-wrap--busy');
-            } else {
-                wrap.innerHTML = '<div class="empty-chart">Loading…</div>';
-            }
-            try {
-                const data = await fetchJson('/api/applications/timeline?freq=' + freq);
-                if (data.activity_logs_ok === false) {
-                    const msg = escapeHtml(data.activity_logs_error || 'Could not load activity data.');
-                    wrap.innerHTML = `<div class="empty-chart">${msg}</div>`;
-                    latestTimelineBuckets = [];
-                    return;
-                }
-                latestTimelineBuckets = data.buckets || [];
-                renderChart(wrap, latestTimelineBuckets);
-            } catch (err) {
-                wrap.innerHTML = `<div class="empty-chart">Failed to load: ${escapeHtml(err.message)}</div>`;
-            } finally {
-                wrap.classList.remove('chart-wrap--busy');
-            }
-        }
-
-        function currentMonthYYYYMM() {
-            const t = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            return `${t.getFullYear()}-${pad(t.getMonth() + 1)}`;
-        }
-
-        function formatContributionMonthLabel(ym) {
-            const parts = ym.split('-');
-            const y = parts[0];
-            const mo = parts[1];
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return `${months[parseInt(mo, 10) - 1]} ${y}`;
-        }
-
-        function fillContributionMonthSelect(months, selected) {
-            const sel = $('contributionMonth');
-            if (!sel) return;
-            sel.innerHTML = '';
-            (months || []).forEach((m) => {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.textContent = formatContributionMonthLabel(m);
-                sel.appendChild(opt);
-            });
-            if (months && months.length) {
-                if (months.includes(selected)) sel.value = selected;
-                else sel.value = months[months.length - 1];
-            }
-        }
-
-        function contributionIntensityLevel(count, maxApps) {
-            if (!count || count <= 0) return 0;
-            const max = Math.max(1, maxApps);
-            const ratio = count / max;
-            if (ratio <= 0.25) return 1;
-            if (ratio <= 0.5) return 2;
-            if (ratio <= 0.75) return 3;
-            return 4;
-        }
-
-        function renderContributionGrid(days, maxApps) {
-            const grid = $('contributionGrid');
-            if (!grid) return;
-            if (!days || !days.length) {
-                grid.innerHTML = '<div class="contribution-error">No days in this month.</div>';
-                return;
-            }
-            const dp = days[0].date.split('-').map((x) => parseInt(x, 10));
-            const first = new Date(dp[0], dp[1] - 1, 1);
-            const padCount = first.getDay();
-            const parts = [];
-            for (let i = 0; i < padCount; i += 1) {
-                parts.push('<div class="contribution-cell contribution-cell--pad"></div>');
-            }
-            const max = maxApps || 1;
-            days.forEach((d) => {
-                const level = contributionIntensityLevel(d.applications, max);
-                const t = `${d.date}: ${d.applications} application(s)`;
-                const dayNum = String(parseInt(d.date.slice(-2), 10));
-                parts.push(`<div class="contribution-cell contribution-level-${level}" data-date="${escapeHtml(d.date)}" data-count="${d.applications}" title="${escapeHtml(t)}">${dayNum}</div>`);
-            });
-            grid.innerHTML = parts.join('');
-            bindContributionClicks();
-        }
-
-        function bindContributionClicks() {
-            const grid = $('contributionGrid');
-            if (!grid) return;
-            grid.onclick = (e) => {
-                const cell = e.target.closest('.contribution-cell[data-date]');
-                if (!cell) return;
-                const date = cell.dataset.date || '';
-                const count = parseInt(cell.dataset.count || '0', 10);
-                const pop = $('contributionPop');
-                if (!pop) return;
-                pop.textContent = `${date}: ${count} application(s)`;
-                pop.classList.add('show');
-            };
-        }
-
-        async function loadContribution(requestedMonth) {
-            const sel = $('contributionMonth');
-            const preferred = requestedMonth || (sel && sel.value) || currentMonthYYYYMM();
-            const grid = $('contributionGrid');
-            const pop = $('contributionPop');
-            if (pop) pop.classList.remove('show');
-            if (grid) {
-                grid.innerHTML = '<div class="contribution-loading">Loading…</div>';
-            }
-            try {
-                const data = await fetchJson(`/api/applications/contribution?month=${encodeURIComponent(preferred)}`);
-                if (data.activity_logs_ok === false) {
-                    const msg = data.activity_logs_error || 'Could not load activity data.';
-                    grid.innerHTML = `<div class="contribution-error">${escapeHtml(msg)}</div>`;
-                    return;
-                }
-                const months = data.months || [];
-                const month = data.month || preferred;
-                fillContributionMonthSelect(months, month);
-                renderContributionGrid(data.days || [], data.max_applications || 1);
-            } catch (err) {
-                if (grid) {
-                    grid.innerHTML = `<div class="contribution-error">${escapeHtml(err.message)}</div>`;
-                }
-            }
-        }
-
-        const contributionMonthEl = $('contributionMonth');
-        if (contributionMonthEl) {
-            contributionMonthEl.addEventListener('change', () => {
-                loadContribution(contributionMonthEl.value);
-            });
-        }
-
-        function renderChart(container, buckets) {
-            if (!buckets.length) {
-                container.innerHTML = '<div class="empty-chart">No data with valid dates yet.</div>';
-                return;
-            }
-            const barsPer = buckets.length;
-            const padding = { top: 16, right: 12, bottom: 40, left: window.innerWidth <= 480 ? 32 : 40 };
-            const width = Math.max(container.clientWidth, 320);
-            const plotWidth = Math.max(width - padding.left - padding.right, 40);
-            const groupWidth = plotWidth / barsPer;
-            const barGap = Math.min(4, Math.max(1, groupWidth * 0.12));
-            const barW = Math.max(1.5, (groupWidth - (barGap * 3)) / 2);
-            const height = 260;
-            const innerH = height - padding.top - padding.bottom;
-            const maxValue = Math.max(...buckets.map((b) => Math.max(b.applications, b.companies)), 1);
-            const niceMax = niceCeiling(maxValue);
-
-            const ticks = 4;
-            const tickLines = [];
-            const tickLabels = [];
-            const visibleLabelIndexes = getVisibleLabelIndexes(buckets, currentFreq);
-            for (let i = 0; i <= ticks; i++) {
-                const v = Math.round((niceMax * i) / ticks);
-                const y = padding.top + innerH - (innerH * i) / ticks;
-                tickLines.push(`<line class="grid-line" x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" />`);
-                tickLabels.push(`<text x="${padding.left - 6}" y="${y + 3}" text-anchor="end">${v}</text>`);
-            }
-
-            const points = buckets.map((b, i) => {
-                const cx = padding.left + i * groupWidth + groupWidth / 2;
-                const appsY = padding.top + innerH - ((b.applications / niceMax) * innerH);
-                const cosY = padding.top + innerH - ((b.companies / niceMax) * innerH);
-                return { bucket: b.bucket, applications: b.applications, companies: b.companies, cx, appsY, cosY };
-            });
-
-            const linePathFrom = (items, key) => {
-                if (!items.length) return '';
-                if (items.length === 1) return `M ${items[0].cx} ${items[0][key]}`;
-                let d = `M ${items[0].cx} ${items[0][key]}`;
-                for (let i = 0; i < items.length - 1; i++) {
-                    const p0 = items[Math.max(0, i - 1)];
-                    const p1 = items[i];
-                    const p2 = items[i + 1];
-                    const p3 = items[Math.min(items.length - 1, i + 2)];
-                    const cp1x = p1.cx + (p2.cx - p0.cx) / 6;
-                    const cp1y = p1[key] + (p2[key] - p0[key]) / 6;
-                    const cp2x = p2.cx - (p3.cx - p1.cx) / 6;
-                    const cp2y = p2[key] - (p3[key] - p1[key]) / 6;
-                    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.cx} ${p2[key]}`;
-                }
-                return d;
-            };
-
-            const barsOrLine = buckets.map((b, i) => {
-                const groupX = padding.left + i * groupWidth + barGap;
-                const appsH = (b.applications / niceMax) * innerH;
-                const cosH = (b.companies / niceMax) * innerH;
-                const appsY = padding.top + innerH - appsH;
-                const cosY = padding.top + innerH - cosH;
-                const xLabelX = padding.left + i * groupWidth + groupWidth / 2;
-                const lbl = formatBucketLabel(b.bucket, currentFreq);
-                const labelMarkup = visibleLabelIndexes.has(i)
-                    ? `<text x="${xLabelX}" y="${height - padding.bottom + 14}" text-anchor="middle">${escapeHtml(lbl)}</text>`
-                    : '';
-                if (currentChartMode === 'line') {
-                    const point = points[i];
-                    return `
-                        ${labelMarkup}
-                        <circle class="line-point-apps timeline-bar" cx="${point.cx}" cy="${point.appsY}" r="2.5"
-                            data-series="Applications" data-bucket="${escapeHtml(b.bucket)}" data-value="${b.applications}" />
-                        <circle class="line-point-cos timeline-bar" cx="${point.cx}" cy="${point.cosY}" r="2.5"
-                            data-series="Companies" data-bucket="${escapeHtml(b.bucket)}" data-value="${b.companies}" />
-                    `;
-                }
-                return `
-                    <rect class="bar-apps timeline-bar" x="${groupX}" y="${appsY}" width="${barW}" height="${Math.max(appsH, 0)}" rx="2"
-                        data-series="Applications" data-bucket="${escapeHtml(b.bucket)}" data-value="${b.applications}">
-                        <title>${escapeHtml(b.bucket)}: ${b.applications} application(s)</title>
-                    </rect>
-                    <rect class="bar-cos timeline-bar" x="${groupX + barW + barGap}" y="${cosY}" width="${barW}" height="${Math.max(cosH, 0)}" rx="2"
-                        data-series="Companies" data-bucket="${escapeHtml(b.bucket)}" data-value="${b.companies}">
-                        <title>${escapeHtml(b.bucket)}: ${b.companies} company(ies)</title>
-                    </rect>
-                    ${labelMarkup}
-                `;
-            }).join('');
-
-            const lineMarkup = currentChartMode === 'line'
-                ? `
-                    <path class="line-apps" d="${linePathFrom(points, 'appsY')}" />
-                    <path class="line-cos" d="${linePathFrom(points, 'cosY')}" />
-                `
-                : '';
-
-            container.innerHTML = `
-                <div class="chart-tooltip" id="chartTooltip"></div>
-                <svg class="chart-svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" preserveAspectRatio="xMinYMid meet">
-                    ${tickLines.join('')}
-                    ${tickLabels.join('')}
-                    <line class="grid-line" x1="${padding.left}" y1="${padding.top + innerH}" x2="${width - padding.right}" y2="${padding.top + innerH}" />
-                    ${lineMarkup}
-                    ${barsOrLine}
-                </svg>
-            `;
-            setupChartTooltip(container);
-        }
-
-        function setupChartTooltip(container) {
-            const tooltip = container.querySelector('#chartTooltip');
-            if (!tooltip) return;
-            const bars = container.querySelectorAll('.timeline-bar');
-            function showTooltip(el) {
-                const value = el.dataset.value || '0';
-                tooltip.textContent = value;
-                tooltip.style.display = 'block';
-
-                const wrapRect = container.getBoundingClientRect();
-                const barRect = el.getBoundingClientRect();
-                const x = (barRect.left - wrapRect.left) + container.scrollLeft + (barRect.width / 2);
-                const y = (barRect.top - wrapRect.top) + container.scrollTop - 6;
-                const minX = container.scrollLeft + 28;
-                const maxX = container.scrollLeft + container.clientWidth - 28;
-                const clampedX = Math.max(minX, Math.min(maxX, x));
-
-                tooltip.style.left = `${clampedX}px`;
-                tooltip.style.top = `${y}px`;
-            }
-
-            function hideTooltip() {
-                tooltip.style.display = 'none';
-            }
-
-            bars.forEach((bar) => {
-                bar.style.cursor = 'pointer';
-                bar.addEventListener('mouseenter', () => showTooltip(bar));
-                bar.addEventListener('mousemove', () => showTooltip(bar));
-                bar.addEventListener('mouseleave', hideTooltip);
-                bar.addEventListener('click', () => showTooltip(bar));
-            });
-        }
-
-        function niceCeiling(n) {
-            if (n <= 5) return 5;
-            const pow = Math.pow(10, Math.floor(Math.log10(n)));
-            const mult = n / pow;
-            let nice;
-            if (mult <= 1) nice = 1;
-            else if (mult <= 2) nice = 2;
-            else if (mult <= 5) nice = 5;
-            else nice = 10;
-            return nice * pow;
-        }
-
-        function formatBucketLabel(bucket, freq) {
-            if (freq === 'month') {
-                const [y, m] = bucket.split('-');
-                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                return `${months[parseInt(m, 10) - 1]} ${y.slice(2)}`;
-            }
-            if (freq === 'week') {
-                return bucket.slice(5);
-            }
-            return bucket.slice(5);
-        }
-
-        function getVisibleLabelIndexes(buckets, freq) {
-            const total = buckets.length;
-            const targetLabelCount = window.innerWidth <= 768 ? 5 : 8;
-            const step = Math.max(1, Math.ceil(total / targetLabelCount));
-            const visible = new Set();
-
-            for (let i = 0; i < total; i += step) {
-                visible.add(i);
-            }
-
-            visible.add(total - 1);
-
-            const currentKey = getCurrentBucketKey(freq);
-            if (currentKey) {
-                const currentIdx = buckets.findIndex((b) => b.bucket === currentKey);
-                if (currentIdx >= 0) {
-                    visible.add(currentIdx);
-                }
-            }
-
-            return visible;
-        }
-
-        function getCurrentBucketKey(freq) {
-            const now = new Date();
-            const local = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
-
-            if (freq === 'month') {
-                return local.toISOString().slice(0, 7);
-            }
-            if (freq === 'week') {
-                const weekday = local.getDay() || 7;
-                local.setDate(local.getDate() - (weekday - 1));
-                return local.toISOString().slice(0, 10);
-            }
-            return local.toISOString().slice(0, 10);
-        }
-
-        function escapeHtml(text) {
-            if (text === null || text === undefined) return '';
-            const div = document.createElement('div');
-            div.textContent = String(text);
-            return div.innerHTML;
-        }
-
-        function setDefaultAppliedDate() {
-            const today = new Date();
-            const local = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
-            $('appliedDates').value = local.toISOString().slice(0, 10);
-        }
-
-        setDefaultAppliedDate();
-        loadStats();
-        loadTimeline(currentFreq);
-        loadContribution();
-
-        let lastWidth = window.innerWidth;
-        const onResize = debounce(() => {
-            const w = window.innerWidth;
-            const crossedBreakpoint = (lastWidth > 768) !== (w > 768) || (lastWidth > 480) !== (w > 480);
-            if (crossedBreakpoint || Math.abs(w - lastWidth) > 80) {
-                lastWidth = w;
-                const wrap = $('chartWrap');
-                if (latestTimelineBuckets && latestTimelineBuckets.length) {
-                    renderChart(wrap, latestTimelineBuckets);
-                } else {
-                    loadTimeline(currentFreq);
-                }
-            }
-        }, 200);
-        window.addEventListener('resize', onResize);
-
-        let currentQueryMode = 'nl';
-        document.querySelectorAll('#queryModeTabs .freq-tab').forEach((tab) => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('#queryModeTabs .freq-tab').forEach((t) => t.classList.remove('active'));
-                tab.classList.add('active');
-                currentQueryMode = tab.dataset.mode;
-                $('queryInput').placeholder = currentQueryMode === 'sql'
-                    ? 'SELECT organization, count FROM applications ORDER BY count DESC LIMIT 10'
-                    : 'e.g. top 10 companies by application count';
-            });
-        });
-
-        $('queryRunBtn').addEventListener('click', async () => {
-            const btn = $('queryRunBtn');
-            const text = $('queryInput').value.trim();
-            const sqlBox = $('queryGeneratedSQL');
-            const errBox = $('queryError');
-            const resBox = $('queryResult');
-            sqlBox.hidden = true;
-            errBox.hidden = true;
-            resBox.hidden = true;
-            if (!text) return;
-            btn.classList.add('loading');
-            try {
-                const data = await fetchJson('/api/applications/query', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mode: currentQueryMode, query: text }),
-                });
-                if (data.sql) {
-                    sqlBox.textContent = data.sql;
-                    sqlBox.hidden = false;
-                }
-                renderQueryTable(resBox, data);
-            } catch (err) {
-                const payload = (err && err.payload) || {};
-                if (payload.sql) {
-                    sqlBox.textContent = payload.sql;
-                    sqlBox.hidden = false;
-                }
-                errBox.textContent = (err && err.message) ? err.message : 'Query failed';
-                errBox.hidden = false;
-            } finally {
-                btn.classList.remove('loading');
-            }
-        });
-
-        function renderQueryTable(container, data) {
-            container.hidden = false;
-            const cols = data.columns || [];
-            const rows = data.rows || [];
-            if (!rows.length) {
-                container.innerHTML = '<div class="query-empty">No rows.</div>';
-                return;
-            }
-            const head = '<tr>' + cols.map((c) => `<th>${escapeHtml(c)}</th>`).join('') + '</tr>';
-            const body = rows.map((r) =>
-                '<tr>' + r.map((v) => `<td>${escapeHtml(v === null || v === undefined ? '' : String(v))}</td>`).join('') + '</tr>'
+    const lookupInput = $('lookupInput');
+    const lookupResult = $('lookupResult');
+    const lookupSuggestions = $('lookupSuggestions');
+    const runSuggestions = debounce(async (val) => {
+        const q = (val || '').trim();
+        if (!q) { lookupSuggestions.classList.remove('show'); lookupSuggestions.innerHTML = ''; return; }
+        try {
+            const data = await suggestCompanies(q);
+            const list = (data.data || data.suggestions || []).slice(0, 3);
+            if (!list.length) { lookupSuggestions.classList.remove('show'); lookupSuggestions.innerHTML = ''; return; }
+            lookupSuggestions.innerHTML = list.map((s) =>
+                '<button type="button" class="lookup-suggestion" data-company="' + escapeHtml(s.organization || s) + '">' + escapeHtml(s.organization || s) + '</button>'
             ).join('');
-            const note = data.truncated
-                ? `<div class="query-empty">Showing first ${rows.length} rows (truncated at server cap).</div>`
-                : '';
-            container.innerHTML = `<table class="query-table"><thead>${head}</thead><tbody>${body}</tbody></table>${note}`;
+            lookupSuggestions.classList.add('show');
+        } catch { lookupSuggestions.classList.remove('show'); lookupSuggestions.innerHTML = ''; }
+    }, 220);
+
+    async function runLookupNow(val) {
+        if (!val) { lookupResult.classList.remove('show'); return; }
+        try {
+            const data = await checkCompany(val);
+            lookupResult.classList.remove('found', 'empty');
+            lookupResult.classList.add('show');
+            if (data.exists) {
+                const status = data.status || '';
+                const pillCls = status.toLowerCase() === 'applied' ? 'applied' : status.toLowerCase() === 'rejected' ? 'rejected' : status.toLowerCase() === 'interview' ? 'interview' : status.toLowerCase() === 'offer' ? 'offer' : status.toLowerCase() === 'accepted' ? 'accepted' : '';
+                lookupResult.classList.add('found');
+                lookupResult.innerHTML =
+                    '<strong>' + escapeHtml(data.organization) + '</strong> — '
+                    + '<strong>' + data.count + '</strong> application' + (data.count === 1 ? '' : 's')
+                    + (status ? ' <span class="pill ' + pillCls + '">' + escapeHtml(status) + '</span>' : '')
+                    + '<div class="flex gap-2 mt-4 items-center flex-wrap">'
+                    + '<select class="px-3 py-1.5 rounded-lg bg-surface-high text-on-surface border border-outline text-sm" id="lookupStatusSelect">'
+                    + '<option value="Applied"' + (status === 'Applied' ? ' selected' : '') + '>Applied</option>'
+                    + '<option value="Interview"' + (status === 'Interview' ? ' selected' : '') + '>Interview</option>'
+                    + '<option value="Offer"' + (status === 'Offer' ? ' selected' : '') + '>Offer</option>'
+                    + '<option value="Accepted"' + (status === 'Accepted' ? ' selected' : '') + '>Accepted</option>'
+                    + '<option value="Rejected"' + (status === 'Rejected' ? ' selected' : '') + '>Rejected</option>'
+                    + '</select>'
+                    + '<button type="button" class="px-3 py-1.5 rounded-lg text-sm bg-surface-high text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" id="lookupUpdateBtn" data-org="' + escapeHtml(data.organization) + '">Update Status</button>'
+                    + '<span class="text-xs text-on-surface-variant" id="lookupInlineStatus"></span>'
+                    + '</div>';
+            } else {
+                lookupResult.classList.add('empty');
+                lookupResult.textContent = 'No application logged for "' + val + '" yet.';
+            }
+        } catch (err) {
+            lookupResult.classList.add('show', 'empty');
+            lookupResult.textContent = 'Lookup failed: ' + err.message;
         }
+    }
+    const runLookup = debounce(runLookupNow, 300);
+
+    lookupInput.addEventListener('input', (e) => { const v = e.target.value.trim(); runSuggestions(v); runLookup(v); });
+    lookupInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') lookupSuggestions.classList.remove('show'); });
+    lookupInput.addEventListener('blur', () => { setTimeout(() => lookupSuggestions.classList.remove('show'), 120); });
+    lookupInput.addEventListener('focus', () => { const v = lookupInput.value.trim(); if (v) runSuggestions(v); });
+    lookupSuggestions.addEventListener('click', (e) => {
+        const btn = e.target.closest('.lookup-suggestion');
+        if (!btn) return;
+        const company = btn.dataset.company || '';
+        lookupInput.value = company;
+        lookupSuggestions.classList.remove('show');
+        runLookup(company);
+    });
+
+    let lastOrgCheck = { name: '', exists: false, count: 0, status: '' };
+    const orgInput = $('org');
+    const upsertHint = $('upsertHint');
+    const countInput = $('count');
+
+    const runOrgCheck = debounce(async (val) => {
+        if (!val) { upsertHint.textContent = '\u00A0'; upsertHint.classList.remove('exists'); lastOrgCheck = { name: '', exists: false, count: 0, status: '' }; return; }
+        try {
+            const data = await checkCompany(val);
+            if (data.exists) {
+                lastOrgCheck = { name: data.organization, exists: true, count: data.count, status: data.status || '' };
+                const add = parseInt(countInput.value, 10) || 0;
+                upsertHint.textContent = lastOrgCheck.name + ' exists with ' + lastOrgCheck.count + ' app(s). Will set total to ' + (lastOrgCheck.count + add) + '.';
+                upsertHint.classList.add('exists');
+            } else {
+                lastOrgCheck = { name: val, exists: false, count: 0, status: '' };
+                upsertHint.textContent = 'New company — will be inserted.';
+            }
+        } catch { upsertHint.textContent = '\u00A0'; }
+    }, 300);
+
+    orgInput.addEventListener('input', (e) => runOrgCheck(e.target.value.trim()));
+
+    $('upsertForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = $('upsertBtn');
+        const status = $('upsertStatus');
+        status.classList.add('hidden');
+        btn.querySelector('.btn-loader').classList.remove('hidden'); btn.disabled = true;
+        try {
+            const data = await fetchJson('/api/applications', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    organization: $('org').value.trim(),
+                    count: parseInt($('count').value, 10) || 1,
+                    status: $('status').value,
+                    category: $('category').value,
+                    applied_dates: $('appliedDates').value,
+                    location: $('location').value,
+                    job_role: $('jobRole').value,
+                    contacts: $('contacts').value,
+                    username_password: $('usernamePassword').value,
+                    remarks: $('remarks').value,
+                })
+            });
+            status.classList.remove('hidden', 'bg-error-soft', 'text-error');
+            status.classList.add('bg-success-soft', 'text-success');
+            status.textContent = (data.action === 'created' ? 'Created' : 'Updated') + ' ' + data.organization + '.';
+            $('upsertForm').reset(); $('count').value = 1; upsertHint.textContent = '\u00A0';
+            loadStats(); loadTimeline(currentFreq);
+        } catch (err) {
+            status.classList.remove('hidden', 'bg-success-soft', 'text-success');
+            status.classList.add('bg-error-soft', 'text-error');
+            status.textContent = 'Failed: ' + err.message;
+        } finally {
+            btn.querySelector('.btn-loader').classList.add('hidden'); btn.disabled = false;
+        }
+    });
+
+    let currentFreq = 'month', currentChartMode = 'bars', latestTimelineBuckets = [];
+
+    document.querySelectorAll('#freqTabs .freq-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('#freqTabs .freq-tab').forEach((t) => t.classList.remove('active'));
+            tab.classList.add('active'); currentFreq = tab.dataset.freq; loadTimeline(currentFreq);
+        });
+    });
+    document.querySelectorAll('#chartModeTabs .freq-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('#chartModeTabs .freq-tab').forEach((t) => t.classList.remove('active'));
+            tab.classList.add('active'); currentChartMode = tab.dataset.mode || 'bars';
+            renderChart(latestTimelineBuckets);
+        });
+    });
+
+    async function loadTimeline(freq) {
+        const wrap = $('chartWrap');
+        wrap.classList.add('chart-wrap--busy');
+        try {
+            const data = await fetchJson('/api/applications/timeline?freq=' + freq);
+            latestTimelineBuckets = data.data || data.buckets || [];
+            renderChart(latestTimelineBuckets);
+        } catch (err) { wrap.innerHTML = '<div class="empty-chart text-center py-12 text-on-surface-muted text-sm">Failed: ' + escapeHtml(err.message) + '</div>'; }
+        finally { wrap.classList.remove('chart-wrap--busy'); }
+    }
+
+    function renderChart(buckets) {
+        const wrap = $('chartWrap');
+        if (!buckets || !buckets.length) { wrap.innerHTML = '<div class="empty-chart text-center py-12 text-on-surface-muted text-sm">No data yet.</div>'; return; }
+        var W = wrap.clientWidth - 20, H = 260, pad = { t: 20, r: 10, b: 30, l: 40 };
+        var iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+        var maxV = 0; buckets.forEach(function(b) { if (b.applications > maxV) maxV = b.applications; if (b.companies > maxV) maxV = b.companies; });
+        maxV = Math.max(maxV, 1);
+        var bw = Math.max(2, (iw / buckets.length) - 1);
+        var html = '<svg class="chart-svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
+        var ySteps = 4;
+        for (var i = 0; i <= ySteps; i++) {
+            var y = pad.t + (ih / ySteps) * i;
+            var v = maxV - (maxV / ySteps) * i;
+            html += '<line class="grid-line" x1="' + pad.l + '" y1="' + y + '" x2="' + (W - pad.r) + '" y2="' + y + '"/>';
+            html += '<text x="' + (pad.l - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + Math.round(v) + '</text>';
+        }
+        if (currentChartMode === 'line') {
+            var ptsA = '', ptsC = '';
+            buckets.forEach(function(b, i) {
+                var x = pad.l + (iw / (buckets.length - 1 || 1)) * i;
+                var yA = pad.t + ih - (b.applications / maxV) * ih;
+                var yC = pad.t + ih - (b.companies / maxV) * ih;
+                ptsA += (i === 0 ? 'M' : 'L') + x + ',' + yA;
+                ptsC += (i === 0 ? 'M' : 'L') + x + ',' + yC;
+            });
+            html += '<path class="line-apps" d="' + ptsA + '"/>';
+            html += '<path class="line-cos" d="' + ptsC + '"/>';
+        } else {
+            buckets.forEach(function(b, i) {
+                var x = pad.l + (iw / buckets.length) * i + 0.5;
+                var hA = (b.applications / maxV) * ih, hC = (b.companies / maxV) * ih;
+                html += '<rect class="bar-apps" x="' + x + '" y="' + (pad.t + ih - hA) + '" width="' + bw + '" height="' + hA + '"/>';
+                html += '<rect class="bar-cos" x="' + (x + bw + 1) + '" y="' + (pad.t + ih - hC) + '" width="' + bw + '" height="' + hC + '"/>';
+            });
+        }
+        html += '</svg>';
+        wrap.innerHTML = html;
+    }
+
+    async function loadContribution() {
+        try {
+            const data = await fetchJson('/api/applications/contribution?year=' + new Date().getFullYear());
+            const days = data.data || data.days || [];
+            const grid = $('contributionGrid');
+            if (!days.length) { grid.innerHTML = '<div class="text-center py-8 text-on-surface-muted text-sm col-span-7">No data.</div>'; return; }
+            grid.innerHTML = days.map(function(d) {
+                var l = d.level || 0;
+                return '<div class="contribution-cell contribution-level-' + l + '" title="' + d.date + ': ' + d.count + ' apps">' + parseInt(d.date.slice(-2), 10) + '</div>';
+            }).join('');
+        } catch (err) { $('contributionGrid').innerHTML = '<div class="text-center py-8 text-error text-sm col-span-7">' + escapeHtml(err.message) + '</div>'; }
+    }
+
+    var queryMode = 'nl';
+    document.querySelectorAll('#queryModeTabs .freq-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('#queryModeTabs .freq-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active'); queryMode = tab.dataset.mode;
+            $('queryInput').placeholder = queryMode === 'nl' ? 'e.g. top 10 companies by application count' : 'e.g. SELECT * FROM applications LIMIT 10';
+        });
+    });
+
+    $('queryRunBtn').addEventListener('click', async function() {
+        var btn = this, sqlDiv = $('queryGeneratedSQL'), errDiv = $('queryError'), resultDiv = $('queryResult');
+        sqlDiv.classList.add('hidden'); errDiv.classList.add('hidden'); resultDiv.classList.add('hidden');
+        var query = $('queryInput').value.trim();
+        if (!query) return;
+        btn.querySelector('.btn-loader').classList.remove('hidden'); btn.disabled = true;
+        try {
+            var data = await fetchJson('/api/applications/query', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: queryMode, query: query })
+            });
+            if (data.sql) { sqlDiv.textContent = data.sql; sqlDiv.classList.remove('hidden'); }
+            if (data.data && data.data.columns && data.data.rows) {
+                var html = '<table class="query-table"><thead><tr>' + data.data.columns.map(function(c) { return '<th>' + escapeHtml(c) + '</th>'; }).join('') + '</tr></thead><tbody>';
+                data.data.rows.forEach(function(r) { html += '<tr>' + r.map(function(v) { return '<td>' + escapeHtml(String(v ?? '')) + '</td>'; }).join('') + '</tr>'; });
+                html += '</tbody></table>';
+                if (data.data.truncated) html += '<div class="px-4 py-3 text-xs text-on-surface-muted">Results truncated at 500 rows.</div>';
+                resultDiv.innerHTML = html; resultDiv.classList.remove('hidden');
+            }
+        } catch (err) {
+            errDiv.textContent = err.message; errDiv.classList.remove('hidden');
+        } finally {
+            btn.querySelector('.btn-loader').classList.add('hidden'); btn.disabled = false;
+        }
+    });
+
+    loadStats(); loadTimeline('month'); loadContribution();
+
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('#lookupUpdateBtn');
+        if (!btn) return;
+        var org = btn.dataset.org, select = $('lookupStatusSelect');
+        if (!org || !select) return;
+        btn.disabled = true; btn.textContent = '...';
+        fetchJson('/api/applications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ organization: org, count: 0, status: select.value, applied_dates: '' }) })
+            .then(function() { runLookupNow(org); loadStats(); loadTimeline(currentFreq); })
+            .finally(function() { btn.disabled = false; btn.textContent = 'Update Status'; });
+    });
     </script>
     <script src="/static/sidebar.js" defer></script>
 </body>

@@ -1,630 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat - Asutosh's Portfolio</title>
-    <link rel="stylesheet" href="/static/zenith.css">
+    <title>Chat - pi_dashboard</title>
+    <link rel="stylesheet" href="/static/output.css">
     <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
 </head>
-<body>
-    <div class="dashboard-layout">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" aria-expanded="false">
-                    <span></span><span></span><span></span>
-                </button>
-                <span class="sidebar-brand">Asutosh's Portfolio</span>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="/dashboard" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">◉</span>
-                    <span class="nav-text">Dashboard</span>
-                </a>
-                <a href="/tools/email" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📧</span>
-                    <span class="nav-text">Email Tool</span>
-                </a>
-                <a href="/tools/cover-letter" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📄</span>
-                    <span class="nav-text">Cover Letter Generator</span>
-                </a>
-                <a href="/tools/resume" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📝</span>
-                    <span class="nav-text">Resume Tailor</span>
-                </a>
-                <a href="/tools/clipboard" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📋</span>
-                    <span class="nav-text">Clipboard</span>
-                </a>
-                <a href="/tools/tracker" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📊</span>
-                    <span class="nav-text">Job Tracker</span>
-                </a>
-                <a href="/tools/chat" class="nav-link active">
-                    <span class="nav-icon" aria-hidden="true">💬</span>
-                    <span class="nav-text">Chat</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <a href="/logout" class="nav-link" title="Logout">
-                    <span class="nav-icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    </span>
-                    <span class="nav-text">Logout</span>
-                </a>
-            </div>
-        </aside>
-        <div class="sidebar-backdrop" aria-hidden="true"></div>
-
-        <main class="main-content">
-            <div class="chat-wrapper">
-                <div class="chat-skill-bar">
-                    <span class="chat-skill-tag">📋 Application Assistant</span>
-                    <span class="chat-skill-desc" id="skillDesc">Drafts short, human-sounding job application responses grounded in your resume.</span>
-                    <button class="btn btn-ghost" id="promptsToggle" title="Toggle prompts">Prompts</button>
+<body class="bg-surface text-on-surface antialiased min-h-screen">
+    <div class="dashboard-layout flex min-h-screen">
+        {{template "sidebar" "chat"}}
+        <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200 flex flex-col">
+            <div class="flex flex-col h-[calc(100vh-0px)]">
+                <div class="flex items-center gap-3 px-6 py-3 bg-surface-container border-b border-outline-variant">
+                    <span class="px-2 py-1 rounded text-xs font-medium bg-surface-high text-on-surface-variant">📋 Application Assistant</span>
+                    <span id="skillDesc" class="text-xs text-on-surface-muted flex-1">Drafts short, human-sounding job application responses.</span>
+                    <button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" id="promptsToggle">Prompts</button>
                 </div>
 
-                <div class="chat-prompts-row" id="promptsRow">
-                    <div class="chat-prompt-add" id="addPromptBtn">+ Add Prompt</div>
-                </div>
-
-                <div class="chat-messages" id="chatMessages">
-                    <div class="chat-empty-state" id="emptyState">
-                        <div class="chat-empty-state-icon">💬</div>
-                        <p class="chat-empty-state-text">Ask me to draft a job application response based on your resume.</p>
+                <div id="promptsRow" class="hidden px-6 py-3 bg-surface-high border-b border-outline-variant">
+                    <div class="flex gap-2 flex-wrap">
+                        <span class="px-3 py-1.5 rounded-full text-xs bg-surface-container text-on-surface-variant border border-outline-variant cursor-pointer hover:bg-surface-highest transition-colors" id="addPromptBtn">+ Add Prompt</span>
                     </div>
                 </div>
 
-                <div class="chat-input-row">
-                    <textarea class="chat-input" id="chatInput" placeholder="e.g. Draft a response for 'Why do you want to work at Google?'" rows="1"></textarea>
-                    <div class="chat-input-actions">
-                        <button class="btn btn-primary" id="sendBtn">
-                            <span class="btn-text">Send</span>
-                            <div class="btn-loader"></div>
+                <div id="chatMessages" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                    <div id="emptyState" class="text-center py-16">
+                        <div class="text-4xl mb-3">💬</div>
+                        <p class="text-sm text-on-surface-muted">Ask me to draft a job application response based on your resume.</p>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-surface-container border-t border-outline-variant">
+                    <div class="flex gap-3 items-end">
+                        <textarea id="chatInput" class="flex-1 px-4 py-2.5 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm resize-none" placeholder="e.g. Draft a response for 'Why do you want to work at Google?'" rows="1"></textarea>
+                        <button class="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none" id="sendBtn">
+                            <span>Send</span>
+                            <div class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></div>
                         </button>
-                        <button class="btn btn-ghost" id="stopBtn" title="Stop generating" style="display:none">Stop</button>
-                        <button class="btn btn-ghost" id="clearBtn" title="Clear chat">✕</button>
+                        <button class="px-3 py-2 rounded-lg text-xs font-medium bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer hidden" id="stopBtn">Stop</button>
+                        <button class="px-3 py-2 rounded-lg text-xs font-medium bg-surface-high text-error hover:bg-error-soft transition-colors border-none cursor-pointer" id="clearBtn" title="Clear chat">✕</button>
                     </div>
+                    <div class="mt-2 text-xs text-on-surface-muted">Enter to send · Shift+Enter for new line</div>
                 </div>
-                <div class="chat-input-hint">Enter to send · Shift+Enter for new line</div>
             </div>
         </main>
     </div>
-
-    <div class="prompt-modal-overlay" id="promptModal">
-        <div class="prompt-modal">
-            <h3 class="prompt-modal-title">Add Default Prompt</h3>
-            <div class="form-group">
-                <label class="form-label" for="promptTitle">Title</label>
-                <input type="text" id="promptTitle" class="form-input" placeholder="e.g. Help me humanize" autocomplete="off">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="promptContent">Prompt Text</label>
-                <textarea id="promptContent" class="form-input" placeholder="The prompt text that will be sent..." rows="3" style="resize:vertical;font-family:inherit;"></textarea>
-            </div>
-            <div id="promptError" class="status-message" style="display:none;"></div>
-            <div style="display:flex;gap:var(--space-sm);justify-content:flex-end;">
-                <button class="btn btn-ghost" id="promptCancelBtn">Cancel</button>
-                <button class="btn btn-primary" id="promptSaveBtn">
-                    <span class="btn-text">Save</span>
-                    <div class="btn-loader"></div>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="toast" class="toast" style="display:none;"></div>
-
     <script>
-        let prompts = [];
-        let streaming = false;
-        let abortController = null;
-        let messagesEl = document.getElementById('chatMessages');
-        let emptyState = document.getElementById('emptyState');
-        let chatInput = document.getElementById('chatInput');
-        let sendBtn = document.getElementById('sendBtn');
-        let stopBtn = document.getElementById('stopBtn');
-        let clearBtn = document.getElementById('clearBtn');
-        let promptsRow = document.getElementById('promptsRow');
-        let promptsToggle = document.getElementById('promptsToggle');
-        let promptModal = document.getElementById('promptModal');
-        let promptTitle = document.getElementById('promptTitle');
-        let promptContent = document.getElementById('promptContent');
-        let promptError = document.getElementById('promptError');
-        let toastEl = document.getElementById('toast');
+    var chatMessages = document.getElementById('chatMessages');
+    var chatInput = document.getElementById('chatInput');
+    var sendBtn = document.getElementById('sendBtn');
+    var stopBtn = document.getElementById('stopBtn');
+    var clearBtn = document.getElementById('clearBtn');
+    var emptyState = document.getElementById('emptyState');
+    var promptsRow = document.getElementById('promptsRow');
+    var promptsToggle = document.getElementById('promptsToggle');
+    var abortController = null;
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+    // Auto-resize textarea
+    chatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    });
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
 
-        function showToast(msg) {
-            toastEl.textContent = msg;
-            toastEl.style.display = 'block';
-            toastEl.style.opacity = '1';
-            setTimeout(() => {
-                toastEl.style.opacity = '0';
-                setTimeout(() => { toastEl.style.display = 'none'; }, 300);
-            }, 3000);
-        }
+    promptsToggle.addEventListener('click', function() {
+        promptsRow.classList.toggle('hidden');
+    });
 
-        function renderMarkdown(text) {
-            let html = escapeHtml(text);
-            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            html = html.replace(/^(\d+)\. (.+)$/gm, '<li value="$1">$2</li>');
-            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/((?:<li.*>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
-            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-            html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
-            html = html.replace(/^---$/gm, '<hr>');
-            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
-            html = html.replace(/\n/g, '<br>');
-            html = html.replace(/<li><br>/g, '<li>');
-            html = html.replace(/<br><\/li>/g, '</li>');
-            html = html.replace(/<br><\/ul>/g, '</ul>');
-            html = html.replace(/<ul><br>/g, '<ul>');
-            html = html.replace(/<\/ul><br><ul>/g, '');
-            html = html.replace(/<br><\/blockquote>/g, '</blockquote>');
-            html = html.replace(/<blockquote><br>/g, '<blockquote>');
-            html = html.replace(/<br><\/h1>/g, '</h1>');
-            html = html.replace(/<br><\/h2>/g, '</h2>');
-            html = html.replace(/<br><\/h3>/g, '</h3>');
-            html = html.replace(/<br><hr>/g, '<hr>');
-            html = html.replace(/<hr><br>/g, '<hr>');
-            return html;
-        }
+    function addMessage(role, content) {
+        emptyState.style.display = 'none';
+        var div = document.createElement('div');
+        div.className = 'flex gap-3 ' + (role === 'user' ? 'justify-end' : 'justify-start');
+        div.innerHTML = '<div class="max-w-[80%] px-4 py-2.5 rounded-xl text-sm ' +
+            (role === 'user' ? 'bg-primary text-on-primary-container' : 'bg-surface-high text-on-surface') + '">' +
+            '<div class="whitespace-pre-wrap">' + escapeHtml(content) + '</div></div>';
+        div.dataset.role = role;
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return div;
+    }
 
-        function addMessage(role, content) {
-            emptyState.style.display = 'none';
+    function showLoader() {
+        var div = document.createElement('div');
+        div.className = 'flex gap-3 justify-start';
+        div.id = 'chatLoader';
+        div.innerHTML = '<div class="px-4 py-2.5 rounded-xl text-sm bg-surface-high text-on-surface-muted"><div class="flex gap-1"><span class="w-2 h-2 bg-on-surface-muted rounded-full animate-bounce" style="animation-delay:0ms"></span><span class="w-2 h-2 bg-on-surface-muted rounded-full animate-bounce" style="animation-delay:150ms"></span><span class="w-2 h-2 bg-on-surface-muted rounded-full animate-bounce" style="animation-delay:300ms"></span></div></div>';
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
-            const div = document.createElement('div');
-            div.className = 'chat-message ' + role;
+    function removeLoader() {
+        var loader = document.getElementById('chatLoader');
+        if (loader) loader.remove();
+    }
 
-            const header = document.createElement('div');
-            header.className = 'chat-message-header';
-            header.textContent = role === 'user' ? 'You' : 'Assistant';
-
-            const bubble = document.createElement('div');
-            bubble.className = 'chat-message-bubble';
-
-            if (role === 'assistant' && streaming) {
-                div.dataset.streaming = 'true';
-                const cursor = document.createElement('span');
-                cursor.className = 'chat-cursor';
-                bubble.appendChild(cursor);
+    function sendMessage() {
+        var text = chatInput.value.trim();
+        if (!text || sendBtn.disabled) return;
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        addMessage('user', text);
+        showLoader();
+        sendBtn.disabled = true;
+        stopBtn.classList.remove('hidden');
+        abortController = new AbortController();
+        fetch('/api/chat/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message: text}),
+            signal: abortController.signal
+        }).then(function(r) { return r.json(); }).then(function(d) {
+            removeLoader();
+            if (d.success && d.data && d.data.response) {
+                addMessage('assistant', d.data.response);
             } else {
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'chat-msg-content';
-                contentDiv.innerHTML = renderMarkdown(content);
-                bubble.appendChild(contentDiv);
+                addMessage('assistant', 'Error: ' + (d.error || 'Unknown error'));
             }
-
-            div.appendChild(header);
-            div.appendChild(bubble);
-            messagesEl.appendChild(div);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-
-        let rafToken = null;
-        let pendingToken = '';
-        let scrollThrottle = null;
-
-        function flushToken() {
-            rafToken = null;
-            const token = pendingToken;
-            pendingToken = '';
-
-            let lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child');
-            if (!lastMsg || lastMsg.dataset.streaming !== 'true') {
-                addMessage('assistant', token);
-                return;
+        }).catch(function(err) {
+            removeLoader();
+            if (err.name !== 'AbortError') {
+                addMessage('assistant', 'Error: ' + err.message);
             }
-            let cursor = lastMsg.querySelector('.chat-cursor');
-            let contentDiv = lastMsg.querySelector('.chat-msg-content');
-            if (!contentDiv) {
-                contentDiv = document.createElement('div');
-                contentDiv.className = 'chat-msg-content';
-                lastMsg.querySelector('.chat-message-bubble').appendChild(contentDiv);
-            }
-            contentDiv.innerHTML = renderMarkdown(token);
-            if (cursor) {
-                lastMsg.querySelector('.chat-message-bubble').appendChild(cursor);
-            }
-            if (lastMsg.hasAttribute('data-user-scrolled')) return;
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-
-        function scheduleFlush() {
-            if (!rafToken) {
-                rafToken = requestAnimationFrame(flushToken);
-            }
-        }
-
-        messagesEl.addEventListener('scroll', () => {
-            if (!streaming) return;
-            if (scrollThrottle) scrollThrottle = null;
-            scrollThrottle = setTimeout(() => {
-                const lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child[data-streaming]');
-                if (!lastMsg) return;
-                const threshold = messagesEl.scrollHeight - messagesEl.clientHeight - 60;
-                if (messagesEl.scrollTop < threshold) {
-                    lastMsg.dataset.userScrolled = 'true';
-                } else {
-                    delete lastMsg.dataset.userScrolled;
-                }
-            }, 100);
-        });
-
-        function finalizeMessage(fullContent) {
-            streaming = false;
+        }).finally(function() {
+            sendBtn.disabled = false;
+            stopBtn.classList.add('hidden');
             abortController = null;
-            stopBtn.style.display = 'none';
-            let lastMsg = messagesEl.querySelector('.chat-message.assistant:last-child');
-            if (lastMsg && lastMsg.dataset.streaming === 'true') {
-                delete lastMsg.dataset.streaming;
-                delete lastMsg.dataset.userScrolled;
-                let cursor = lastMsg.querySelector('.chat-cursor');
-                if (cursor) cursor.remove();
-                let contentDiv = lastMsg.querySelector('.chat-msg-content');
-                if (!contentDiv) {
-                    contentDiv = document.createElement('div');
-                    contentDiv.className = 'chat-msg-content';
-                    lastMsg.querySelector('.chat-message-bubble').appendChild(contentDiv);
-                }
-                contentDiv.innerHTML = renderMarkdown(fullContent);
-
-                const copyBtn = document.createElement('button');
-                copyBtn.className = 'chat-copy-btn';
-                copyBtn.textContent = 'Copy';
-                copyBtn.addEventListener('click', async () => {
-                    await copyText(fullContent, copyBtn);
-                });
-                lastMsg.querySelector('.chat-message-bubble').appendChild(copyBtn);
-            }
-            sendBtn.classList.remove('loading');
-            chatInput.disabled = false;
-            chatInput.focus();
-        }
-
-        async function copyText(text, btn) {
-            try {
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(text);
-                } else {
-                    const ta = document.createElement('textarea');
-                    ta.value = text;
-                    ta.style.position = 'fixed';
-                    ta.style.left = '-9999px';
-                    document.body.appendChild(ta);
-                    ta.focus();
-                    ta.select();
-                    if (!document.execCommand('copy')) throw new Error('fallback failed');
-                    document.body.removeChild(ta);
-                }
-                btn.textContent = 'Copied';
-                setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-            } catch (e) { btn.textContent = 'Failed'; }
-        }
-
-        async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message || streaming) return;
-
-            streaming = true;
-            abortController = new AbortController();
-            stopBtn.style.display = 'inline-flex';
-            addMessage('user', message);
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
-            sendBtn.classList.add('loading');
-            chatInput.disabled = true;
-
-            try {
-                const resp = await fetch('/api/chat/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message }),
-                    signal: abortController.signal
-                });
-
-                if (!resp.ok) {
-                    const errData = await resp.json().catch(() => ({}));
-                    addMessage('assistant', 'Error: ' + (errData.error || 'Request failed'));
-                    showToast(errData.error || 'Request failed');
-                    streaming = false;
-                    stopBtn.style.display = 'none';
-                    sendBtn.classList.remove('loading');
-                    chatInput.disabled = false;
-                    return;
-                }
-
-                const reader = resp.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                let fullContent = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || '';
-
-                    for (const line of lines) {
-                        if (!line.startsWith('data: ')) continue;
-                        const data = line.slice(6).trim();
-                        if (!data) continue;
-
-                        try {
-                            const parsed = JSON.parse(data);
-                            if (parsed.token) {
-                                fullContent += parsed.token;
-                                pendingToken = fullContent;
-                                scheduleFlush();
-                            } else if (parsed.done !== undefined) {
-                                fullContent = parsed.done || fullContent;
-                                if (rafToken) {
-                                    cancelAnimationFrame(rafToken);
-                                    rafToken = null;
-                                }
-                                pendingToken = '';
-                                finalizeMessage(fullContent);
-                                return;
-                            }
-                        } catch (e) {
-                            showToast('Error parsing response');
-                        }
-                    }
-                }
-
-                if (rafToken) {
-                    cancelAnimationFrame(rafToken);
-                    rafToken = null;
-                }
-                pendingToken = '';
-                finalizeMessage(fullContent);
-            } catch (e) {
-                if (e.name === 'AbortError') {
-                    if (rafToken) {
-                        cancelAnimationFrame(rafToken);
-                        rafToken = null;
-                    }
-                    pendingToken = '';
-                    finalizeMessage(fullContent || '');
-                    return;
-                }
-                addMessage('assistant', 'Error: ' + (e.message || 'Connection failed'));
-                showToast(e.message || 'Connection failed');
-                streaming = false;
-                stopBtn.style.display = 'none';
-                sendBtn.classList.remove('loading');
-                chatInput.disabled = false;
-            }
-        }
-
-        stopBtn.addEventListener('click', () => {
-            if (abortController) {
-                abortController.abort();
-            }
         });
+    }
 
-        sendBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+    stopBtn.addEventListener('click', function() {
+        if (abortController) { abortController.abort(); }
+    });
 
-        clearBtn.addEventListener('click', async () => {
-            if (streaming && abortController) {
-                abortController.abort();
-            }
-            try {
-                const resp = await fetch('/api/chat/clear', { method: 'POST' });
-                if (!resp.ok) {
-                    showToast('Failed to clear chat');
-                }
-            } catch (e) {
-                showToast('Failed to clear chat');
-            }
-            messagesEl.querySelectorAll('.chat-message').forEach(el => el.remove());
-            emptyState.style.display = 'flex';
-            streaming = false;
-            abortController = null;
-            stopBtn.style.display = 'none';
-            sendBtn.classList.remove('loading');
-            chatInput.disabled = false;
-            chatInput.value = '';
-        });
+    sendBtn.addEventListener('click', sendMessage);
 
-        chatInput.addEventListener('input', () => {
-            chatInput.style.height = 'auto';
-            chatInput.style.height = Math.min(chatInput.scrollHeight, 240) + 'px';
-        });
-
-        async function loadSkill() {
-            try {
-                const resp = await fetch('/api/chat/skill');
-                const data = await resp.json();
-                if (data.success && data.skill) {
-                    document.getElementById('skillDesc').textContent = data.skill.description;
-                } else {
-                    showToast('Failed to load skill info');
-                }
-            } catch (e) {
-                showToast('Failed to load skill info');
-            }
-        }
-
-        async function loadPrompts() {
-            try {
-                const resp = await fetch('/api/chat/prompts');
-                const data = await resp.json();
-                if (data.success) {
-                    prompts = data.prompts || [];
-                    renderPrompts();
-                } else {
-                    showToast('Failed to load prompts');
-                }
-            } catch (e) {
-                showToast('Failed to load prompts');
-            }
-        }
-
-        function renderPrompts() {
-            let html = '';
-            for (const p of prompts) {
-                html += '<div class="chat-prompt-pill" onclick="fillPrompt(\'' + escapeHtml(p.id) + '\')">';
-                html += escapeHtml(p.title);
-                html += '<span class="pill-remove" onclick="event.stopPropagation();deletePrompt(\'' + escapeHtml(p.id) + '\')">✕</span>';
-                html += '</div>';
-            }
-            html += '<div class="chat-prompt-add" id="addPromptBtn">+ Add Prompt</div>';
-            promptsRow.innerHTML = html;
-            document.getElementById('addPromptBtn').addEventListener('click', showPromptModal);
-        }
-
-        function fillPrompt(id) {
-            const p = prompts.find(x => x.id === id);
-            if (p) {
-                chatInput.value = p.content;
-                chatInput.focus();
-                chatInput.dispatchEvent(new Event('input'));
-            }
-        }
-
-        async function deletePrompt(id) {
-            try {
-                const resp = await fetch('/api/chat/prompts/delete?id=' + encodeURIComponent(id), {
-                    method: 'DELETE',
-                    headers: { 'Accept': 'application/json' }
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    prompts = prompts.filter(x => x.id !== id);
-                    renderPrompts();
-                } else {
-                    showToast(data.error || 'Failed to delete prompt');
-                }
-            } catch (e) {
-                showToast('Failed to delete prompt');
-            }
-        }
-
-        promptsToggle.addEventListener('click', () => {
-            promptsRow.classList.toggle('collapsed');
-        });
-
-        function showPromptModal() {
-            promptTitle.value = '';
-            promptContent.value = '';
-            promptError.style.display = 'none';
-            promptModal.classList.add('show');
-            promptTitle.focus();
-        }
-
-        document.getElementById('promptCancelBtn').addEventListener('click', () => {
-            promptModal.classList.remove('show');
-        });
-        promptModal.addEventListener('click', (e) => {
-            if (e.target === promptModal) promptModal.classList.remove('show');
-        });
-
-        promptContent.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                document.getElementById('promptSaveBtn').click();
-            }
-        });
-
-        document.getElementById('promptSaveBtn').addEventListener('click', async () => {
-            const title = promptTitle.value.trim();
-            const content = promptContent.value.trim();
-            if (!title || !content) {
-                promptError.textContent = 'Title and content are required';
-                promptError.style.display = 'block';
-                return;
-            }
-
-            const btn = document.getElementById('promptSaveBtn');
-            btn.classList.add('loading');
-            promptError.style.display = 'none';
-
-            try {
-                const resp = await fetch('/api/chat/prompts/add', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, content })
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    prompts.push(data.prompt);
-                    renderPrompts();
-                    promptModal.classList.remove('show');
-                } else {
-                    promptError.textContent = data.error || 'Failed to save prompt';
-                    promptError.style.display = 'block';
-                }
-            } catch (e) {
-                promptError.textContent = 'Failed to save prompt';
-                promptError.style.display = 'block';
-            } finally {
-                btn.classList.remove('loading');
-            }
-        });
-
-        async function loadHistory() {
-            try {
-                const resp = await fetch('/api/chat/history');
-                const data = await resp.json();
-                if (data.success && data.messages) {
-                    for (const msg of data.messages) {
-                        const div = document.createElement('div');
-                        div.className = 'chat-message ' + msg.role;
-                        const header = document.createElement('div');
-                        header.className = 'chat-message-header';
-                        header.textContent = msg.role === 'user' ? 'You' : 'Assistant';
-                        const bubble = document.createElement('div');
-                        bubble.className = 'chat-message-bubble';
-                        const contentDiv = document.createElement('div');
-                        contentDiv.className = 'chat-msg-content';
-                        contentDiv.innerHTML = renderMarkdown(msg.content);
-                        bubble.appendChild(contentDiv);
-                        if (msg.role === 'assistant') {
-                            const copyBtn = document.createElement('button');
-                            copyBtn.className = 'chat-copy-btn';
-                            copyBtn.textContent = 'Copy';
-                            copyBtn.addEventListener('click', async () => {
-                                await copyText(msg.content, copyBtn);
-                            });
-                            bubble.appendChild(copyBtn);
-                        }
-                        div.appendChild(header);
-                        div.appendChild(bubble);
-                        messagesEl.appendChild(div);
-                    }
-                    if (data.messages.length > 0) {
-                        emptyState.style.display = 'none';
-                        messagesEl.scrollTop = messagesEl.scrollHeight;
-                    }
-                }
-            } catch (e) {
-                showToast('Failed to load chat history');
-            }
-        }
-
-        loadSkill();
-        loadPrompts();
-        loadHistory();
+    clearBtn.addEventListener('click', function() {
+        if (abortController) abortController.abort();
+        chatMessages.querySelectorAll('[data-role]').forEach(function(el) { el.remove(); });
+        emptyState.style.display = 'block';
+        fetch('/api/chat/clear', {method: 'POST'});
+    });
     </script>
     <script src="/static/sidebar.js" defer></script>
 </body>

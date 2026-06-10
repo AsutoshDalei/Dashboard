@@ -1,182 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Sender - Asutosh's Portfolio</title>
-    <link rel="stylesheet" href="/static/zenith.css">
+    <title>Email Sender - pi_dashboard</title>
+    <link rel="stylesheet" href="/static/output.css">
     <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
 </head>
-<body>
-    <div class="dashboard-layout">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" aria-expanded="false">
-                    <span></span><span></span><span></span>
-                </button>
-                <span class="sidebar-brand">Asutosh's Portfolio</span>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <a href="/dashboard" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">◉</span>
-                    <span class="nav-text">Dashboard</span>
-                </a>
-                <a href="/tools/email" class="nav-link active">
-                    <span class="nav-icon" aria-hidden="true">📧</span>
-                    <span class="nav-text">Email Tool</span>
-                </a>
-                <a href="/tools/cover-letter" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📄</span>
-                    <span class="nav-text">Cover Letter Generator</span>
-                </a>
-                <a href="/tools/resume" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📝</span>
-                    <span class="nav-text">Resume Tailor</span>
-                </a>
-                <a href="/tools/clipboard" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📋</span>
-                    <span class="nav-text">Clipboard</span>
-                </a>
-                <a href="/tools/tracker" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">📊</span>
-                    <span class="nav-text">Job Tracker</span>
-                </a>
-                <a href="/tools/chat" class="nav-link">
-                    <span class="nav-icon" aria-hidden="true">💬</span>
-                    <span class="nav-text">Chat</span>
-                </a>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <a href="/logout" class="nav-link" title="Logout">
-                    <span class="nav-icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    </span>
-                    <span class="nav-text">Logout</span>
-                </a>
-            </div>
-        </aside>
-        
-        <div class="sidebar-backdrop" aria-hidden="true"></div>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-wrapper">
-                <!-- Page Header -->
-                <header class="page-header">
-                    <h1 class="page-title">Email Sender</h1>
-                    <p class="page-subtitle">Send personalized job application emails with your resume attached.</p>
+<body class="bg-surface text-on-surface antialiased min-h-screen">
+    <div class="dashboard-layout flex min-h-screen">
+        {{template "sidebar" "email"}}
+        <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200">
+            <div class="content-wrapper max-w-3xl mx-auto px-6 py-8">
+                <header class="page-header mb-8">
+                    <h1 class="page-title text-2xl font-bold text-on-surface">Email Sender</h1>
+                    <p class="page-subtitle text-on-surface-muted mt-1">Send personalized job application emails with your resume attached.</p>
                 </header>
-                
-                <!-- Email Form Card -->
-                <div class="email-form-card">
-                    <div class="email-form-header">
-                        <h2 class="email-form-title">Send Application</h2>
-                        <p class="email-form-subtitle">Fill in the details below to send a bespoke job application.</p>
+
+                <div class="bg-surface-container rounded-xl p-6 border border-outline-variant">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-on-surface">Send Application</h2>
+                        <p class="text-sm text-on-surface-muted mt-1">Fill in details below to send a bespoke job application.</p>
                     </div>
-                    
                     <form id="emailForm">
-                        <div class="form-group">
-                            <label class="form-label" for="senderKey">Sender Account</label>
-                            <select id="senderKey" name="senderKey" class="form-select" required>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-on-surface-variant mb-1" for="senderKey">Sender Account</label>
+                            <select id="senderKey" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm" required>
                                 <option value="university" selected>University Gmail (Default)</option>
                                 <option value="personal">Personal Gmail</option>
                             </select>
                         </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="personName">Recipient's Name</label>
-                            <input 
-                                type="text" 
-                                id="personName" 
-                                name="personName" 
-                                class="form-input" 
-                                placeholder="e.g. John Smith"
-                                autocomplete="off"
-                                required
-                            >
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-on-surface-variant mb-1" for="personName">Recipient's Name</label>
+                            <input type="text" id="personName" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="e.g. John Smith" autocomplete="off" required>
                         </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="companyName">Target Company</label>
-                            <input 
-                                type="text" 
-                                id="companyName" 
-                                name="companyName" 
-                                class="form-input" 
-                                placeholder="e.g. Google"
-                                autocomplete="off"
-                                required
-                            >
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-on-surface-variant mb-1" for="companyName">Target Company</label>
+                            <input type="text" id="companyName" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="e.g. Google" autocomplete="off" required>
                         </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="emailAddress">Recipient's Email</label>
-                            <input 
-                                type="email" 
-                                id="emailAddress" 
-                                name="emailAddress" 
-                                class="form-input" 
-                                placeholder="e.g. john@company.com"
-                                autocomplete="off"
-                                required
-                            >
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-on-surface-variant mb-1" for="emailAddress">Recipient's Email</label>
+                            <input type="email" id="emailAddress" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="e.g. john@company.com" autocomplete="off" required>
                         </div>
-                        
-                        <button type="submit" id="submitBtn" class="btn btn-primary btn-full">
+                        <button type="submit" id="submitBtn" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
                             <span class="btn-text">Send Application</span>
-                            <div class="btn-loader"></div>
+                            <div class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></div>
                         </button>
                     </form>
-                    
-                    <div id="statusMessage" class="status-message"></div>
+                    <div id="statusMessage" class="mt-4 px-4 py-3 rounded-lg text-sm hidden"></div>
                 </div>
             </div>
         </main>
     </div>
-    
     <script>
-        document.getElementById('emailForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const btn = document.getElementById('submitBtn');
-            const statusMessage = document.getElementById('statusMessage');
-            
-            const name = document.getElementById('personName').value;
-            const company = document.getElementById('companyName').value;
-            const email = document.getElementById('emailAddress').value;
-            const senderKey = document.getElementById('senderKey').value;
-            
-            // Loading state
-            btn.classList.add('loading');
-            statusMessage.classList.remove('show', 'success', 'error');
-            
-            try {
-                const response = await fetch('/send-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, company, email, sender_key: senderKey })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    statusMessage.textContent = 'Email sent successfully!';
-                    statusMessage.classList.add('show', 'success');
-                    document.getElementById('emailForm').reset();
-                } else {
-                    statusMessage.textContent = 'Error: ' + result.error;
-                    statusMessage.classList.add('show', 'error');
-                }
-            } catch (error) {
-                statusMessage.textContent = 'Failed to connect to the server.';
-                statusMessage.classList.add('show', 'error');
-            } finally {
-                btn.classList.remove('loading');
-            }
+    document.getElementById('emailForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = document.getElementById('submitBtn');
+        var status = document.getElementById('statusMessage');
+        var loader = btn.querySelector('.btn-loader');
+        btn.querySelector('.btn-text').textContent = 'Sending...';
+        loader.classList.remove('hidden');
+        btn.disabled = true;
+        status.className = 'mt-4 px-4 py-3 rounded-lg text-sm hidden';
+        fetch('/send-email', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name: document.getElementById('personName').value,
+                company: document.getElementById('companyName').value,
+                email: document.getElementById('emailAddress').value,
+                sender_key: document.getElementById('senderKey').value
+            })
+        }).then(function(r) { return r.json(); }).then(function(d) {
+            status.className = 'mt-4 px-4 py-3 rounded-lg text-sm ' + (d.success ? 'bg-success-soft text-success' : 'bg-error-soft text-error');
+            status.textContent = d.message || d.error || 'Something went wrong.';
+            status.classList.remove('hidden');
+        }).catch(function() {
+            status.className = 'mt-4 px-4 py-3 rounded-lg text-sm bg-error-soft text-error';
+            status.textContent = 'Network error.';
+            status.classList.remove('hidden');
+        }).finally(function() {
+            btn.querySelector('.btn-text').textContent = 'Send Application';
+            loader.classList.add('hidden');
+            btn.disabled = false;
         });
+    });
     </script>
     <script src="/static/sidebar.js" defer></script>
 </body>
