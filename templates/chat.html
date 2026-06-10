@@ -284,17 +284,33 @@
                 copyBtn.className = 'chat-copy-btn';
                 copyBtn.textContent = 'Copy';
                 copyBtn.addEventListener('click', async () => {
-                    try {
-                        await navigator.clipboard.writeText(fullContent);
-                        copyBtn.textContent = 'Copied';
-                        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
-                    } catch (e) { copyBtn.textContent = 'Failed'; }
+                    await copyText(fullContent, copyBtn);
                 });
                 lastMsg.querySelector('.chat-message-bubble').appendChild(copyBtn);
             }
             sendBtn.classList.remove('loading');
             chatInput.disabled = false;
             chatInput.focus();
+        }
+
+        async function copyText(text, btn) {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    if (!document.execCommand('copy')) throw new Error('fallback failed');
+                    document.body.removeChild(ta);
+                }
+                btn.textContent = 'Copied';
+                setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+            } catch (e) { btn.textContent = 'Failed'; }
         }
 
         async function sendMessage() {
@@ -588,11 +604,7 @@
                             copyBtn.className = 'chat-copy-btn';
                             copyBtn.textContent = 'Copy';
                             copyBtn.addEventListener('click', async () => {
-                                try {
-                                    await navigator.clipboard.writeText(msg.content);
-                                    copyBtn.textContent = 'Copied';
-                                    setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
-                                } catch (e) { copyBtn.textContent = 'Failed'; }
+                                await copyText(msg.content, copyBtn);
                             });
                             bubble.appendChild(copyBtn);
                         }
