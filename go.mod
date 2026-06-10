@@ -1,4 +1,4 @@
-module pi_portfolio
+module pi_dashboard
 
 go 1.25.7
 

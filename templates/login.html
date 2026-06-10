@@ -1,58 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asutosh's Portfolio - Login</title>
-    <link rel="stylesheet" href="/static/zenith.css">
+    <title>Login - pi_dashboard</title>
+    <link rel="stylesheet" href="/static/output.css">
 </head>
-<body class="login-page">
-    <main class="login-main">
-        <div class="login-container">
-            <div class="login-header">
-                <h1 class="text-h1">Asutosh's Portfolio</h1>
-            </div>
-            
-            <div class="login-card">
-                <form id="loginForm" method="POST" action="/auth">
-                    <div class="form-group">
-                        <label class="form-label" for="passkey">Access Key</label>
-                        <input 
-                            type="password" 
-                            id="passkey" 
-                            name="passkey" 
-                            class="form-input" 
-                            placeholder="Enter your access key"
-                            autocomplete="current-password"
-                            required
-                        >
-                    </div>
-                    
-                    {{if .Error}}
-                    <div class="status-message error show">
-                        {{.Error}}
-                    </div>
-                    {{end}}
-                    
-                    <div class="mt-lg">
-                        <button type="submit" class="btn btn-primary btn-full">
-                            <span class="btn-text">Sign In</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex items-center justify-center">
+    <main class="w-full max-w-sm px-4">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-on-surface">pi_dashboard</h1>
         </div>
+
+        <div class="bg-surface-container rounded-xl p-6 border border-outline-variant">
+            <form id="loginForm" method="POST" action="/auth">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-on-surface-variant mb-1" for="passkey">Access Key</label>
+                    <input
+                        type="password"
+                        id="passkey"
+                        name="passkey"
+                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                        placeholder="Enter your access key"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                {{if .Error}}
+                <div class="px-4 py-3 rounded-lg text-sm bg-error-soft text-error mb-4">
+                    {{.Error}}
+                </div>
+                {{end}}
+
+                <div class="mt-6">
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
+                        <span>Sign In</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <footer class="mt-8 text-center text-xs text-on-surface-muted">
+            <p>&copy; <span id="footer-year">{{.Year}}</span> pi_dashboard.</p>
+            <div class="flex justify-center gap-4 mt-2">
+                <a href="https://www.linkedin.com/in/asutosh-dalei2212" class="text-on-surface-variant hover:text-on-surface no-underline" rel="noopener noreferrer" target="_blank">LinkedIn</a>
+                <a href="https://tectonic-typesetting.github.io/" class="text-on-surface-variant hover:text-on-surface no-underline" rel="noopener noreferrer" target="_blank">Tectonic</a>
+                <a href="https://www.postgresql.org/docs/current/sql-select.html" class="text-on-surface-variant hover:text-on-surface no-underline" rel="noopener noreferrer" target="_blank">PostgreSQL</a>
+            </div>
+        </footer>
     </main>
-    
-    <footer class="footer">
-        <div class="footer-copyright">
-            &copy; <span id="footer-year">{{.Year}}</span> Asutosh's Portfolio. Built for developers.
-        </div>
-        <div class="footer-links">
-            <a href="https://www.linkedin.com/in/asutosh-dalei2212" class="footer-link" rel="noopener noreferrer" target="_blank">LinkedIn</a>
-            <a href="https://tectonic-typesetting.github.io/" class="footer-link" rel="noopener noreferrer" target="_blank">Tectonic</a>
-            <a href="https://www.postgresql.org/docs/current/sql-select.html" class="footer-link" rel="noopener noreferrer" target="_blank">PostgreSQL</a>
-        </div>
-    </footer>
 </body>
 </html>
