@@ -52,8 +52,12 @@ func (p *GmailProvider) Send(fromEmail, toEmail, name, company string) (string, 
 
 func getGmailCredentials(tokenPath string) (*oauth2.Token, error) {
 	targetPath := tokenPath
-	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+	if targetPath == "" {
 		targetPath = "token.json"
+	}
+
+	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("Gmail token file not found at %s. Copy your token.json to the working directory or set GMAIL_TOKEN_PATH in .env", targetPath)
 	}
 
 	credsData, err := os.ReadFile(targetPath)
