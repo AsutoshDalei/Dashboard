@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Tracker - AsutoshAsutosh's Dashboard#39;s Dashboard</title>
+    <title>Job Tracker - Asutosh's Dashboard</title>
     <link rel="stylesheet" href="/static/output.css">
     <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
     <style>
@@ -497,11 +497,11 @@
                 body: JSON.stringify({ mode: queryMode, query: query })
             });
             if (data.sql) { sqlDiv.textContent = data.sql; sqlDiv.classList.remove('hidden'); }
-            if (data.data && data.data.columns && data.data.rows) {
-                var html = '<table class="query-table"><thead><tr>' + data.data.columns.map(function(c) { return '<th>' + escapeHtml(c) + '</th>'; }).join('') + '</tr></thead><tbody>';
-                data.data.rows.forEach(function(r) { html += '<tr>' + r.map(function(v) { return '<td>' + escapeHtml(String(v ?? '')) + '</td>'; }).join('') + '</tr>'; });
+            if (data.columns && data.rows) {
+                var html = '<table class="query-table"><thead><tr>' + data.columns.map(function(c) { return '<th>' + escapeHtml(c) + '</th>'; }).join('') + '</tr></thead><tbody>';
+                data.rows.forEach(function(r) { html += '<tr>' + r.map(function(v) { return '<td>' + escapeHtml(String(v ?? '')) + '</td>'; }).join('') + '</tr>'; });
                 html += '</tbody></table>';
-                if (data.data.truncated) html += '<div class="px-4 py-3 text-xs text-on-surface-muted">Results truncated at 500 rows.</div>';
+                if (data.truncated) html += '<div class="px-4 py-3 text-xs text-on-surface-muted">Results truncated at 500 rows.</div>';
                 resultDiv.innerHTML = html; resultDiv.classList.remove('hidden');
             }
         } catch (err) {

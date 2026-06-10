@@ -161,7 +161,7 @@ func (r *Repository) Stats(ctx context.Context, timezone *time.Location) (*Stats
 }
 
 func (r *Repository) Timeline(ctx context.Context, days int) ([]TimelineEntry, error) {
-	query := `SELECT activity_date, SUM(delta_count), COALESCE(string_agg(DISTINCT action, ', '), '')
+	query := `SELECT activity_date::text, SUM(delta_count), COALESCE(string_agg(DISTINCT action, ', '), '')
 		FROM application_activity_logs
 		WHERE activity_date >= CURRENT_DATE - $1::integer
 		GROUP BY activity_date ORDER BY activity_date`
@@ -184,7 +184,7 @@ func (r *Repository) Timeline(ctx context.Context, days int) ([]TimelineEntry, e
 }
 
 func (r *Repository) ContributionHeatmap(ctx context.Context, year int) ([]ContributionDay, error) {
-	query := `SELECT activity_date, SUM(delta_count)
+	query := `SELECT activity_date::text, SUM(delta_count)
 		FROM application_activity_logs
 		WHERE EXTRACT(YEAR FROM activity_date) = $1
 		GROUP BY activity_date ORDER BY activity_date`

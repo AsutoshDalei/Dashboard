@@ -3,64 +3,64 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-surface text-on-surface antialiased;
-  }
+    body {
+        @apply bg-surface text-on-surface antialiased;
+    }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-150 cursor-pointer border-none text-sm;
-  }
-  .btn-primary {
-    @apply btn bg-primary text-on-primary-container hover:brightness-110;
-  }
-  .btn-light {
-    @apply btn bg-surface-high text-on-surface hover:bg-surface-highest;
-  }
-  .btn-full {
-    @apply w-full;
-  }
-  .card {
-    @apply bg-surface-container rounded-xl p-6 border border-outline-variant;
-  }
-  .form-input {
-    @apply w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted;
-  }
-  .form-label {
-    @apply block text-sm font-medium text-on-surface-variant mb-1;
-  }
-  .sidebar {
-    @apply fixed top-0 left-0 h-full w-64 bg-surface-container border-r border-outline-variant z-40 transition-transform duration-200;
-  }
-  .main-content {
-    @apply ml-64 min-h-screen transition-all duration-200;
-  }
-  .nav-link {
-    @apply flex items-center gap-3 px-4 py-2.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-high rounded-lg transition-colors no-underline;
-  }
-  .nav-link.active {
-    @apply text-primary bg-primary-container/10;
-  }
-  .page-header {
-    @apply mb-8;
-  }
-  .page-title {
-    @apply text-2xl font-bold text-on-surface;
-  }
-  .page-subtitle {
-    @apply text-on-surface-muted mt-1;
-  }
-  .tools-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
-  }
-  .status-message {
-    @apply px-4 py-3 rounded-lg text-sm hidden;
-  }
-  .status-message.error {
-    @apply bg-error-soft text-error;
-  }
-  .status-message.show {
-    @apply block;
-  }
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-150 cursor-pointer border-none text-sm;
+    }
+    .btn-primary {
+        @apply btn bg-primary text-on-primary-container hover:brightness-110;
+    }
+    .btn-light {
+        @apply btn bg-surface-high text-on-surface hover:bg-surface-highest;
+    }
+    .btn-full {
+        @apply w-full;
+    }
+    .card {
+        @apply bg-surface-container rounded-xl p-6 border border-outline-variant;
+    }
+    .form-input {
+        @apply w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted;
+    }
+    .form-label {
+        @apply block text-sm font-medium text-on-surface-variant mb-1;
+    }
+    .sidebar {
+        @apply fixed top-0 left-0 h-full w-64 bg-surface-container border-r border-outline-variant z-40 transition-transform duration-200;
+    }
+    .main-content {
+        @apply ml-64 min-h-screen transition-all duration-200;
+    }
+    .nav-link {
+        @apply flex items-center gap-3 px-4 py-2.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-high rounded-lg transition-colors no-underline;
+    }
+    .nav-link.active {
+        @apply text-primary bg-primary-container/10;
+    }
+    .page-header {
+        @apply mb-8;
+    }
+    .page-title {
+        @apply text-2xl font-bold text-on-surface;
+    }
+    .page-subtitle {
+        @apply text-on-surface-muted mt-1;
+    }
+    .tools-grid {
+        @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+    }
+    .status-message {
+        @apply px-4 py-3 rounded-lg text-sm hidden;
+    }
+    .status-message.error {
+        @apply bg-error-soft text-error;
+    }
+    .status-message.show {
+        @apply block;
+    }
 }

@@ -29,15 +29,21 @@ func (h *Handler) HandleTool(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
 func (h *Handler) HandleUpsert(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"success": false, "error": "Method not allowed"})
 		return
 	}
 
 	var app Application
 	if err := json.NewDecoder(r.Body).Decode(&app); err != nil {
-		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "error": "Invalid JSON"})
 		return
 	}
 
@@ -47,25 +53,31 @@ func (h *Handler) HandleUpsert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", result)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":        true,
+		"action":         result.Action,
+		"organization":   result.Organization,
+		"previous_count": result.PreviousCount,
+		"added":          result.Added,
+		"new_count":      result.NewCount,
+	})
 }
 
 func (h *Handler) HandleCheck(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("company")
 	if name == "" {
-		middleware.RespondJSON(w, http.StatusBadRequest, false, "company required", "")
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "error": "company required"})
 		return
 	}
 
 	exists, count, status, appliedDates, err := h.svc.Check(r.Context(), name)
 	if err != nil || !exists {
-		middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
-			"exists": false,
-		})
+		writeJSON(w, http.StatusOK, map[string]any{"success": true, "exists": false})
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":       true,
 		"exists":        true,
 		"organization":  name,
 		"count":         count,
@@ -77,7 +89,7 @@ func (h *Handler) HandleCheck(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleSuggest(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		middleware.RespondJSON(w, http.StatusBadRequest, false, "query required", "")
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "error": "query required"})
 		return
 	}
 
@@ -94,7 +106,8 @@ func (h *Handler) HandleSuggest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":     true,
 		"suggestions": results,
 	})
 }
@@ -106,8 +119,9 @@ func (h *Handler) HandleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
-		"stats": stats,
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success": true,
+		"stats":   stats,
 	})
 }
 
@@ -137,7 +151,8 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success": true,
 		"buckets": entries,
 	})
 }
@@ -156,14 +171,15 @@ func (h *Handler) HandleContribution(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
-		"days": days,
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success": true,
+		"days":    days,
 	})
 }
 
 func (h *Handler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"success": false, "error": "Method not allowed"})
 		return
 	}
 
@@ -172,7 +188,7 @@ func (h *Handler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 		Query string `json:"query"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "error": "Invalid JSON"})
 		return
 	}
 
@@ -180,7 +196,7 @@ func (h *Handler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 	req.Query = strings.TrimSpace(req.Query)
 
 	if req.Query == "" {
-		middleware.RespondJSON(w, http.StatusBadRequest, false, "query required", "")
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "error": "query required"})
 		return
 	}
 	if req.Mode == "" {
@@ -200,7 +216,7 @@ func (h *Handler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := ValidateReadOnlySQL(sqlText); err != nil {
-		middleware.RespondJSON(w, http.StatusBadRequest, false, err.Error(), "")
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 		return
 	}
 
@@ -210,5 +226,12 @@ func (h *Handler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", result)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":   true,
+		"sql":       result.SQL,
+		"columns":   result.Columns,
+		"rows":      result.Rows,
+		"row_count": result.RowCount,
+		"truncated": result.Truncated,
+	})
 }
