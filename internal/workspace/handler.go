@@ -2,9 +2,11 @@ package workspace
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"pi_dashboard/internal/middleware"
 )
@@ -32,6 +34,8 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	stream := r.URL.Query().Get("stream") == "true"
+
 	var req struct {
 		Message      string `json:"message"`
 		SystemPrompt string `json:"system_prompt"`
@@ -52,6 +56,40 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 		systemPrompt = "You are a helpful assistant."
 	}
 
+	if stream {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "streaming not supported", http.StatusInternalServerError)
+			return
+		}
+
+		resp, err := h.svc.Chat(r.Context(), sessionID, req.Message, systemPrompt)
+		if err != nil {
+			fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
+			flusher.Flush()
+			return
+		}
+
+		// Send response in chunks to simulate streaming
+		chunkSize := 10
+		runes := []rune(resp)
+		for i := 0; i < len(runes); i += chunkSize {
+			end := i + chunkSize
+			if end > len(runes) {
+				end = len(runes)
+			}
+			chunk := string(runes[i:end])
+			fmt.Fprintf(w, "data: %s\n\n", jsonEscape(chunk))
+			flusher.Flush()
+		}
+		fmt.Fprintf(w, "data: [DONE]\n\n")
+		flusher.Flush()
+		return
+	}
+
 	resp, err := h.svc.Chat(r.Context(), sessionID, req.Message, systemPrompt)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
@@ -59,6 +97,23 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"response": resp})
+}
+
+func jsonEscape(s string) string {
+	b := strings.Builder{}
+	for _, r := range s {
+		switch r {
+		case '\n':
+			b.WriteString("\\n")
+		case '\r':
+			b.WriteString("\\r")
+		case '"':
+			b.WriteString("\\\"")
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func (h *Handler) HandleChatClear(w http.ResponseWriter, r *http.Request) {

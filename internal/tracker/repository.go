@@ -17,32 +17,55 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (r *Repository) Upsert(ctx context.Context, app Application) (*Application, error) {
+func (r *Repository) Upsert(ctx context.Context, app Application) (*UpsertResult, error) {
+	var prevCount int
+	err := r.pool.QueryRow(ctx, `SELECT COALESCE(count, 0) FROM applications WHERE organization = $1`, app.Organization).Scan(&prevCount)
+	exists := err == nil
+
+	newCount := app.Count
+	if exists {
+		newCount = prevCount + app.Count
+	}
+
 	query := `INSERT INTO applications (organization, job_role, location, contacts, applied_dates, remarks, status, category, count, username_password)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (organization) DO UPDATE SET
-			count = applications.count + 1,
-			job_role = EXCLUDED.job_role,
-			status = EXCLUDED.status,
+			count = $9,
+			job_role = COALESCE(NULLIF(EXCLUDED.job_role, ''), applications.job_role),
+			status = COALESCE(NULLIF(EXCLUDED.status, ''), applications.status),
+			category = COALESCE(NULLIF(EXCLUDED.category, ''), applications.category),
+			location = COALESCE(NULLIF(EXCLUDED.location, ''), applications.location),
+			contacts = COALESCE(NULLIF(EXCLUDED.contacts, ''), applications.contacts),
+			applied_dates = COALESCE(NULLIF(EXCLUDED.applied_dates, ''), applications.applied_dates),
+			remarks = COALESCE(NULLIF(EXCLUDED.remarks, ''), applications.remarks),
+			username_password = COALESCE(NULLIF(EXCLUDED.username_password, ''), applications.username_password),
 			updated_at = NOW()
-		RETURNING id, organization, job_role, location, contacts, applied_dates, remarks, status, category, count, username_password`
+		RETURNING id, organization, count`
 
-	row := r.pool.QueryRow(ctx, query,
+	var resultID int
+	var resultOrg string
+	var resultCount int
+	err = r.pool.QueryRow(ctx, query,
 		app.Organization, app.JobRole, app.Location, app.Contacts,
 		app.AppliedDates, app.Remarks, app.Status, app.Category,
-		app.Count, app.UsernamePassword,
-	)
-
-	var result Application
-	err := row.Scan(
-		&result.ID, &result.Organization, &result.JobRole, &result.Location,
-		&result.Contacts, &result.AppliedDates, &result.Remarks, &result.Status,
-		&result.Category, &result.Count, &result.UsernamePassword,
-	)
+		newCount, app.UsernamePassword,
+	).Scan(&resultID, &resultOrg, &resultCount)
 	if err != nil {
 		return nil, fmt.Errorf("upsert: %w", err)
 	}
-	return &result, nil
+
+	action := "updated"
+	if !exists {
+		action = "created"
+	}
+
+	return &UpsertResult{
+		Action:        action,
+		Organization:  resultOrg,
+		PreviousCount: prevCount,
+		Added:         app.Count,
+		NewCount:      resultCount,
+	}, nil
 }
 
 func (r *Repository) GetByOrganization(ctx context.Context, name string) (*Application, error) {
@@ -62,7 +85,7 @@ func (r *Repository) GetByOrganization(ctx context.Context, name string) (*Appli
 	return &app, nil
 }
 
-func (r *Repository) Suggest(ctx context.Context, query string, limit int) ([]string, error) {
+func (r *Repository) Suggest(ctx context.Context, query string, limit int) ([]map[string]string, error) {
 	sql := `SELECT DISTINCT organization FROM applications WHERE organization ILIKE $1 ORDER BY organization LIMIT $2`
 	rows, err := r.pool.Query(ctx, sql, "%"+query+"%", limit)
 	if err != nil {
@@ -70,13 +93,13 @@ func (r *Repository) Suggest(ctx context.Context, query string, limit int) ([]st
 	}
 	defer rows.Close()
 
-	var results []string
+	var results []map[string]string
 	for rows.Next() {
 		var org string
 		if err := rows.Scan(&org); err != nil {
 			return nil, err
 		}
-		results = append(results, org)
+		results = append(results, map[string]string{"organization": org})
 	}
 	return results, nil
 }
@@ -86,22 +109,33 @@ func (r *Repository) Stats(ctx context.Context, timezone *time.Location) (*Stats
 	today := now.Format("2006-01-02")
 	weekStart := now.AddDate(0, 0, -int(now.Weekday())).Format("2006-01-02")
 
-	var stats Stats
+	var s Stats
 
-	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM applications`).Scan(&stats.TotalApplications)
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(*), COALESCE(SUM(count), 0) FROM applications`).Scan(&s.Companies, &s.Applications)
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.pool.QueryRow(ctx, `SELECT COUNT(DISTINCT organization) FROM applications`).Scan(&stats.TotalCompanies)
+	err = r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM applications WHERE status = 'Applied'`).Scan(&s.Applied)
 	if err != nil {
 		return nil, err
+	}
+
+	err = r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM applications WHERE status = 'Rejected'`).Scan(&s.Rejected)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.Companies > 0 {
+		s.AppliedPct = float64(s.Applied) / float64(s.Companies) * 100
+		s.RejectedPct = float64(s.Rejected) / float64(s.Companies) * 100
+		s.AvgPerCompany = float64(s.Applications) / float64(s.Companies)
 	}
 
 	err = r.pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(delta_count), 0), COUNT(DISTINCT organization)
 		FROM application_activity_logs WHERE activity_date = $1`, today,
-	).Scan(&stats.TodayApplications, &stats.TodayCompanies)
+	).Scan(&s.TodayApplications, &s.TodayCompanies)
 	if err != nil {
 		return nil, err
 	}
@@ -110,12 +144,20 @@ func (r *Repository) Stats(ctx context.Context, timezone *time.Location) (*Stats
 		`SELECT COALESCE(SUM(delta_count), 0), COUNT(DISTINCT organization)
 		FROM application_activity_logs WHERE activity_date >= $1 AND activity_date < $2`,
 		weekStart, now.Format("2006-01-02"),
-	).Scan(&stats.WeekApplications, &stats.WeekCompanies)
+	).Scan(&s.WeekApplications, &s.WeekCompanies)
 	if err != nil {
 		return nil, err
 	}
 
-	return &stats, nil
+	err = r.pool.QueryRow(ctx,
+		`SELECT COALESCE(organization, ''), COALESCE(MAX(count), 0) FROM applications GROUP BY organization ORDER BY MAX(count) DESC LIMIT 1`,
+	).Scan(&s.TopCompany, &s.MaxPerCompany)
+	if err != nil {
+		s.TopCompany = ""
+		s.MaxPerCompany = 0
+	}
+
+	return &s, nil
 }
 
 func (r *Repository) Timeline(ctx context.Context, days int) ([]TimelineEntry, error) {
@@ -188,8 +230,16 @@ func (r *Repository) Query(ctx context.Context, sql string) (pgx.Rows, error) {
 	return r.pool.Query(ctx, sql)
 }
 
-func (r *Repository) CheckExists(ctx context.Context, name string) (bool, error) {
-	var exists bool
-	err := r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM applications WHERE organization = $1)`, name).Scan(&exists)
-	return exists, err
+func (r *Repository) CheckExists(ctx context.Context, name string) (bool, int, string, *string, error) {
+	var count int
+	var status string
+	var appliedDates *string
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*), COALESCE(status, ''), applied_dates FROM applications WHERE organization = $1 GROUP BY organization, status, applied_dates`,
+		name,
+	).Scan(&count, &status, &appliedDates)
+	if err != nil {
+		return false, 0, "", nil, nil
+	}
+	return true, count, status, appliedDates, nil
 }

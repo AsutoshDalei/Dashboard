@@ -30,15 +30,15 @@ func NewService(repo *Repository, llmProvider llm.Provider, tz string) *Service 
 	}
 }
 
-func (s *Service) Upsert(ctx context.Context, app Application) (*Application, error) {
+func (s *Service) Upsert(ctx context.Context, app Application) (*UpsertResult, error) {
 	return s.repo.Upsert(ctx, app)
 }
 
-func (s *Service) Check(ctx context.Context, name string) (*Application, error) {
-	return s.repo.GetByOrganization(ctx, name)
+func (s *Service) Check(ctx context.Context, name string) (bool, int, string, *string, error) {
+	return s.repo.CheckExists(ctx, name)
 }
 
-func (s *Service) Suggest(ctx context.Context, query string, limit int) ([]string, error) {
+func (s *Service) Suggest(ctx context.Context, query string, limit int) ([]map[string]string, error) {
 	return s.repo.Suggest(ctx, query, limit)
 }
 

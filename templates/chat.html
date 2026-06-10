@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat - pi_dashboard</title>
+    <title>Chat - AsutoshAsutosh's Dashboard#39;s Dashboard</title>
     <link rel="stylesheet" href="/static/output.css">
     <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
 </head>
@@ -106,29 +106,47 @@
         showLoader();
         sendBtn.disabled = true;
         stopBtn.classList.remove('hidden');
-        abortController = new AbortController();
-        fetch('/api/chat/send', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({message: text}),
-            signal: abortController.signal
-        }).then(function(r) { return r.json(); }).then(function(d) {
-            removeLoader();
-            if (d.success && d.data && d.data.response) {
-                addMessage('assistant', d.data.response);
-            } else {
-                addMessage('assistant', 'Error: ' + (d.error || 'Unknown error'));
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/chat/send?stream=true', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.responseType = 'text';
+
+        var fullResponse = '';
+        var responseDiv = null;
+
+        xhr.onprogress = function() {
+            var lines = xhr.responseText.split('\n');
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (line.startsWith('data: ')) {
+                    var data = line.substring(6);
+                    if (data === '[DONE]') {
+                        removeLoader();
+                        sendBtn.disabled = false;
+                        stopBtn.classList.add('hidden');
+                        return;
+                    }
+                    removeLoader();
+                    if (!responseDiv) {
+                        responseDiv = addMessage('assistant', '');
+                    }
+                    fullResponse += data;
+                    var msgDiv = responseDiv.querySelector('div');
+                    if (msgDiv) msgDiv.textContent = fullResponse;
+                }
             }
-        }).catch(function(err) {
+        };
+
+        xhr.onerror = function() {
             removeLoader();
-            if (err.name !== 'AbortError') {
-                addMessage('assistant', 'Error: ' + err.message);
-            }
-        }).finally(function() {
+            addMessage('assistant', 'Error: Connection failed');
             sendBtn.disabled = false;
             stopBtn.classList.add('hidden');
-            abortController = null;
-        });
+        };
+
+        xhr.send(JSON.stringify({message: text}));
+        abortController = { abort: function() { xhr.abort(); } };
     }
 
     stopBtn.addEventListener('click', function() {

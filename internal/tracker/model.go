@@ -26,12 +26,27 @@ type ActivityLog struct {
 }
 
 type Stats struct {
-	TotalApplications int `json:"total_applications"`
-	TotalCompanies    int `json:"total_companies"`
-	TodayApplications int `json:"today_applications"`
-	TodayCompanies    int `json:"today_companies"`
-	WeekApplications  int `json:"week_applications"`
-	WeekCompanies     int `json:"week_companies"`
+	Companies          int     `json:"companies"`
+	Applications       int     `json:"applications"`
+	Applied            int     `json:"applied"`
+	AppliedPct         float64 `json:"applied_pct"`
+	Rejected           int     `json:"rejected"`
+	RejectedPct        float64 `json:"rejected_pct"`
+	TodayCompanies     int     `json:"today_companies"`
+	TodayApplications  int     `json:"today_applications"`
+	WeekCompanies      int     `json:"week_companies"`
+	WeekApplications   int     `json:"week_applications"`
+	AvgPerCompany      float64 `json:"avg_per_company"`
+	TopCompany         string  `json:"top_company"`
+	MaxPerCompany      int     `json:"max_per_company"`
+}
+
+type UpsertResult struct {
+	Action       string `json:"action"`
+	Organization string `json:"organization"`
+	PreviousCount int   `json:"previous_count"`
+	Added        int    `json:"added"`
+	NewCount     int    `json:"new_count"`
 }
 
 type TimelineEntry struct {

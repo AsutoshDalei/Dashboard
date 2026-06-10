@@ -51,19 +51,27 @@ func (h *Handler) HandleUpsert(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleCheck(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("organization")
+	name := r.URL.Query().Get("company")
 	if name == "" {
-		middleware.RespondJSON(w, http.StatusBadRequest, false, "organization required", "")
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "company required", "")
 		return
 	}
 
-	app, err := h.svc.Check(r.Context(), name)
-	if err != nil {
-		middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", nil)
+	exists, count, status, appliedDates, err := h.svc.Check(r.Context(), name)
+	if err != nil || !exists {
+		middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+			"exists": false,
+		})
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", app)
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+		"exists":        true,
+		"organization":  name,
+		"count":         count,
+		"status":        status,
+		"applied_dates": appliedDates,
+	})
 }
 
 func (h *Handler) HandleSuggest(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +94,9 @@ func (h *Handler) HandleSuggest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", results)
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+		"suggestions": results,
+	})
 }
 
 func (h *Handler) HandleStats(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +106,9 @@ func (h *Handler) HandleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", stats)
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+		"stats": stats,
+	})
 }
 
 func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
@@ -107,13 +119,27 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	freq := r.URL.Query().Get("freq")
+	switch freq {
+	case "day":
+		days = 14
+	case "week":
+		days = 90
+	case "month":
+		days = 365
+	default:
+		days = 365
+	}
+
 	entries, err := h.svc.Timeline(r.Context(), days)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", entries)
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+		"buckets": entries,
+	})
 }
 
 func (h *Handler) HandleContribution(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +156,9 @@ func (h *Handler) HandleContribution(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", days)
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{
+		"days": days,
+	})
 }
 
 func (h *Handler) HandleQuery(w http.ResponseWriter, r *http.Request) {
