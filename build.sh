@@ -48,6 +48,7 @@ mkdir -p pi_bundle/templates
 	cp templates/email_body.tmpl pi_bundle/templates/
 	cp templates/coverletter.tex.tmpl pi_bundle/templates/
 	cp templates/system_prompts.json pi_bundle/
+	cp resume.tex pi_bundle/
 	cp static/output.css pi_bundle/
 
 find pi_bundle -name '.DS_Store' -delete

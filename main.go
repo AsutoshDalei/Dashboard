@@ -149,7 +149,9 @@ func main() {
 	trackerSvc := tracker.NewService(trackerRepo, llmProvider, cfg.ActivityStatsTimezone, prompts)
 	trackerHandler := tracker.NewHandler(trackerSvc, templates)
 
-	workspaceSvc := workspace.NewService(llmProvider, "", prompts)
+	resumeText, _ := os.ReadFile("resume.tex")
+
+	workspaceSvc := workspace.NewService(llmProvider, string(resumeText), prompts)
 	workspaceHandler := workspace.NewHandler(workspaceSvc, templates, prompts)
 
 	deps := router.Dependencies{
