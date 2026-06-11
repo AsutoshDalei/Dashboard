@@ -70,26 +70,33 @@ func (s *ChatStore) Prune(validSessions map[string]bool) {
 }
 
 type Service struct {
-	provider   pkgllm.Provider
-	chatStore  *ChatStore
-	resumeText string
-	prompts    *llm.Prompts
+	provider       pkgllm.Provider
+	chatStore      *ChatStore
+	resumeText     string
+	resumeMarkdown string
+	prompts        *llm.Prompts
 }
 
-func NewService(provider pkgllm.Provider, resumeText string, prompts *llm.Prompts) *Service {
+func NewService(provider pkgllm.Provider, resumeText string, resumeMarkdown string, prompts *llm.Prompts) *Service {
 	return &Service{
-		provider:   provider,
-		chatStore:  NewChatStore(),
-		resumeText: resumeText,
-		prompts:    prompts,
+		provider:       provider,
+		chatStore:      NewChatStore(),
+		resumeText:     resumeText,
+		resumeMarkdown: resumeMarkdown,
+		prompts:        prompts,
 	}
 }
 
 func (s *Service) Chat(ctx context.Context, sessionID string, message string, systemPrompt string) (string, error) {
 	session := s.chatStore.GetOrCreate(sessionID)
 
+	fullSystemPrompt := systemPrompt
+	if s.resumeMarkdown != "" {
+		fullSystemPrompt = systemPrompt + "\n\nHere is the user's resume for reference:\n\n" + s.resumeMarkdown
+	}
+
 	messages := []pkgllm.Message{
-		{Role: "system", Content: systemPrompt},
+		{Role: "system", Content: fullSystemPrompt},
 	}
 	messages = append(messages, session.Messages...)
 	messages = append(messages, pkgllm.Message{Role: "user", Content: message})
@@ -108,8 +115,13 @@ func (s *Service) Chat(ctx context.Context, sessionID string, message string, sy
 func (s *Service) ChatStream(ctx context.Context, sessionID string, message string, systemPrompt string) (<-chan string, error) {
 	session := s.chatStore.GetOrCreate(sessionID)
 
+	fullSystemPrompt := systemPrompt
+	if s.resumeMarkdown != "" {
+		fullSystemPrompt = systemPrompt + "\n\nHere is the user's resume for reference:\n\n" + s.resumeMarkdown
+	}
+
 	messages := []pkgllm.Message{
-		{Role: "system", Content: systemPrompt},
+		{Role: "system", Content: fullSystemPrompt},
 	}
 	messages = append(messages, session.Messages...)
 	messages = append(messages, pkgllm.Message{Role: "user", Content: message})

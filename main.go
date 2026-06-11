@@ -150,8 +150,9 @@ func main() {
 	trackerHandler := tracker.NewHandler(trackerSvc, templates)
 
 	resumeText, _ := os.ReadFile("resume.tex")
+	resumeMarkdown, _ := os.ReadFile("resume.md")
 
-	workspaceSvc := workspace.NewService(llmProvider, string(resumeText), prompts)
+	workspaceSvc := workspace.NewService(llmProvider, string(resumeText), string(resumeMarkdown), prompts)
 	workspaceHandler := workspace.NewHandler(workspaceSvc, templates, prompts)
 
 	deps := router.Dependencies{

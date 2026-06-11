@@ -54,6 +54,21 @@
     var promptsRow = document.getElementById('promptsRow');
     var promptsToggle = document.getElementById('promptsToggle');
     var abortController = null;
+    var chatHistory = JSON.parse(localStorage.getItem('chat_history') || '[]');
+
+    function saveChatHistory() {
+        localStorage.setItem('chat_history', JSON.stringify(chatHistory));
+    }
+
+    function loadChatHistory() {
+        if (chatHistory.length === 0) return;
+        emptyState.style.display = 'none';
+        chatHistory.forEach(function(msg) {
+            addMessage(msg.role, msg.content);
+        });
+    }
+
+    loadChatHistory();
 
     // Auto-resize textarea
     chatInput.addEventListener('input', function() {
@@ -164,6 +179,8 @@
         chatInput.value = '';
         chatInput.style.height = 'auto';
         addMessage('user', text);
+        chatHistory.push({role: 'user', content: text});
+        saveChatHistory();
         showLoader();
         sendBtn.disabled = true;
         stopBtn.classList.remove('hidden');
@@ -186,6 +203,8 @@
                 if (line.startsWith('data: ')) {
                     var data = line.substring(6).replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"');
                     if (data === '[DONE]') {
+                        chatHistory.push({role: 'assistant', content: fullResponse});
+                        saveChatHistory();
                         removeLoader();
                         sendBtn.disabled = false;
                         stopBtn.classList.add('hidden');

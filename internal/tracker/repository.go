@@ -109,6 +109,10 @@ func (r *Repository) Upsert(ctx context.Context, app Application) (*UpsertResult
 		newCount = prevCount + app.Count
 	}
 
+	if app.AppliedDates != nil && *app.AppliedDates == "" {
+		app.AppliedDates = nil
+	}
+
 	query := `INSERT INTO applications (organization, job_role, location, contacts, applied_dates, remarks, status, category, count, username_password)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (organization) DO UPDATE SET

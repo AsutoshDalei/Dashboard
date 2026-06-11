@@ -236,7 +236,7 @@
             .chart-wrap {
                 width: 100%;
                 max-width: 100%;
-                overflow-x: hidden;
+                overflow-x: auto;
                 overflow-y: hidden;
                 height: 300px;
                 box-sizing: border-box;
@@ -250,6 +250,7 @@
             .chart-svg {
                 display: block;
                 overflow: visible;
+                min-width: 100%;
             }
             .chart-svg .axis-line {
                 stroke: #3f3f46;
@@ -938,11 +939,11 @@
                     $("statTodayCompanies").textContent =
                         fmtNum(s.today_companies) + " companies";
                     $("statTodaySub").textContent =
-                        "apps: " + fmtNum(s.today_applications);
+                        "Applications: " + fmtNum(s.today_applications);
                     $("statWeekCompanies").textContent =
                         fmtNum(s.week_companies) + " companies";
                     $("statWeekSub").textContent =
-                        "apps: " + fmtNum(s.week_applications);
+                        "Applications: " + fmtNum(s.week_applications);
                     $("statAvg").textContent = (s.avg_per_company || 0).toFixed(
                         1,
                     );
@@ -1360,6 +1361,8 @@
                 var W = Math.max(320, wrap.clientWidth - 20),
                     H = Math.max(260, Math.min(340, wrap.clientHeight || 320)),
                     pad = { t: 20, r: 14, b: 48, l: 46 };
+                var minChartW = buckets.length * 40;
+                if (W < minChartW) W = minChartW;
                 if (W < 460) {
                     pad = { t: 18, r: 10, b: 52, l: 38 };
                 }
@@ -1373,9 +1376,11 @@
                     if (companies > maxV) maxV = companies;
                 });
                 maxV = Math.max(maxV, 1);
+                maxV = Math.ceil(maxV * 1.2);
                 var groupW = iw / buckets.length;
                 var barW = Math.min(9, Math.max(3, groupW * 0.28));
                 var html =
+                    '<div style="min-width:' + W + 'px">' +
                     '<svg class="chart-svg" width="' +
                     W +
                     '" height="' +
@@ -1512,7 +1517,7 @@
                             "</text>";
                     }
                 });
-                html += "</svg>";
+                html += "</svg></div>";
                 wrap.innerHTML = '<div id="chartTooltip" class="chart-tooltip"></div>' + html;
 
                 var tipFactory = function (p) {
