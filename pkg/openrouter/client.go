@@ -1,6 +1,7 @@
 package openrouter
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -45,6 +46,9 @@ type chatResponse struct {
 		Message struct {
 			Content string `json:"content"`
 		} `json:"message"`
+		Delta *struct {
+			Content string `json:"content"`
+		} `json:"delta,omitempty"`
 	} `json:"choices"`
 	Error *struct {
 		Message string `json:"message"`
@@ -111,6 +115,71 @@ func (c *Client) Generate(ctx context.Context, prompt string) (string, error) {
 		return "", err
 	}
 	return resp.Content, nil
+}
+
+func (c *Client) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
+	reqBody := chatRequest{
+		Model:    c.model,
+		Messages: messages,
+		Stream:   true,
+	}
+
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("openrouter marshal: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("openrouter request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("openrouter do: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		var parsed chatResponse
+		if json.Unmarshal(body, &parsed) == nil && parsed.Error != nil && parsed.Error.Message != "" {
+			return nil, fmt.Errorf("openrouter error: %s", parsed.Error.Message)
+		}
+		return nil, fmt.Errorf("openrouter status %d", resp.StatusCode)
+	}
+
+	ch := make(chan string)
+	go func() {
+		defer close(ch)
+		defer resp.Body.Close()
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+			data := strings.TrimPrefix(line, "data: ")
+			if data == "[DONE]" {
+				return
+			}
+			var chunk chatResponse
+			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+				continue
+			}
+			if len(chunk.Choices) == 0 {
+				continue
+			}
+			delta := chunk.Choices[0].Delta
+			if delta != nil && delta.Content != "" {
+				ch <- delta.Content
+			}
+		}
+	}()
+
+	return ch, nil
 }
 
 func ResolveModels(primaryEnv, fallbackEnv string) []string {

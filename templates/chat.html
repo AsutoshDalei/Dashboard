@@ -76,6 +76,7 @@
 
     function renderMarkdown(text) {
         var html = text;
+
         html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
         html = html.replace(/`(.+?)`/g, '<code>$1</code>');
         html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
@@ -84,9 +85,39 @@
         html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        html = '<p>' + html.split('\n\n').map(function(p) {
+
+        var lines = html.split('\n');
+        var result = [];
+        var i = 0;
+        while (i < lines.length) {
+            if (lines[i].trim().startsWith('|') && i + 1 < lines.length && /^\|[\s\-:|]+\|$/.test(lines[i + 1].trim())) {
+                var headers = lines[i].trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function(c) { return c.trim(); });
+                i += 2;
+                var rows = [];
+                while (i < lines.length && lines[i].trim().startsWith('|')) {
+                    rows.push(lines[i].trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function(c) { return c.trim(); }));
+                    i++;
+                }
+                var table = '<table class="markdown-table"><thead><tr>';
+                headers.forEach(function(h) { table += '<th>' + h + '</th>'; });
+                table += '</tr></thead><tbody>';
+                rows.forEach(function(row) {
+                    table += '<tr>';
+                    row.forEach(function(cell) { table += '<td>' + cell + '</td>'; });
+                    table += '</tr>';
+                });
+                table += '</tbody></table>';
+                result.push(table);
+            } else {
+                result.push(lines[i]);
+                i++;
+            }
+        }
+        html = result.join('\n');
+
+        html = html.split('\n\n').map(function(p) {
             return p.trim() ? '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>' : '';
-        }).join('') + '</p>';
+        }).join('');
         var temp = document.createElement('div');
         temp.innerHTML = html;
         var paragraphs = temp.querySelectorAll('p');
@@ -147,7 +178,7 @@
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i].trim();
                 if (line.startsWith('data: ')) {
-                    var data = line.substring(6);
+                    var data = line.substring(6).replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"');
                     if (data === '[DONE]') {
                         removeLoader();
                         sendBtn.disabled = false;

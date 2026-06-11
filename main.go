@@ -141,11 +141,8 @@ func main() {
 		prompts, _ = llm.LoadPrompts(path)
 	}
 	if prompts == nil {
-		if _, err := os.Stat("pi_bundle/system_prompts.json"); err == nil {
-			prompts, _ = llm.LoadPrompts("pi_bundle/system_prompts.json")
-		} else {
-			prompts, _ = llm.LoadPrompts("templates/system_prompts.json")
-		}
+		slog.Error("failed to load system prompts", "path", cfg.SystemPromptsPath)
+		os.Exit(1)
 	}
 
 	trackerRepo := tracker.NewRepository(dbPool.Pool)

@@ -14,5 +14,6 @@ type Response struct {
 
 type Provider interface {
 	Chat(ctx context.Context, messages []Message) (Response, error)
+	ChatStream(ctx context.Context, messages []Message) (<-chan string, error)
 	Generate(ctx context.Context, prompt string) (string, error)
 }

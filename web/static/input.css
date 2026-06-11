@@ -181,4 +181,16 @@
         @apply bg-transparent p-0;
     }
     .markdown-content br { @apply block mb-1; }
+    .markdown-content table {
+        @apply w-full text-xs border-collapse my-2;
+    }
+    .markdown-content th {
+        @apply text-left font-semibold px-3 py-2 border-b-2 border-surface-high bg-surface-high;
+    }
+    .markdown-content td {
+        @apply px-3 py-2 border-b border-outline/20;
+    }
+    .markdown-content tr:last-child td {
+        @apply border-b-0;
+    }
 }

@@ -106,7 +106,7 @@ func Load() (*Config, error) {
 		ResumeTailorPath:        getEnv("RESUME_TAILOR_PATH", "pi_bundle/resume_tailor"),
 		EmailTemplatePath:       getEnv("EMAIL_TEMPLATE_PATH", "templates/email_body.tmpl"),
 		CoverLetterTemplatePath: getEnv("COVERLETTER_TEMPLATE_PATH", "templates/coverletter.tex.tmpl"),
-		SystemPromptsPath:       getEnv("SYSTEM_PROMPTS_PATH", "templates/system_prompts.json"),
+		SystemPromptsPath:       getEnv("SYSTEM_PROMPTS_PATH", "system_prompts.json"),
 		DBDumpDir:               getEnv("DB_DUMP_DIR", "db_dumps"),
 		DBBackupInterval:        getEnvDuration("DB_BACKUP_INTERVAL", 24*time.Hour),
 		DBBackupMaxRetries:      getEnvInt("DB_BACKUP_MAX_RETRIES", 2),
