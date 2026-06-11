@@ -130,21 +130,14 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		resp, err := h.svc.Chat(r.Context(), sessionID, req.Message, systemPrompt)
+		ch, err := h.svc.ChatStream(r.Context(), sessionID, req.Message, systemPrompt)
 		if err != nil {
 			fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
 			flusher.Flush()
 			return
 		}
 
-		chunkSize := 10
-		runes := []rune(resp)
-		for i := 0; i < len(runes); i += chunkSize {
-			end := i + chunkSize
-			if end > len(runes) {
-				end = len(runes)
-			}
-			chunk := string(runes[i:end])
+		for chunk := range ch {
 			fmt.Fprintf(w, "data: %s\n\n", jsonEscape(chunk))
 			flusher.Flush()
 		}

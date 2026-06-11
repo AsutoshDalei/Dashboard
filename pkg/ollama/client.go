@@ -1,6 +1,7 @@
 package ollama
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -87,6 +88,57 @@ func (c *Client) Chat(ctx context.Context, messages []llm.Message) (llm.Response
 		Content: parsed.Message.Content,
 		Done:    parsed.Done,
 	}, nil
+}
+
+func (c *Client) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
+	reqBody := chatRequest{
+		Model:    c.model,
+		Messages: messages,
+		Stream:   true,
+	}
+
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("ollama marshal: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.host+"/api/chat", bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("ollama request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ollama do: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("ollama status %d: %s", resp.StatusCode, string(body))
+	}
+
+	ch := make(chan string)
+	go func() {
+		defer close(ch)
+		defer resp.Body.Close()
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			var chunk chatResponse
+			if err := json.Unmarshal(scanner.Bytes(), &chunk); err != nil {
+				continue
+			}
+			if chunk.Message.Content != "" {
+				ch <- chunk.Message.Content
+			}
+			if chunk.Done {
+				return
+			}
+		}
+	}()
+
+	return ch, nil
 }
 
 type generateRequest struct {

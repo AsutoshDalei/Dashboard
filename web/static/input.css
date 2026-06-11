@@ -162,12 +162,18 @@
 
     .markdown-content h1,
     .markdown-content h2,
-    .markdown-content h3 {
+    .markdown-content h3,
+    .markdown-content h4,
+    .markdown-content h5,
+    .markdown-content h6 {
         @apply font-bold text-on-surface mb-2 mt-3 first:mt-0;
     }
     .markdown-content h1 { @apply text-lg; }
     .markdown-content h2 { @apply text-base; }
     .markdown-content h3 { @apply text-sm; }
+    .markdown-content h4,
+    .markdown-content h5,
+    .markdown-content h6 { @apply text-sm; }
     .markdown-content p { @apply mb-2 last:mb-0; }
     .markdown-content strong { @apply font-semibold; }
     .markdown-content em { @apply italic; }

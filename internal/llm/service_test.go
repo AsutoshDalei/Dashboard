@@ -13,6 +13,12 @@ func (m *mockProvider) Chat(ctx context.Context, messages []llm.Message) (llm.Re
 	return llm.Response{Content: "mock response", Done: true}, nil
 }
 
+func (m *mockProvider) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
+	ch := make(chan string)
+	close(ch)
+	return ch, nil
+}
+
 func (m *mockProvider) Generate(ctx context.Context, prompt string) (string, error) {
 	return "mock generated", nil
 }

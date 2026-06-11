@@ -102,6 +102,35 @@ func (s *Service) Chat(ctx context.Context, sessionID string, message string, sy
 	return resp.Content, nil
 }
 
+func (s *Service) ChatStream(ctx context.Context, sessionID string, message string, systemPrompt string) (<-chan string, error) {
+	session := s.chatStore.GetOrCreate(sessionID)
+
+	messages := []pkgllm.Message{
+		{Role: "system", Content: systemPrompt},
+	}
+	messages = append(messages, session.Messages...)
+	messages = append(messages, pkgllm.Message{Role: "user", Content: message})
+
+	ch, err := s.provider.ChatStream(ctx, messages)
+	if err != nil {
+		return nil, fmt.Errorf("chat stream: %w", err)
+	}
+
+	wrapped := make(chan string)
+	go func() {
+		defer close(wrapped)
+		var full string
+		for chunk := range ch {
+			full += chunk
+			wrapped <- chunk
+		}
+		s.chatStore.AddMessage(sessionID, pkgllm.Message{Role: "user", Content: message})
+		s.chatStore.AddMessage(sessionID, pkgllm.Message{Role: "assistant", Content: full})
+	}()
+
+	return wrapped, nil
+}
+
 func (s *Service) ClearChat(sessionID string) {
 	s.chatStore.Clear(sessionID)
 }
