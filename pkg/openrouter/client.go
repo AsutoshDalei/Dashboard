@@ -31,14 +31,15 @@ func New(cfg Config) *Client {
 	return &Client{
 		apiKey: cfg.APIKey,
 		model:  cfg.Model,
-		http:   &http.Client{Timeout: 60 * time.Second},
+		http:   &http.Client{Timeout: 300 * time.Second},
 	}
 }
 
 type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []llm.Message `json:"messages"`
-	Stream   bool          `json:"stream"`
+	Model          string        `json:"model"`
+	Messages       []llm.Message `json:"messages"`
+	Stream         bool          `json:"stream"`
+	ResponseFormat any           `json:"response_format,omitempty"`
 }
 
 type chatResponse struct {
@@ -115,6 +116,59 @@ func (c *Client) Generate(ctx context.Context, prompt string) (string, error) {
 		return "", err
 	}
 	return resp.Content, nil
+}
+
+func (c *Client) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
+	reqBody := chatRequest{
+		Model:          c.model,
+		Messages:       messages,
+		Stream:         false,
+		ResponseFormat: schema,
+	}
+
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("openrouter marshal: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("openrouter request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("openrouter do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("openrouter read: %w", err)
+	}
+
+	var parsed chatResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return llm.Response{}, fmt.Errorf("openrouter decode: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if parsed.Error != nil && parsed.Error.Message != "" {
+			return llm.Response{}, fmt.Errorf("openrouter error: %s", parsed.Error.Message)
+		}
+		return llm.Response{}, fmt.Errorf("openrouter status %d", resp.StatusCode)
+	}
+
+	if len(parsed.Choices) == 0 {
+		return llm.Response{}, fmt.Errorf("openrouter no choices")
+	}
+
+	return llm.Response{
+		Content: parsed.Choices[0].Message.Content,
+		Done:    true,
+	}, nil
 }
 
 func (c *Client) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {

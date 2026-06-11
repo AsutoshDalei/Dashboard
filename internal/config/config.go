@@ -88,7 +88,7 @@ func Load() (*Config, error) {
 		NgrokAuthtoken:          getEnv("NGROK_AUTHTOKEN", ""),
 		NgrokInternalURL:        getEnv("NGROK_INTERNAL_ENDPOINT_URL", ""),
 		NgrokPublicURL:          getEnv("NGROK_PUBLIC_URL", ""),
-		LLMProvider:             getEnv("LLM_PROVIDER", "openrouter"),
+		LLMProvider:             getEnv("LLM_PROVIDER", "ollama"),
 		OllamaHost:              getEnv("OLLAMA_HOST", "172.16.7.115"),
 		OllamaModel:             getEnv("OLLAMA_MODEL", "gemma4"),
 		OpenRouterAPIKey:        getEnv("OPENROUTER_API_KEY", ""),

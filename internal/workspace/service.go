@@ -2,7 +2,10 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -197,4 +200,92 @@ func (s *Service) AnalyzeJobMatch(ctx context.Context, jobDescription string) (s
 		return "", fmt.Errorf("job match: %w", err)
 	}
 	return resp, nil
+}
+
+type SkillsResponse struct {
+	Skills []SkillCategory `json:"skills"`
+}
+
+type SkillCategory struct {
+	Category string `json:"category"`
+	Items    string `json:"items"`
+}
+
+func (s *Service) GenerateSkills(ctx context.Context, jobDescription string) (string, error) {
+	currentSkills := extractSkills(s.resumeText)
+
+	schema := map[string]any{
+		"type": "json_schema",
+		"json_schema": map[string]any{
+			"name":   "skills_update",
+			"strict": true,
+			"schema": map[string]any{
+				"type":       "object",
+				"properties": map[string]any{
+					"skills": map[string]any{
+						"type": "array",
+						"items": map[string]any{
+							"type":       "object",
+							"properties": map[string]any{
+								"category": map[string]any{
+									"type":        "string",
+									"description": "Skill category name (e.g. ML & AI, Languages)",
+								},
+								"items": map[string]any{
+									"type":        "string",
+									"description": "Comma-separated skill items for this category",
+								},
+							},
+							"required":             []string{"category", "items"},
+							"additionalProperties": false,
+						},
+					},
+				},
+				"required":             []string{"skills"},
+				"additionalProperties": false,
+			},
+		},
+	}
+
+	messages := []pkgllm.Message{
+		{Role: "system", Content: s.prompts.Get("resume_generate")},
+		{Role: "user", Content: fmt.Sprintf("Job Description:\n%s\n\nCurrent Skills Section:\n%s\n\nUpdate the skills to better match the job description. Add relevant keywords that are genuinely applicable. Remove irrelevant skills. Return the complete updated skills list.", jobDescription, currentSkills)},
+	}
+
+	resp, err := s.provider.ChatWithSchema(ctx, messages, schema)
+	if err != nil {
+		return "", fmt.Errorf("generate skills: %w", err)
+	}
+
+	return rebuildResume(s.resumeText, resp.Content)
+}
+
+func extractSkills(resume string) string {
+	re := regexp.MustCompile(`(?s)\\section\*\{TECHNICAL SKILLS\}(.*?)(?:\\section\*|$)`)
+	matches := re.FindStringSubmatch(resume)
+	if len(matches) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(matches[1])
+}
+
+func rebuildResume(resume string, skillsJSON string) (string, error) {
+	var result SkillsResponse
+	if err := json.Unmarshal([]byte(skillsJSON), &result); err != nil {
+		return "", fmt.Errorf("parse skills JSON: %w", err)
+	}
+
+	var sb strings.Builder
+	sb.WriteString("\\begin{itemize}\n")
+	for _, cat := range result.Skills {
+		sb.WriteString(fmt.Sprintf("    \\item \\textbf{%s:} %s.\n", cat.Category, cat.Items))
+	}
+	sb.WriteString("\\end{itemize}")
+
+	newSkills := sb.String()
+
+	re := regexp.MustCompile(`(?s)(\\section\*\{TECHNICAL SKILLS\})\s*.*?(\\section\*|$)`)
+	updated := re.ReplaceAllString(resume, fmt.Sprintf("${1}\n%s\n\n${2}", newSkills))
+
+	return updated, nil
 }

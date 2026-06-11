@@ -19,6 +19,10 @@ func (m *mockProvider) ChatStream(ctx context.Context, messages []llm.Message) (
 	return ch, nil
 }
 
+func (m *mockProvider) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
+	return llm.Response{Content: "{}", Done: true}, nil
+}
+
 func (m *mockProvider) Generate(ctx context.Context, prompt string) (string, error) {
 	return "mock generated", nil
 }

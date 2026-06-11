@@ -225,22 +225,24 @@ func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		JobDescription string `json:"job_description"`
-		Analysis       string `json:"analysis"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
 		return
 	}
 
-	systemPrompt := h.prompts.Get("resume_generate")
+	if req.JobDescription == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Job description required", "")
+		return
+	}
 
-	result, err := h.svc.GenerateResume(r.Context(), req.JobDescription, req.Analysis, systemPrompt)
+	result, err := h.svc.GenerateSkills(r.Context(), req.JobDescription)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"result": result, "modified_latex": result})
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"modified_latex": result})
 }
 
 func (h *Handler) HandleResumeCompile(w http.ResponseWriter, r *http.Request) {

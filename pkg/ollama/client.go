@@ -33,7 +33,7 @@ func New(cfg Config) *Client {
 	return &Client{
 		host:  host,
 		model: cfg.Model,
-		http:  &http.Client{Timeout: 60 * time.Second},
+		http:  &http.Client{Timeout: 300 * time.Second},
 	}
 }
 
@@ -88,6 +88,10 @@ func (c *Client) Chat(ctx context.Context, messages []llm.Message) (llm.Response
 		Content: parsed.Message.Content,
 		Done:    parsed.Done,
 	}, nil
+}
+
+func (c *Client) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
+	return llm.Response{}, fmt.Errorf("ollama does not support structured output schema")
 }
 
 func (c *Client) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
