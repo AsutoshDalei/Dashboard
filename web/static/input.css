@@ -34,11 +34,11 @@
         @apply fixed top-0 left-0 h-full w-56 bg-surface-container border-r border-outline-variant z-40 transition-transform duration-200;
         transform: translateX(-100%);
     }
-    .sidebar.open {
+    .sidebar.collapsed {
+        width: 14rem;
         transform: translateX(0);
     }
-    .sidebar.collapsed {
-        width: 3.5rem;
+    .sidebar.open {
         transform: translateX(0);
     }
     .sidebar.collapsed .sidebar-brand,
@@ -56,6 +56,9 @@
     }
     .main-content {
         @apply min-h-screen transition-all duration-200;
+        margin-left: 14rem;
+    }
+    .dashboard-layout.sidebar-collapsed .main-content {
         margin-left: 3.5rem;
     }
     .sidebar-backdrop.show {

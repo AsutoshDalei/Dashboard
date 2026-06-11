@@ -76,6 +76,10 @@ func (s *Service) ContributionHeatmap(ctx context.Context, year int, month int) 
 	return s.repo.ContributionHeatmap(ctx, year, month)
 }
 
+func (s *Service) DateRange(ctx context.Context) (string, string, error) {
+	return s.repo.DateRange(ctx)
+}
+
 func (s *Service) LogActivity(ctx context.Context, org string, delta int, date string, action string) error {
 	return s.repo.LogActivity(ctx, org, delta, date, action)
 }

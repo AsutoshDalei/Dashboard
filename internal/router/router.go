@@ -18,16 +18,16 @@ import (
 )
 
 type Dependencies struct {
-	Auth       *auth.Handler
-	AuthStore  *auth.SessionStore
-	Templates  *template.Template
-	DB         *database.Pool
-	Stats      *observability.StatsCollector
-	Email      *email.Handler
+	Auth        *auth.Handler
+	AuthStore   *auth.SessionStore
+	Templates   *template.Template
+	DB          *database.Pool
+	Stats       *observability.StatsCollector
+	Email       *email.Handler
 	CoverLetter *coverletter.Handler
-	Clipboard  *clipboard.Handler
-	Tracker    *tracker.Handler
-	Workspace  *workspace.Handler
+	Clipboard   *clipboard.Handler
+	Tracker     *tracker.Handler
+	Workspace   *workspace.Handler
 }
 
 type Router struct {
@@ -95,6 +95,7 @@ func (r *Router) registerRoutes() {
 		r.mux.HandleFunc("/api/applications/stats", auth(r.deps.Tracker.HandleStats))
 		r.mux.HandleFunc("/api/applications/timeline", auth(r.deps.Tracker.HandleTimeline))
 		r.mux.HandleFunc("/api/applications/contribution", auth(r.deps.Tracker.HandleContribution))
+		r.mux.HandleFunc("/api/applications/contribution-range", auth(r.deps.Tracker.HandleContributionRange))
 		r.mux.HandleFunc("/api/applications/query", auth(r.deps.Tracker.HandleQuery))
 	}
 
@@ -105,6 +106,9 @@ func (r *Router) registerRoutes() {
 		r.mux.HandleFunc("/tools/resume", auth(r.deps.Workspace.HandleResumeTool))
 		r.mux.HandleFunc("/api/resume/analyze", auth(r.deps.Workspace.HandleResumeAnalyze))
 		r.mux.HandleFunc("/api/resume/generate", auth(r.deps.Workspace.HandleResumeGenerate))
+		r.mux.HandleFunc("/api/resume/compile", auth(r.deps.Workspace.HandleResumeCompile))
+		r.mux.HandleFunc("/api/resume/reanalyze", auth(r.deps.Workspace.HandleResumeReanalyze))
+		r.mux.HandleFunc("/api/resume/chat", auth(r.deps.Workspace.HandleResumeChat))
 		r.mux.HandleFunc("/api/resume/job-match", auth(r.deps.Workspace.HandleJobMatch))
 		r.mux.HandleFunc("/api/workspace/draft-email", auth(r.deps.Workspace.HandleDraftEmail))
 		r.mux.HandleFunc("/api/workspace/draft-cover-letter", auth(r.deps.Workspace.HandleDraftCoverLetter))

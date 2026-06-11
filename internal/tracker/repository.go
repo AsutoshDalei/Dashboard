@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -390,6 +391,21 @@ func (r *Repository) LogActivity(ctx context.Context, org string, delta int, dat
 		org, delta, date, action,
 	)
 	return err
+}
+
+func (r *Repository) DateRange(ctx context.Context) (string, string, error) {
+	query := `WITH dates AS (
+		SELECT activity_date AS d FROM application_activity_logs
+		UNION ALL
+		SELECT COALESCE(applied_dates, created_at::date) AS d FROM applications
+	)
+	SELECT MIN(d)::text, MAX(d)::text FROM dates`
+
+	var first, last sql.NullString
+	if err := r.pool.QueryRow(ctx, query).Scan(&first, &last); err != nil {
+		return "", "", err
+	}
+	return first.String, last.String, nil
 }
 
 func (r *Repository) Query(ctx context.Context, sql string) (pgx.Rows, error) {

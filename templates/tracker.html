@@ -249,6 +249,36 @@
             }
             .chart-svg {
                 display: block;
+                overflow: visible;
+            }
+            .chart-svg .axis-line {
+                stroke: #3f3f46;
+                stroke-width: 1;
+            }
+            .chart-svg .axis-label {
+                fill: var(--on-surface-muted);
+                font-size: 9px;
+                font-family: inherit;
+            }
+            .chart-svg .dot-apps {
+                fill: var(--primary-container);
+                stroke: var(--surface-lowest);
+                stroke-width: 2;
+                cursor: pointer;
+            }
+            .chart-svg .dot-cos {
+                fill: #71717a;
+                stroke: var(--surface-lowest);
+                stroke-width: 2;
+                cursor: pointer;
+            }
+            .chart-svg .bar-apps,
+            .chart-svg .bar-cos {
+                cursor: pointer;
+            }
+            .chart-svg .bar-apps:hover,
+            .chart-svg .dot-apps:hover {
+                filter: brightness(1.15);
             }
             .chart-svg .grid-line {
                 stroke: #27272a;
@@ -418,14 +448,14 @@
                             <div class="label">Today</div>
                             <div class="value" id="statTodayCompanies">—</div>
                             <div class="sub" id="statTodaySub">
-                                applications: —
+                                Applications: —
                             </div>
                         </div>
                         <div class="tracker-stat col-4">
                             <div class="label">This Week</div>
                             <div class="value" id="statWeekCompanies">—</div>
                             <div class="sub" id="statWeekSub">
-                                applications: —
+                                Applications: —
                             </div>
                         </div>
                         <div class="tracker-stat col-4">
@@ -1241,6 +1271,85 @@
                 }
             }
 
+            function chartValue(b, key) {
+                if (key === "applications") {
+                    return b.applications !== undefined ? b.applications : b.count || 0;
+                }
+                return b.companies !== undefined ? b.companies : 0;
+            }
+
+            function smoothPath(points) {
+                if (!points.length) return "";
+                if (points.length === 1) {
+                    return "M " + points[0].x + "," + points[0].y;
+                }
+                var d = "M " + points[0].x + "," + points[0].y;
+                for (var i = 0; i < points.length - 1; i++) {
+                    var p0 = points[i - 1] || points[i];
+                    var p1 = points[i];
+                    var p2 = points[i + 1];
+                    var p3 = points[i + 2] || p2;
+                    var cp1x = p1.x + (p2.x - p0.x) / 6;
+                    var cp1y = p1.y + (p2.y - p0.y) / 6;
+                    var cp2x = p2.x - (p3.x - p1.x) / 6;
+                    var cp2y = p2.y - (p3.y - p1.y) / 6;
+                    d +=
+                        " C " +
+                        cp1x +
+                        "," +
+                        cp1y +
+                        " " +
+                        cp2x +
+                        "," +
+                        cp2y +
+                        " " +
+                        p2.x +
+                        "," +
+                        p2.y;
+                }
+                return d;
+            }
+
+            function bucketLabel(date, freq) {
+                var d = new Date(date + "T00:00:00");
+                if (freq === "day") {
+                    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                }
+                if (freq === "week") {
+                    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                }
+                return d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+            }
+
+            function chartTooltipHTML(label, apps, companies) {
+                return (
+                    "<strong>" +
+                    escapeHtml(label) +
+                    "</strong><br>Applications: <strong>" +
+                    fmtNum(apps) +
+                    "</strong><br>Companies: <strong>" +
+                    fmtNum(companies) +
+                    "</strong>"
+                );
+            }
+
+            function attachChartHover(el, html, wrap) {
+                var tip = $("chartTooltip");
+                if (!tip) return;
+                el.addEventListener("mousemove", function (e) {
+                    tip.innerHTML = html;
+                    tip.style.display = "block";
+                    var rect = wrap.getBoundingClientRect();
+                    var x = e.clientX - rect.left;
+                    var y = e.clientY - rect.top;
+                    tip.style.left = Math.min(Math.max(x, 70), rect.width - 70) + "px";
+                    tip.style.top = Math.max(18, y - 12) + "px";
+                });
+                el.addEventListener("mouseleave", function () {
+                    tip.style.display = "none";
+                });
+            }
+
             function renderChart(buckets) {
                 const wrap = $("chartWrap");
                 if (!buckets || !buckets.length) {
@@ -1249,22 +1358,23 @@
                     return;
                 }
                 var W = Math.max(320, wrap.clientWidth - 20),
-                    H = Math.max(240, Math.min(320, wrap.clientHeight || 300)),
-                    pad = { t: 20, r: 10, b: 30, l: 40 };
-                if (W < 420) {
-                    pad = { t: 18, r: 8, b: 34, l: 34 };
+                    H = Math.max(260, Math.min(340, wrap.clientHeight || 320)),
+                    pad = { t: 20, r: 14, b: 48, l: 46 };
+                if (W < 460) {
+                    pad = { t: 18, r: 10, b: 52, l: 38 };
                 }
                 var iw = Math.max(1, W - pad.l - pad.r),
                     ih = Math.max(1, H - pad.t - pad.b);
                 var maxV = 0;
                 buckets.forEach(function (b) {
-                    var apps = b.applications !== undefined ? b.applications : b.count || 0;
-                    var companies = b.companies !== undefined ? b.companies : 0;
+                    var apps = chartValue(b, "applications");
+                    var companies = chartValue(b, "companies");
                     if (apps > maxV) maxV = apps;
                     if (companies > maxV) maxV = companies;
                 });
                 maxV = Math.max(maxV, 1);
-                var bw = Math.max(2, iw / buckets.length - 1);
+                var groupW = iw / buckets.length;
+                var barW = Math.min(9, Math.max(3, groupW * 0.28));
                 var html =
                     '<svg class="chart-svg" width="' +
                     W +
@@ -1290,59 +1400,134 @@
                         y +
                         '"/>';
                     html +=
-                        '<text x="' +
-                        (pad.l - 6) +
+                        '<text class="axis-label" x="' +
+                        (pad.l - 8) +
                         '" y="' +
                         (y + 3) +
                         '" text-anchor="end">' +
                         Math.round(v) +
                         "</text>";
                 }
-                if (currentChartMode === "line") {
-                    var ptsA = "",
-                        ptsC = "";
-                    buckets.forEach(function (b, i) {
-                        var x = pad.l + (iw / (buckets.length - 1 || 1)) * i;
-                        var apps = b.applications !== undefined ? b.applications : b.count || 0;
-                        var companies = b.companies !== undefined ? b.companies : 0;
-                        var yA = pad.t + ih - (apps / maxV) * ih;
-                        var yC = pad.t + ih - (companies / maxV) * ih;
-                        ptsA += (i === 0 ? "M" : "L") + x + "," + yA;
-                        ptsC += (i === 0 ? "M" : "L") + x + "," + yC;
+                html +=
+                    '<line class="axis-line" x1="' +
+                    pad.l +
+                    '" y1="' +
+                    (pad.t + ih) +
+                    '" x2="' +
+                    (W - pad.r) +
+                    '" y2="' +
+                    (pad.t + ih) +
+                    '"/>';
+                html +=
+                    '<line class="axis-line" x1="' +
+                    pad.l +
+                    '" y1="' +
+                    pad.t +
+                    '" x2="' +
+                    pad.l +
+                    '" y2="' +
+                    (pad.t + ih) +
+                    '"/>';
+
+                var pointsA = [],
+                    pointsC = [];
+                buckets.forEach(function (b, i) {
+                    var x = pad.l + groupW * i + groupW / 2;
+                    var apps = chartValue(b, "applications");
+                    var companies = chartValue(b, "companies");
+                    pointsA.push({
+                        x: x,
+                        y: pad.t + ih - (apps / maxV) * ih,
+                        apps: apps,
+                        companies: companies,
+                        label: bucketLabel(b.date, currentFreq),
                     });
-                    html += '<path class="line-apps" d="' + ptsA + '"/>';
-                    html += '<path class="line-cos" d="' + ptsC + '"/>';
+                    pointsC.push({
+                        x: x,
+                        y: pad.t + ih - (companies / maxV) * ih,
+                        apps: apps,
+                        companies: companies,
+                        label: bucketLabel(b.date, currentFreq),
+                    });
+                });
+
+                if (currentChartMode === "line") {
+                    html += '<path class="line-apps" d="' + smoothPath(pointsA) + '"/>';
+                    html += '<path class="line-cos" d="' + smoothPath(pointsC) + '"/>';
+                    pointsA.forEach(function (p) {
+                        html +=
+                            '<circle class="dot-apps" cx="' +
+                            p.x +
+                            '" cy="' +
+                            p.y +
+                            '" r="3.5"></circle>';
+                    });
+                    pointsC.forEach(function (p) {
+                        html +=
+                            '<circle class="dot-cos" cx="' +
+                            p.x +
+                            '" cy="' +
+                            p.y +
+                            '" r="3"></circle>';
+                    });
                 } else {
-                    buckets.forEach(function (b, i) {
-                        var x = pad.l + (iw / buckets.length) * i + 0.5;
-                        var apps = b.applications !== undefined ? b.applications : b.count || 0;
-                        var companies = b.companies !== undefined ? b.companies : 0;
-                        var hA = (apps / maxV) * ih,
-                            hC = (companies / maxV) * ih;
+                    pointsA.forEach(function (p, i) {
+                        var x = pad.l + groupW * i + groupW / 2 - barW - 1;
+                        var hA = (p.apps / maxV) * ih;
+                        var hC = (p.companies / maxV) * ih;
                         html +=
                             '<rect class="bar-apps" x="' +
                             x +
                             '" y="' +
                             (pad.t + ih - hA) +
                             '" width="' +
-                            bw +
+                            barW +
                             '" height="' +
                             hA +
-                            '"/>';
+                            '" rx="2"></rect>';
                         html +=
                             '<rect class="bar-cos" x="' +
-                            (x + bw + 1) +
+                            (x + barW + 2) +
                             '" y="' +
                             (pad.t + ih - hC) +
                             '" width="' +
-                            bw +
+                            barW +
                             '" height="' +
                             hC +
-                            '"/>';
+                            '" rx="2"></rect>';
                     });
                 }
+
+                var labelEvery = buckets.length > 12 ? Math.ceil(buckets.length / 8) : 1;
+                buckets.forEach(function (b, i) {
+                    if (i % labelEvery === 0 || i === buckets.length - 1) {
+                        var x = pad.l + groupW * i + groupW / 2;
+                        html +=
+                            '<text class="axis-label" x="' +
+                            x +
+                            '" y="' +
+                            (H - 18) +
+                            '" text-anchor="middle">' +
+                            escapeHtml(bucketLabel(b.date, currentFreq)) +
+                            "</text>";
+                    }
+                });
                 html += "</svg>";
-                wrap.innerHTML = html;
+                wrap.innerHTML = '<div id="chartTooltip" class="chart-tooltip"></div>' + html;
+
+                var tipFactory = function (p) {
+                    return chartTooltipHTML(p.label, p.apps, p.companies);
+                };
+                wrap.querySelectorAll(".dot-apps").forEach(function (dot, i) {
+                    if (pointsA[i]) attachChartHover(dot, tipFactory(pointsA[i]), wrap);
+                });
+                wrap.querySelectorAll(".dot-cos").forEach(function (dot, i) {
+                    if (pointsC[i]) attachChartHover(dot, tipFactory(pointsC[i]), wrap);
+                });
+                wrap.querySelectorAll(".bar-apps, .bar-cos").forEach(function (bar, i) {
+                    var p = pointsA[Math.floor(i / 2)];
+                    if (p) attachChartHover(bar, tipFactory(p), wrap);
+                });
             }
 
             function contributionLevel(count, maxCount) {
@@ -1379,10 +1564,12 @@
                 for (var day = 1; day <= daysInMonth; day++) {
                     var date = formatDate(year, month, day);
                     var count = byDate[date] || 0;
-                    var level = contributionLevel(count, maxCount);
+                    var color = contributionColor(count, maxCount);
                     html +=
-                        '<div class="contribution-cell contribution-level-' +
-                        level +
+                        '<div class="contribution-cell" style="background:' +
+                        color.background +
+                        ";border-color:" +
+                        color.border +
                         '" title="' +
                         date +
                         ": " +
@@ -1394,28 +1581,72 @@
                 grid.innerHTML = html;
             }
 
-            function populateContributionMonths() {
+            async function populateContributionMonths() {
                 var select = $("contributionMonth");
-                var year = new Date().getFullYear();
-                var currentMonth = new Date().getMonth() + 1;
+                var now = new Date();
+                var firstYear = now.getFullYear();
+                var firstMonth = now.getMonth() + 1;
+                var lastYear = firstYear;
+                var lastMonth = firstMonth;
+
+                try {
+                    const range = await fetchJson("/api/applications/contribution-range");
+                    if (range.first_month && range.last_month) {
+                        firstYear = parseInt(range.first_month.slice(0, 4), 10);
+                        firstMonth = parseInt(range.first_month.slice(5, 7), 10);
+                        lastYear = parseInt(range.last_month.slice(0, 4), 10);
+                        lastMonth = parseInt(range.last_month.slice(5, 7), 10);
+                    }
+                } catch {
+                    // Fall back to the current year when the range endpoint is unavailable.
+                }
+
                 select.innerHTML = "";
-                for (var m = 1; m <= 12; m++) {
+                var found = false;
+                for (var y = firstYear; y <= lastYear; y++) {
+                    var start = y === firstYear ? firstMonth : 1;
+                    var end = y === lastYear ? lastMonth : 12;
+                    for (var m = start; m <= end; m++) {
+                        var opt = document.createElement("option");
+                        opt.value = y + "-" + String(m).padStart(2, "0");
+                        opt.textContent = new Date(y, m - 1, 1).toLocaleString(undefined, {
+                            month: "short",
+                            year: "numeric",
+                        });
+                        select.appendChild(opt);
+                        found = true;
+                    }
+                }
+                if (!found) {
                     var opt = document.createElement("option");
-                    opt.value = String(m);
-                    opt.textContent = new Date(year, m - 1, 1).toLocaleString(
-                        undefined,
-                        { month: "short" },
-                    );
-                    if (m === currentMonth) opt.selected = true;
+                    opt.value = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+                    opt.textContent = "No data";
                     select.appendChild(opt);
                 }
-                select.value = String(currentMonth);
+                select.selectedIndex = select.options.length - 1;
+            }
+
+            function contributionColor(count, maxCount) {
+                if (!count || count <= 0) {
+                    return {
+                        background: "transparent",
+                        border: "1px solid rgba(82, 82, 91, 0.45)",
+                    };
+                }
+                var ratio = maxCount > 0 ? count / maxCount : 1;
+                var alpha = 0.14 + Math.min(0.76, ratio * 0.76);
+                return {
+                    background: "rgba(34, 197, 94, " + alpha + ")",
+                    border: "1px solid rgba(34, 197, 94, " + Math.min(0.95, alpha + 0.12) + ")",
+                };
             }
 
             async function loadContribution() {
                 try {
-                    var year = new Date().getFullYear();
-                    var month = parseInt($("contributionMonth").value, 10) || 0;
+                    var value = $("contributionMonth").value || "";
+                    var parts = value.split("-");
+                    var year = parseInt(parts[0], 10) || new Date().getFullYear();
+                    var month = parseInt(parts[1], 10) || 0;
                     const data = await fetchJson(
                         "/api/applications/contribution?year=" +
                             year +
@@ -1512,11 +1743,13 @@
                 }
             });
 
-            populateContributionMonths();
-            $("contributionMonth").addEventListener("change", loadContribution);
+            (async function initContributionMonths() {
+                await populateContributionMonths();
+                $("contributionMonth").addEventListener("change", loadContribution);
+                loadContribution();
+            })();
             loadStats();
             loadTimeline("month");
-            loadContribution();
 
             document.addEventListener("click", function (e) {
                 var btn = e.target.closest("#lookupUpdateBtn");

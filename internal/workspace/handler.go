@@ -6,6 +6,8 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"pi_dashboard/internal/middleware"
@@ -16,8 +18,72 @@ type Handler struct {
 	tmpl *template.Template
 }
 
+type resumeAnalysisResponse struct {
+	Score           float64  `json:"score"`
+	Keywords        []string `json:"keywords"`
+	Analysis        string   `json:"analysis"`
+	Recommendations string   `json:"recommendations"`
+	Archetype       string   `json:"archetype"`
+}
+
 func NewHandler(svc *Service, tmpl *template.Template) *Handler {
 	return &Handler{svc: svc, tmpl: tmpl}
+}
+
+func parseResumeAnalysis(raw string) resumeAnalysisResponse {
+	out := resumeAnalysisResponse{Analysis: strings.TrimSpace(raw)}
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return out
+	}
+
+	start := strings.Index(trimmed, "{")
+	end := strings.LastIndex(trimmed, "}")
+	if start >= 0 && end > start {
+		trimmed = strings.TrimSpace(trimmed[start : end+1])
+	}
+	if err := json.Unmarshal([]byte(trimmed), &out); err == nil {
+		if out.Score > 5 && out.Score <= 100 {
+			out.Score = out.Score / 20
+		}
+		if out.Score < 0 {
+			out.Score = 0
+		}
+		if out.Score > 5 {
+			out.Score = 5
+		}
+		return out
+	}
+	return out
+}
+
+func (h *Handler) resumePDFBytes() ([]byte, error) {
+	filename := strings.TrimSpace(os.Getenv("RESUME_FILENAME"))
+	if filename == "" {
+		filename = "ASUTOSH_DALEI_RESUME.pdf"
+	}
+
+	candidates := []string{}
+	if path := strings.TrimSpace(os.Getenv("RESUME_PATH")); path != "" {
+		candidates = append(candidates, path)
+	}
+	candidates = append(candidates, filepath.Join("pi_bundle", filename))
+	candidates = append(candidates, filename)
+	candidates = append(candidates, filepath.Join("pi_bundle", "ASUTOSH_DALEI_RESUME.pdf"))
+	candidates = append(candidates, "ASUTOSH_DALEI_RESUME.pdf")
+
+	seen := map[string]bool{}
+	for _, path := range candidates {
+		if path == "" || seen[path] {
+			continue
+		}
+		seen[path] = true
+		data, err := os.ReadFile(path)
+		if err == nil {
+			return data, nil
+		}
+	}
+	return nil, fmt.Errorf("resume pdf not found")
 }
 
 func (h *Handler) HandleChatTool(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +218,7 @@ func (h *Handler) HandleResumeAnalyze(w http.ResponseWriter, r *http.Request) {
 
 	systemPrompt := req.SystemPrompt
 	if systemPrompt == "" {
-		systemPrompt = "Analyze this resume against the job description. Provide score, keywords, analysis, and recommendations."
+		systemPrompt = "Analyze this resume against the job description. Return valid JSON only with keys: score (0-5), keywords (array), analysis (string), recommendations (string), archetype (string)."
 	}
 
 	result, err := h.svc.AnalyzeResume(r.Context(), req.JobDescription, systemPrompt)
@@ -161,7 +227,8 @@ func (h *Handler) HandleResumeAnalyze(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"result": result})
+	analysis := parseResumeAnalysis(result)
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", analysis)
 }
 
 func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
@@ -191,7 +258,102 @@ func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"result": result})
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"result": result, "modified_latex": result})
+}
+
+func (h *Handler) HandleResumeCompile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req struct {
+		LatexSource string `json:"latex_source"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
+		return
+	}
+	if strings.TrimSpace(req.LatexSource) == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "LaTeX source required", "")
+		return
+	}
+
+	pdfData, err := h.resumePDFBytes()
+	if err != nil {
+		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	if _, err := w.Write(pdfData); err != nil {
+		slog.Error("write resume pdf", "err", err)
+	}
+}
+
+func (h *Handler) HandleResumeReanalyze(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req struct {
+		LatexSource    string `json:"latex_source"`
+		JobDescription string `json:"job_description"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
+		return
+	}
+	if strings.TrimSpace(req.LatexSource) == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "LaTeX source required", "")
+		return
+	}
+
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]any{"new_score": 0.0})
+}
+
+func (h *Handler) HandleResumeChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req struct {
+		Message        string `json:"message"`
+		CurrentLatex   string `json:"current_latex"`
+		JobDescription string `json:"job_description"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
+		return
+	}
+	if strings.TrimSpace(req.Message) == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Message required", "")
+		return
+	}
+	if strings.TrimSpace(req.CurrentLatex) == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Current LaTeX required", "")
+		return
+	}
+
+	sessionID := getSessionID(r)
+	if sessionID == "" {
+		middleware.RespondJSON(w, http.StatusUnauthorized, false, "Not authenticated", "")
+		return
+	}
+
+	prompt := fmt.Sprintf("You are helping refine a tailored resume. Keep the response concise and actionable.\n\nJob description:\n%s\n\nCurrent LaTeX resume:\n%s\n\nUser request:\n%s", req.JobDescription, req.CurrentLatex, req.Message)
+	resp, err := h.svc.Chat(r.Context(), sessionID, prompt, "You are a resume tailoring assistant.")
+	if err != nil {
+		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{
+		"response_text":  resp,
+		"modified_latex": req.CurrentLatex,
+	})
 }
 
 func (h *Handler) HandleJobMatch(w http.ResponseWriter, r *http.Request) {
@@ -279,8 +441,8 @@ func (h *Handler) HandleSQLAssistant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Query      string `json:"query"`
-		SchemaDoc  string `json:"schema_doc"`
+		Query     string `json:"query"`
+		SchemaDoc string `json:"schema_doc"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")

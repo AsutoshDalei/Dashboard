@@ -55,12 +55,17 @@ func (h *Handler) HandleGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	safeName := strings.ReplaceAll(companyName, " ", "_")
+	safeName := strings.TrimSpace(companyName)
+	safeName = strings.ReplaceAll(safeName, " ", "_")
 	safeName = strings.ReplaceAll(safeName, "/", "_")
 	safeName = strings.ReplaceAll(safeName, "\\", "_")
+	safeName = strings.Trim(safeName, "._-")
+	if safeName == "" {
+		safeName = "Company"
+	}
 
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"COVERLETTER_%s.pdf\"", safeName))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"ASUTOSH_DALEI_COVERLETTER_%s.pdf\"", safeName))
 
 	if _, err := w.Write(pdfData); err != nil {
 		slog.Error("write pdf", "err", err)

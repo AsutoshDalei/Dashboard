@@ -23,6 +23,9 @@
 
     function setCollapsed(collapsed) {
         if (isMobile()) {
+            sidebar.classList.remove('collapsed');
+            if (layout) layout.classList.remove('sidebar-collapsed');
+            html.setAttribute('data-sidebar', 'expanded');
             setOpen(false);
             return;
         }

@@ -184,6 +184,20 @@ func (h *Handler) HandleContribution(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) HandleContributionRange(w http.ResponseWriter, r *http.Request) {
+	firstMonth, lastMonth, err := h.svc.DateRange(r.Context())
+	if err != nil {
+		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":     true,
+		"first_month": firstMonth,
+		"last_month":  lastMonth,
+	})
+}
+
 func (h *Handler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"success": false, "error": "Method not allowed"})
