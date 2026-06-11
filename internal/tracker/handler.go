@@ -70,7 +70,7 @@ func (h *Handler) HandleCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, count, status, appliedDates, err := h.svc.Check(r.Context(), name)
+	organization, exists, count, status, appliedDates, err := h.svc.Check(r.Context(), name)
 	if err != nil || !exists {
 		writeJSON(w, http.StatusOK, map[string]any{"success": true, "exists": false})
 		return
@@ -79,7 +79,7 @@ func (h *Handler) HandleCheck(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"success":       true,
 		"exists":        true,
-		"organization":  name,
+		"organization":  organization,
 		"count":         count,
 		"status":        status,
 		"applied_dates": appliedDates,
@@ -145,7 +145,7 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 		days = 365
 	}
 
-	entries, err := h.svc.Timeline(r.Context(), days)
+	entries, err := h.svc.Timeline(r.Context(), days, freq)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
@@ -165,7 +165,14 @@ func (h *Handler) HandleContribution(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	days, err := h.svc.ContributionHeatmap(r.Context(), year)
+	month := 0
+	if m := r.URL.Query().Get("month"); m != "" {
+		if n, err := strconv.Atoi(m); err == nil && n > 0 && n <= 12 {
+			month = n
+		}
+	}
+
+	days, err := h.svc.ContributionHeatmap(r.Context(), year, month)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return

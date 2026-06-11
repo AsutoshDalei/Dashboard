@@ -3,6 +3,7 @@
     var toggle = document.querySelector('.sidebar-toggle');
     var layout = document.querySelector('.dashboard-layout');
     var html = document.documentElement;
+    var backdrop = document.querySelector('.sidebar-backdrop');
 
     if (!sidebar || !toggle) return;
 
@@ -10,74 +11,74 @@
 
     var COLLAPSE_KEY = 'sidebar_collapsed';
 
+    function isMobile() {
+        return window.innerWidth <= 768;
+    }
+
+    function setOpen(open) {
+        sidebar.classList.toggle('open', open);
+        if (backdrop) backdrop.classList.toggle('show', open);
+        if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    }
+
     function setCollapsed(collapsed) {
-        if (collapsed) {
-            sidebar.classList.add('collapsed');
-            if (layout) layout.classList.add('sidebar-collapsed');
-            html.setAttribute('data-sidebar', 'collapsed');
-            localStorage.setItem(COLLAPSE_KEY, 'true');
+        if (isMobile()) {
+            setOpen(false);
+            return;
+        }
+
+        sidebar.classList.toggle('collapsed', collapsed);
+        if (layout) layout.classList.toggle('sidebar-collapsed', collapsed);
+        html.setAttribute('data-sidebar', collapsed ? 'collapsed' : 'expanded');
+        localStorage.setItem(COLLAPSE_KEY, String(collapsed));
+        if (toggle) toggle.setAttribute('aria-expanded', String(!collapsed));
+    }
+
+    function loadCollapsedState() {
+        if (!isMobile() && (html.getAttribute('data-sidebar') === 'collapsed' || localStorage.getItem(COLLAPSE_KEY) === 'true')) {
+            setCollapsed(true);
         } else {
-            sidebar.classList.remove('collapsed');
-            if (layout) layout.classList.remove('sidebar-collapsed');
-            html.removeAttribute('data-sidebar');
-            localStorage.setItem(COLLAPSE_KEY, 'false');
+            setCollapsed(false);
         }
     }
 
-    // Load saved state (data-sidebar already set by inline <head> script)
-    if (html.getAttribute('data-sidebar') === 'collapsed') {
-        setCollapsed(true);
-    } else if (localStorage.getItem(COLLAPSE_KEY) === 'true') {
-        setCollapsed(true);
-    }
+    loadCollapsedState();
 
     toggle.addEventListener('click', function () {
-        var isMobile = window.innerWidth <= 768;
-
-        if (isMobile) {
-            sidebar.classList.toggle('open');
-            var backdrop = document.querySelector('.sidebar-backdrop');
-            if (backdrop) {
-                backdrop.classList.toggle('show');
-            }
-            toggle.setAttribute('aria-expanded', sidebar.classList.contains('open'));
+        if (isMobile()) {
+            setOpen(!sidebar.classList.contains('open'));
         } else {
             setCollapsed(!sidebar.classList.contains('collapsed'));
         }
     });
 
-    var backdrop = document.querySelector('.sidebar-backdrop');
     if (backdrop) {
         backdrop.addEventListener('click', function () {
-            sidebar.classList.remove('open');
-            backdrop.classList.remove('show');
-            toggle.setAttribute('aria-expanded', 'false');
+            setOpen(false);
         });
     }
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
-            sidebar.classList.remove('open');
-            if (backdrop) backdrop.classList.remove('show');
-            toggle.setAttribute('aria-expanded', 'false');
+            setOpen(false);
         }
     });
 
     sidebar.querySelectorAll('.nav-link').forEach(function (a) {
         a.addEventListener('click', function () {
-            if (window.innerWidth <= 768) {
-                sidebar.classList.remove('open');
-                if (backdrop) backdrop.classList.remove('show');
-                toggle.setAttribute('aria-expanded', 'false');
+            if (isMobile()) {
+                setOpen(false);
             }
         });
     });
 
     window.addEventListener('resize', function () {
-        if (window.innerWidth > 768) {
-            sidebar.classList.remove('open');
-            if (backdrop) backdrop.classList.remove('show');
-            toggle.setAttribute('aria-expanded', 'false');
+        if (isMobile()) {
+            sidebar.classList.remove('collapsed');
+            if (layout) layout.classList.remove('sidebar-collapsed');
+        } else {
+            setOpen(false);
+            loadCollapsedState();
         }
     });
 })();

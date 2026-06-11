@@ -31,10 +31,51 @@
         @apply block text-sm font-medium text-on-surface-variant mb-1;
     }
     .sidebar {
-        @apply fixed top-0 left-0 h-full w-64 bg-surface-container border-r border-outline-variant z-40 transition-transform duration-200;
+        @apply fixed top-0 left-0 h-full w-56 bg-surface-container border-r border-outline-variant z-40 transition-transform duration-200;
+        transform: translateX(-100%);
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .sidebar.collapsed {
+        width: 3.5rem;
+        transform: translateX(0);
+    }
+    .sidebar.collapsed .sidebar-brand,
+    .sidebar.collapsed .nav-text,
+    .sidebar.collapsed .sidebar-footer .nav-text {
+        @apply hidden;
+    }
+    .sidebar.collapsed .sidebar-header,
+    .sidebar.collapsed .sidebar-nav,
+    .sidebar.collapsed .sidebar-footer {
+        @apply px-3;
+    }
+    .sidebar.collapsed .nav-link {
+        @apply justify-center px-2;
     }
     .main-content {
-        @apply ml-64 min-h-screen transition-all duration-200;
+        @apply min-h-screen transition-all duration-200;
+        margin-left: 3.5rem;
+    }
+    .sidebar-backdrop.show {
+        display: block;
+    }
+    @media (min-width: 768px) {
+        .sidebar {
+            transform: translateX(0);
+        }
+        .main-content {
+            margin-left: 14rem;
+        }
+    }
+    @media (max-width: 767.98px) {
+        .sidebar.collapsed {
+            width: 14rem;
+        }
+        .main-content {
+            margin-left: 0;
+        }
     }
     .nav-link {
         @apply flex items-center gap-3 px-4 py-2.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-high rounded-lg transition-colors no-underline;

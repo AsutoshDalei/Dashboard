@@ -1248,15 +1248,20 @@
                         '<div class="empty-chart text-center py-12 text-on-surface-muted text-sm">No data yet.</div>';
                     return;
                 }
-                var W = wrap.clientWidth - 20,
-                    H = 260,
+                var W = Math.max(320, wrap.clientWidth - 20),
+                    H = Math.max(240, Math.min(320, wrap.clientHeight || 300)),
                     pad = { t: 20, r: 10, b: 30, l: 40 };
-                var iw = W - pad.l - pad.r,
-                    ih = H - pad.t - pad.b;
+                if (W < 420) {
+                    pad = { t: 18, r: 8, b: 34, l: 34 };
+                }
+                var iw = Math.max(1, W - pad.l - pad.r),
+                    ih = Math.max(1, H - pad.t - pad.b);
                 var maxV = 0;
                 buckets.forEach(function (b) {
-                    if (b.applications > maxV) maxV = b.applications;
-                    if (b.companies > maxV) maxV = b.companies;
+                    var apps = b.applications !== undefined ? b.applications : b.count || 0;
+                    var companies = b.companies !== undefined ? b.companies : 0;
+                    if (apps > maxV) maxV = apps;
+                    if (companies > maxV) maxV = companies;
                 });
                 maxV = Math.max(maxV, 1);
                 var bw = Math.max(2, iw / buckets.length - 1);
@@ -1269,7 +1274,7 @@
                     W +
                     " " +
                     H +
-                    '">';
+                    '" preserveAspectRatio="none">';
                 var ySteps = 4;
                 for (var i = 0; i <= ySteps; i++) {
                     var y = pad.t + (ih / ySteps) * i;
@@ -1298,8 +1303,10 @@
                         ptsC = "";
                     buckets.forEach(function (b, i) {
                         var x = pad.l + (iw / (buckets.length - 1 || 1)) * i;
-                        var yA = pad.t + ih - (b.applications / maxV) * ih;
-                        var yC = pad.t + ih - (b.companies / maxV) * ih;
+                        var apps = b.applications !== undefined ? b.applications : b.count || 0;
+                        var companies = b.companies !== undefined ? b.companies : 0;
+                        var yA = pad.t + ih - (apps / maxV) * ih;
+                        var yC = pad.t + ih - (companies / maxV) * ih;
                         ptsA += (i === 0 ? "M" : "L") + x + "," + yA;
                         ptsC += (i === 0 ? "M" : "L") + x + "," + yC;
                     });
@@ -1308,8 +1315,10 @@
                 } else {
                     buckets.forEach(function (b, i) {
                         var x = pad.l + (iw / buckets.length) * i + 0.5;
-                        var hA = (b.applications / maxV) * ih,
-                            hC = (b.companies / maxV) * ih;
+                        var apps = b.applications !== undefined ? b.applications : b.count || 0;
+                        var companies = b.companies !== undefined ? b.companies : 0;
+                        var hA = (apps / maxV) * ih,
+                            hC = (companies / maxV) * ih;
                         html +=
                             '<rect class="bar-apps" x="' +
                             x +
@@ -1336,35 +1345,85 @@
                 wrap.innerHTML = html;
             }
 
+            function contributionLevel(count, maxCount) {
+                if (!count || count <= 0) return 0;
+                if (maxCount <= 0) return 1;
+                if (count <= 3) return 1;
+                if (maxCount <= 6) return count <= 6 ? 2 : 1;
+                if (maxCount <= 9) return count <= 6 ? 2 : count <= 9 ? 3 : 1;
+                return count <= 3 ? 1 : count <= 6 ? 2 : count <= 9 ? 3 : 4;
+            }
+
+            function formatDate(year, month, day) {
+                var m = String(month).padStart(2, "0");
+                var d = String(day).padStart(2, "0");
+                return year + "-" + m + "-" + d;
+            }
+
+            function renderContributionGrid(days, year, month) {
+                var grid = $("contributionGrid");
+                var byDate = {};
+                var maxCount = 0;
+                (days || []).forEach(function (d) {
+                    byDate[d.date] = d.count || 0;
+                    if ((d.count || 0) > maxCount) maxCount = d.count || 0;
+                });
+
+                var first = new Date(year, month - 1, 1);
+                var daysInMonth = new Date(year, month, 0).getDate();
+                var padding = first.getDay();
+                var html = "";
+                for (var p = 0; p < padding; p++) {
+                    html += '<div class="contribution-cell contribution-cell--pad contribution-level-0"></div>';
+                }
+                for (var day = 1; day <= daysInMonth; day++) {
+                    var date = formatDate(year, month, day);
+                    var count = byDate[date] || 0;
+                    var level = contributionLevel(count, maxCount);
+                    html +=
+                        '<div class="contribution-cell contribution-level-' +
+                        level +
+                        '" title="' +
+                        date +
+                        ": " +
+                        count +
+                        ' apps">' +
+                        day +
+                        "</div>";
+                }
+                grid.innerHTML = html;
+            }
+
+            function populateContributionMonths() {
+                var select = $("contributionMonth");
+                var year = new Date().getFullYear();
+                var currentMonth = new Date().getMonth() + 1;
+                select.innerHTML = "";
+                for (var m = 1; m <= 12; m++) {
+                    var opt = document.createElement("option");
+                    opt.value = String(m);
+                    opt.textContent = new Date(year, m - 1, 1).toLocaleString(
+                        undefined,
+                        { month: "short" },
+                    );
+                    if (m === currentMonth) opt.selected = true;
+                    select.appendChild(opt);
+                }
+                select.value = String(currentMonth);
+            }
+
             async function loadContribution() {
                 try {
+                    var year = new Date().getFullYear();
+                    var month = parseInt($("contributionMonth").value, 10) || 0;
                     const data = await fetchJson(
                         "/api/applications/contribution?year=" +
-                            new Date().getFullYear(),
+                            year +
+                            "&month=" +
+                            month,
                     );
                     const days = data.data || data.days || [];
-                    const grid = $("contributionGrid");
-                    if (!days.length) {
-                        grid.innerHTML =
-                            '<div class="text-center py-8 text-on-surface-muted text-sm col-span-7">No data.</div>';
-                        return;
-                    }
-                    grid.innerHTML = days
-                        .map(function (d) {
-                            var l = d.level || 0;
-                            return (
-                                '<div class="contribution-cell contribution-level-' +
-                                l +
-                                '" title="' +
-                                d.date +
-                                ": " +
-                                d.count +
-                                ' apps">' +
-                                parseInt(d.date.slice(-2), 10) +
-                                "</div>"
-                            );
-                        })
-                        .join("");
+                    renderContributionGrid(days, year, month);
                 } catch (err) {
                     $("contributionGrid").innerHTML =
                         '<div class="text-center py-8 text-error text-sm col-span-7">' +
@@ -1453,6 +1512,8 @@
                 }
             });
 
+            populateContributionMonths();
+            $("contributionMonth").addEventListener("change", loadContribution);
             loadStats();
             loadTimeline("month");
             loadContribution();

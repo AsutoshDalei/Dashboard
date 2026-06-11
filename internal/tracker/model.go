@@ -26,45 +26,46 @@ type ActivityLog struct {
 }
 
 type Stats struct {
-	Companies          int     `json:"companies"`
-	Applications       int     `json:"applications"`
-	Applied            int     `json:"applied"`
-	AppliedPct         float64 `json:"applied_pct"`
-	Rejected           int     `json:"rejected"`
-	RejectedPct        float64 `json:"rejected_pct"`
-	TodayCompanies     int     `json:"today_companies"`
-	TodayApplications  int     `json:"today_applications"`
-	WeekCompanies      int     `json:"week_companies"`
-	WeekApplications   int     `json:"week_applications"`
-	AvgPerCompany      float64 `json:"avg_per_company"`
-	TopCompany         string  `json:"top_company"`
-	MaxPerCompany      int     `json:"max_per_company"`
+	Companies         int     `json:"companies"`
+	Applications      int     `json:"applications"`
+	Applied           int     `json:"applied"`
+	AppliedPct        float64 `json:"applied_pct"`
+	Rejected          int     `json:"rejected"`
+	RejectedPct       float64 `json:"rejected_pct"`
+	TodayCompanies    int     `json:"today_companies"`
+	TodayApplications int     `json:"today_applications"`
+	WeekCompanies     int     `json:"week_companies"`
+	WeekApplications  int     `json:"week_applications"`
+	AvgPerCompany     float64 `json:"avg_per_company"`
+	TopCompany        string  `json:"top_company"`
+	MaxPerCompany     int     `json:"max_per_company"`
 }
 
 type UpsertResult struct {
-	Action       string `json:"action"`
-	Organization string `json:"organization"`
-	PreviousCount int   `json:"previous_count"`
-	Added        int    `json:"added"`
-	NewCount     int    `json:"new_count"`
+	Action        string `json:"action"`
+	Organization  string `json:"organization"`
+	PreviousCount int    `json:"previous_count"`
+	Added         int    `json:"added"`
+	NewCount      int    `json:"new_count"`
 }
 
 type TimelineEntry struct {
-	Date   string `json:"date"`
-	Count  int    `json:"count"`
-	Action string `json:"action"`
+	Date         string `json:"date"`
+	Applications int    `json:"applications"`
+	Companies    int    `json:"companies"`
+	Action       string `json:"action"`
 }
 
 type ContributionDay struct {
-	Date      string `json:"date"`
-	Count     int    `json:"count"`
-	Level     int    `json:"level"`
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+	Level int    `json:"level"`
 }
 
 type QueryResult struct {
-	SQL       string          `json:"sql"`
-	Columns   []string        `json:"columns"`
-	Rows      [][]any         `json:"rows"`
-	RowCount  int             `json:"row_count"`
-	Truncated bool            `json:"truncated"`
+	SQL       string   `json:"sql"`
+	Columns   []string `json:"columns"`
+	Rows      [][]any  `json:"rows"`
+	RowCount  int      `json:"row_count"`
+	Truncated bool     `json:"truncated"`
 }

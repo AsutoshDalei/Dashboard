@@ -3,6 +3,7 @@ package tracker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -31,10 +32,31 @@ func NewService(repo *Repository, llmProvider llm.Provider, tz string) *Service 
 }
 
 func (s *Service) Upsert(ctx context.Context, app Application) (*UpsertResult, error) {
-	return s.repo.Upsert(ctx, app)
+	result, err := s.repo.Upsert(ctx, app)
+	if err != nil {
+		return nil, err
+	}
+
+	if app.Count > 0 {
+		activityDate := ""
+		if app.AppliedDates != nil && strings.TrimSpace(*app.AppliedDates) != "" {
+			activityDate = strings.TrimSpace(*app.AppliedDates)
+		} else {
+			activityDate = time.Now().In(s.timezone).Format("2006-01-02")
+		}
+		action := "upsert"
+		if app.Status != nil && strings.TrimSpace(*app.Status) != "" {
+			action = strings.TrimSpace(*app.Status)
+		}
+		if err := s.repo.LogActivity(ctx, result.Organization, app.Count, activityDate, action); err != nil {
+			slog.Warn("log tracker activity", "err", err)
+		}
+	}
+
+	return result, nil
 }
 
-func (s *Service) Check(ctx context.Context, name string) (bool, int, string, *string, error) {
+func (s *Service) Check(ctx context.Context, name string) (string, bool, int, string, *string, error) {
 	return s.repo.CheckExists(ctx, name)
 }
 
@@ -46,12 +68,12 @@ func (s *Service) Stats(ctx context.Context) (*Stats, error) {
 	return s.repo.Stats(ctx, s.timezone)
 }
 
-func (s *Service) Timeline(ctx context.Context, days int) ([]TimelineEntry, error) {
-	return s.repo.Timeline(ctx, days)
+func (s *Service) Timeline(ctx context.Context, days int, freq string) ([]TimelineEntry, error) {
+	return s.repo.Timeline(ctx, days, freq)
 }
 
-func (s *Service) ContributionHeatmap(ctx context.Context, year int) ([]ContributionDay, error) {
-	return s.repo.ContributionHeatmap(ctx, year)
+func (s *Service) ContributionHeatmap(ctx context.Context, year int, month int) ([]ContributionDay, error) {
+	return s.repo.ContributionHeatmap(ctx, year, month)
 }
 
 func (s *Service) LogActivity(ctx context.Context, org string, delta int, date string, action string) error {
