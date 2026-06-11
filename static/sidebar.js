@@ -1,32 +1,49 @@
 (function () {
     var sidebar = document.querySelector('.sidebar');
-    var toggle = document.querySelector('.sidebar-toggle');
+    var toggles = Array.prototype.slice.call(document.querySelectorAll('.sidebar-toggle, .mobile-menu-toggle'));
+    var toggle = toggles[0];
+    var mobileToggles = Array.prototype.slice.call(document.querySelectorAll('.mobile-menu-toggle'));
     var layout = document.querySelector('.dashboard-layout');
     var html = document.documentElement;
     var backdrop = document.querySelector('.sidebar-backdrop');
 
     if (!sidebar || !toggle) return;
 
-    toggle.title = 'Toggle sidebar';
+    toggles.forEach(function (btn) {
+        btn.title = 'Toggle sidebar';
+    });
 
     var COLLAPSE_KEY = 'sidebar_collapsed';
 
     function isMobile() {
-        return window.innerWidth <= 768;
+        return window.matchMedia('(max-width: 767.98px)').matches;
     }
 
     function setOpen(open) {
         sidebar.classList.toggle('open', open);
         if (backdrop) backdrop.classList.toggle('show', open);
-        if (toggle) toggle.setAttribute('aria-expanded', String(open));
+        toggles.forEach(function (btn) {
+            btn.setAttribute('aria-expanded', String(open));
+            btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        });
+        mobileToggles.forEach(function (btn) {
+            btn.classList.toggle('mobile-menu-hidden', open);
+        });
+    }
+
+    function closeMobileSidebar() {
+        sidebar.classList.remove('open', 'collapsed');
+        if (layout) layout.classList.remove('sidebar-collapsed');
+        if (backdrop) backdrop.classList.remove('show');
+        toggles.forEach(function (btn) {
+            btn.setAttribute('aria-expanded', 'false');
+            btn.setAttribute('aria-label', 'Open menu');
+        });
     }
 
     function setCollapsed(collapsed) {
         if (isMobile()) {
-            sidebar.classList.remove('collapsed');
-            if (layout) layout.classList.remove('sidebar-collapsed');
-            html.setAttribute('data-sidebar', 'expanded');
-            setOpen(false);
+            closeMobileSidebar();
             return;
         }
 
@@ -34,7 +51,9 @@
         if (layout) layout.classList.toggle('sidebar-collapsed', collapsed);
         html.setAttribute('data-sidebar', collapsed ? 'collapsed' : 'expanded');
         localStorage.setItem(COLLAPSE_KEY, String(collapsed));
-        if (toggle) toggle.setAttribute('aria-expanded', String(!collapsed));
+        toggles.forEach(function (btn) {
+            btn.setAttribute('aria-expanded', String(!collapsed));
+        });
     }
 
     function loadCollapsedState() {
@@ -47,38 +66,41 @@
 
     loadCollapsedState();
 
-    toggle.addEventListener('click', function () {
-        if (isMobile()) {
-            setOpen(!sidebar.classList.contains('open'));
-        } else {
-            setCollapsed(!sidebar.classList.contains('collapsed'));
-        }
+    toggles.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (isMobile()) {
+                sidebar.classList.remove('collapsed');
+                if (layout) layout.classList.remove('sidebar-collapsed');
+                setOpen(!sidebar.classList.contains('open'));
+            } else {
+                setCollapsed(!sidebar.classList.contains('collapsed'));
+            }
+        });
     });
 
     if (backdrop) {
         backdrop.addEventListener('click', function () {
-            setOpen(false);
+            closeMobileSidebar();
         });
     }
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
-            setOpen(false);
+            closeMobileSidebar();
         }
     });
 
     sidebar.querySelectorAll('.nav-link').forEach(function (a) {
         a.addEventListener('click', function () {
             if (isMobile()) {
-                setOpen(false);
+                closeMobileSidebar();
             }
         });
     });
 
     window.addEventListener('resize', function () {
         if (isMobile()) {
-            sidebar.classList.remove('collapsed');
-            if (layout) layout.classList.remove('sidebar-collapsed');
+            closeMobileSidebar();
         } else {
             setOpen(false);
             loadCollapsedState();
