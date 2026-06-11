@@ -1,529 +1,1491 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Tracker - Asutosh's Dashboard</title>
-    <link rel="stylesheet" href="/static/output.css">
-    <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
-    <style>
-    :root {
-        --surface-lowest:#09090b;--surface-low:#0c0c0e;--surface:#09090b;
-        --surface-container:#18181b;--surface-high:#27272a;--surface-highest:#3f3f46;
-        --on-surface:#fafafa;--on-surface-variant:#a1a1aa;--on-surface-muted:#71717a;
-        --primary:#bec2ff;--primary-container:#8a94ff;--on-primary-container:#18181b;
-        --outline:#52525b;--outline-variant:#27272a;--border:#27272a;
-        --success:#22c55e;--success-soft:rgba(34,197,94,0.12);
-        --error:#ef4444;--error-soft:rgba(239,68,68,0.12);
-        --space-xs:4px;--space-sm:8px;--space-md:16px;--space-lg:24px;--space-xl:32px;--space-2xl:48px;
-        --radius-sm:4px;--radius-md:6px;--radius-lg:8px;--radius-xl:12px;--radius-full:9999px;
-        --transition-fast:150ms ease;--transition-normal:200ms ease;
-    }
-    .tracker-stats{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--space-md);margin-bottom:var(--space-xl)}
-    .tracker-stat{background:rgba(24,24,27,.5);border:1px solid #27272a;border-radius:var(--radius-lg);padding:var(--space-md) var(--space-lg)}
-    .tracker-stat.col-3{grid-column:span 3}.tracker-stat.col-4{grid-column:span 4}
-    @media(max-width:1024px){.tracker-stat.col-3,.tracker-stat.col-4{grid-column:span 6}}
-    @media(max-width:640px){.tracker-stat.col-3,.tracker-stat.col-4{grid-column:span 12}}
-    .tracker-stat .label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--on-surface-muted);margin-bottom:var(--space-xs)}
-    .tracker-stat .value{font-size:26px;font-weight:700;color:var(--on-surface);letter-spacing:-.02em}
-    .tracker-stat .sub{font-size:12px;color:var(--on-surface-variant);margin-top:2px}
-    .tracker-stat .sub.success{color:var(--success)}.tracker-stat .sub.error{color:var(--error)}
-    .tracker-card{background:rgba(24,24,27,.5);border:1px solid #27272a;border-radius:var(--radius-lg);padding:var(--space-xl);margin-bottom:var(--space-xl);min-width:0}
-    .lookup-row{display:flex;gap:var(--space-md);align-items:stretch;position:relative}
-    .lookup-suggestions{position:absolute;top:calc(100%+4px);left:0;right:0;border:1px solid #27272a;background:#09090b;border-radius:var(--radius-md);z-index:15;display:none;overflow:hidden}
-    .lookup-suggestions.show{display:block}
-    .lookup-suggestion{width:100%;text-align:left;padding:10px 12px;color:var(--on-surface);border-top:1px solid #18181b;background:transparent;font-size:14px}
-    .lookup-suggestion:first-child{border-top:0}.lookup-suggestion:hover{background:#18181b}
-    .lookup-result{margin-top:var(--space-md);padding:var(--space-md) var(--space-lg);border-radius:var(--radius-md);font-size:14px;border:1px solid #27272a;background:#09090b;color:var(--on-surface-variant);display:none}
-    .lookup-result.show{display:block}.lookup-result.found{border-color:rgba(34,197,94,.4)}.lookup-result.empty{border-color:rgba(113,113,122,.4)}
-    .lookup-result strong{color:var(--on-surface)}
-    .lookup-result .pill{display:inline-block;padding:2px 8px;border-radius:var(--radius-full);font-size:11px;font-weight:600;margin-left:var(--space-sm);background:var(--surface-high);color:var(--on-surface-variant)}
-    .lookup-result .pill.applied{background:rgba(138,148,255,.2);color:var(--primary)}
-    .lookup-result .pill.rejected{background:var(--error-soft);color:var(--error)}
-    .lookup-result .pill.interview{background:rgba(245,158,11,.2);color:#f59e0b}
-    .lookup-result .pill.offer,.lookup-result .pill.accepted{background:rgba(34,197,94,.2);color:var(--success)}
-    .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-md)}
-    @media(max-width:700px){.form-grid{grid-template-columns:1fr}}
-    .form-grid .full{grid-column:1/-1}
-    .freq-tabs{display:inline-flex;background:#09090b;border:1px solid #27272a;border-radius:var(--radius-md);padding:4px;gap:2px}
-    .freq-tab{padding:6px 14px;font-size:13px;font-weight:500;color:var(--on-surface-variant);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition-fast)}
-    .freq-tab:hover{color:var(--on-surface)}.freq-tab.active{background:var(--surface-high);color:var(--on-surface)}
-    .chart-wrap{width:100%;max-width:100%;overflow-x:hidden;overflow-y:hidden;height:300px;box-sizing:border-box;padding-bottom:var(--space-sm);position:relative}
-    .chart-wrap.chart-wrap--busy{opacity:.55;pointer-events:none}
-    .chart-svg{display:block}.chart-svg .grid-line{stroke:#27272a;stroke-dasharray:2 3}
-    .chart-svg text{fill:var(--on-surface-muted);font-size:10px;font-family:inherit}
-    .chart-svg .bar-apps{fill:var(--primary-container)}.chart-svg .bar-cos{fill:#52525b}
-    .chart-svg .line-apps{fill:none;stroke:var(--primary-container);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-    .chart-svg .line-cos{fill:none;stroke:#71717a;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-    .chart-tooltip{position:absolute;display:none;pointer-events:none;background:#09090b;border:1px solid #27272a;color:var(--on-surface);font-size:12px;border-radius:var(--radius-sm);padding:6px 8px;white-space:nowrap;z-index:20;transform:translate(-50%,calc(-100% - 8px))}
-    .contribution-grid{display:grid;grid-template-columns:repeat(7,minmax(24px,1fr));grid-auto-rows:minmax(24px,1fr);gap:8px;max-width:100%}
-    .contribution-cell{width:100%;height:100%;min-height:24px;border-radius:3px;min-width:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:rgba(255,255,255,.9);cursor:pointer}
-    .contribution-cell--pad{visibility:hidden;pointer-events:none}
-    .contribution-level-0{background:rgba(20,83,45,.22);border:1px solid rgba(22,101,52,.45)}
-    .contribution-level-1{background:#14532d;border:1px solid transparent}
-    .contribution-level-2{background:#166534;border:1px solid transparent}
-    .contribution-level-3{background:#15803d;border:1px solid transparent}
-    .contribution-level-4{background:#22c55e;border:1px solid transparent}
-    .query-table{width:100%;border-collapse:collapse;font-size:13px}
-    .query-table th,.query-table td{text-align:left;padding:8px 10px;border-bottom:1px solid #27272a;white-space:nowrap;color:var(--on-surface)}
-    .query-table th{color:var(--on-surface-variant);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.05em;background:rgba(9,9,11,.6);position:sticky;top:0}
-    .query-table tr:last-child td{border-bottom:0}
-    </style>
-</head>
-<body class="bg-surface text-on-surface antialiased min-h-screen">
-    <div class="dashboard-layout flex min-h-screen">
-        {{template "sidebar" "tracker"}}
-        <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200">
-            <div class="content-wrapper max-w-6xl mx-auto px-6 py-8">
-                <header class="page-header mb-8">
-                    <h1 class="page-title text-2xl font-bold text-on-surface">Job Tracker</h1>
-                    <p class="page-subtitle text-on-surface-muted mt-1">Track companies, applications, and your job-hunt momentum over time.</p>
-                </header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Job Tracker - Asutosh's Dashboard</title>
+        <link rel="stylesheet" href="/static/output.css" />
+        <script>
+            if (localStorage.getItem("sidebar_collapsed") === "true") {
+                document.documentElement.setAttribute(
+                    "data-sidebar",
+                    "collapsed",
+                );
+            }
+        </script>
+        <style>
+            :root {
+                --surface-lowest: #09090b;
+                --surface-low: #0c0c0e;
+                --surface: #09090b;
+                --surface-container: #18181b;
+                --surface-high: #27272a;
+                --surface-highest: #3f3f46;
+                --on-surface: #fafafa;
+                --on-surface-variant: #a1a1aa;
+                --on-surface-muted: #71717a;
+                --primary: #bec2ff;
+                --primary-container: #8a94ff;
+                --on-primary-container: #18181b;
+                --outline: #52525b;
+                --outline-variant: #27272a;
+                --border: #27272a;
+                --success: #22c55e;
+                --success-soft: rgba(34, 197, 94, 0.12);
+                --error: #ef4444;
+                --error-soft: rgba(239, 68, 68, 0.12);
+                --space-xs: 4px;
+                --space-sm: 8px;
+                --space-md: 16px;
+                --space-lg: 24px;
+                --space-xl: 32px;
+                --space-2xl: 48px;
+                --radius-sm: 4px;
+                --radius-md: 6px;
+                --radius-lg: 8px;
+                --radius-xl: 12px;
+                --radius-full: 9999px;
+                --transition-fast: 150ms ease;
+                --transition-normal: 200ms ease;
+            }
+            .tracker-stats {
+                display: grid;
+                grid-template-columns: repeat(12, 1fr);
+                gap: var(--space-md);
+                margin-bottom: var(--space-xl);
+            }
+            .tracker-stat {
+                background: rgba(24, 24, 27, 0.5);
+                border: 1px solid #27272a;
+                border-radius: var(--radius-lg);
+                padding: var(--space-md) var(--space-lg);
+            }
+            .tracker-stat.col-3 {
+                grid-column: span 3;
+            }
+            .tracker-stat.col-4 {
+                grid-column: span 4;
+            }
+            @media (max-width: 1024px) {
+                .tracker-stat.col-3,
+                .tracker-stat.col-4 {
+                    grid-column: span 6;
+                }
+            }
+            @media (max-width: 640px) {
+                .tracker-stat.col-3,
+                .tracker-stat.col-4 {
+                    grid-column: span 12;
+                }
+            }
+            .tracker-stat .label {
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--on-surface-muted);
+                margin-bottom: var(--space-xs);
+            }
+            .tracker-stat .value {
+                font-size: 26px;
+                font-weight: 700;
+                color: var(--on-surface);
+                letter-spacing: -0.02em;
+            }
+            .tracker-stat .sub {
+                font-size: 12px;
+                color: var(--on-surface-variant);
+                margin-top: 2px;
+            }
+            .tracker-stat .sub.success {
+                color: var(--success);
+            }
+            .tracker-stat .sub.error {
+                color: var(--error);
+            }
+            .tracker-card {
+                background: rgba(24, 24, 27, 0.5);
+                border: 1px solid #27272a;
+                border-radius: var(--radius-lg);
+                padding: var(--space-xl);
+                margin-bottom: var(--space-xl);
+                min-width: 0;
+            }
+            .lookup-row {
+                display: flex;
+                gap: var(--space-md);
+                align-items: stretch;
+                position: relative;
+            }
+            .lookup-suggestions {
+                position: absolute;
+                top: calc(100%+4px);
+                left: 0;
+                right: 0;
+                border: 1px solid #27272a;
+                background: #09090b;
+                border-radius: var(--radius-md);
+                z-index: 15;
+                display: none;
+                overflow: hidden;
+            }
+            .lookup-suggestions.show {
+                display: block;
+            }
+            .lookup-suggestion {
+                width: 100%;
+                text-align: left;
+                padding: 10px 12px;
+                color: var(--on-surface);
+                border-top: 1px solid #18181b;
+                background: transparent;
+                font-size: 14px;
+            }
+            .lookup-suggestion:first-child {
+                border-top: 0;
+            }
+            .lookup-suggestion:hover {
+                background: #18181b;
+            }
+            .lookup-result {
+                margin-top: var(--space-md);
+                padding: var(--space-md) var(--space-lg);
+                border-radius: var(--radius-md);
+                font-size: 14px;
+                border: 1px solid #27272a;
+                background: #09090b;
+                color: var(--on-surface-variant);
+                display: none;
+            }
+            .lookup-result.show {
+                display: block;
+            }
+            .lookup-result.found {
+                border-color: rgba(34, 197, 94, 0.4);
+            }
+            .lookup-result.empty {
+                border-color: rgba(113, 113, 122, 0.4);
+            }
+            .lookup-result strong {
+                color: var(--on-surface);
+            }
+            .lookup-result .pill {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: var(--radius-full);
+                font-size: 11px;
+                font-weight: 600;
+                margin-left: var(--space-sm);
+                background: var(--surface-high);
+                color: var(--on-surface-variant);
+            }
+            .lookup-result .pill.applied {
+                background: rgba(138, 148, 255, 0.2);
+                color: var(--primary);
+            }
+            .lookup-result .pill.rejected {
+                background: var(--error-soft);
+                color: var(--error);
+            }
+            .lookup-result .pill.interview {
+                background: rgba(245, 158, 11, 0.2);
+                color: #f59e0b;
+            }
+            .lookup-result .pill.offer,
+            .lookup-result .pill.accepted {
+                background: rgba(34, 197, 94, 0.2);
+                color: var(--success);
+            }
+            .form-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--space-md);
+            }
+            @media (max-width: 700px) {
+                .form-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .form-grid .full {
+                grid-column: 1/-1;
+            }
+            .freq-tabs {
+                display: inline-flex;
+                background: #09090b;
+                border: 1px solid #27272a;
+                border-radius: var(--radius-md);
+                padding: 4px;
+                gap: 2px;
+            }
+            .freq-tab {
+                padding: 6px 14px;
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--on-surface-variant);
+                border-radius: var(--radius-sm);
+                cursor: pointer;
+                transition: all var(--transition-fast);
+            }
+            .freq-tab:hover {
+                color: var(--on-surface);
+            }
+            .freq-tab.active {
+                background: var(--surface-high);
+                color: var(--on-surface);
+            }
+            .chart-wrap {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: hidden;
+                overflow-y: hidden;
+                height: 300px;
+                box-sizing: border-box;
+                padding-bottom: var(--space-sm);
+                position: relative;
+            }
+            .chart-wrap.chart-wrap--busy {
+                opacity: 0.55;
+                pointer-events: none;
+            }
+            .chart-svg {
+                display: block;
+            }
+            .chart-svg .grid-line {
+                stroke: #27272a;
+                stroke-dasharray: 2 3;
+            }
+            .chart-svg text {
+                fill: var(--on-surface-muted);
+                font-size: 10px;
+                font-family: inherit;
+            }
+            .chart-svg .bar-apps {
+                fill: var(--primary-container);
+            }
+            .chart-svg .bar-cos {
+                fill: #52525b;
+            }
+            .chart-svg .line-apps {
+                fill: none;
+                stroke: var(--primary-container);
+                stroke-width: 2;
+                stroke-linejoin: round;
+                stroke-linecap: round;
+            }
+            .chart-svg .line-cos {
+                fill: none;
+                stroke: #71717a;
+                stroke-width: 2;
+                stroke-linejoin: round;
+                stroke-linecap: round;
+            }
+            .chart-tooltip {
+                position: absolute;
+                display: none;
+                pointer-events: none;
+                background: #09090b;
+                border: 1px solid #27272a;
+                color: var(--on-surface);
+                font-size: 12px;
+                border-radius: var(--radius-sm);
+                padding: 6px 8px;
+                white-space: nowrap;
+                z-index: 20;
+                transform: translate(-50%, calc(-100% - 8px));
+            }
+            .contribution-grid {
+                display: grid;
+                grid-template-columns: repeat(7, minmax(24px, 1fr));
+                grid-auto-rows: minmax(24px, 1fr);
+                gap: 8px;
+                max-width: 100%;
+            }
+            .contribution-cell {
+                width: 100%;
+                height: 100%;
+                min-height: 24px;
+                border-radius: 3px;
+                min-width: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.9);
+                cursor: pointer;
+            }
+            .contribution-cell--pad {
+                visibility: hidden;
+                pointer-events: none;
+            }
+            .contribution-level-0 {
+                background: rgba(20, 83, 45, 0.22);
+                border: 1px solid rgba(22, 101, 52, 0.45);
+            }
+            .contribution-level-1 {
+                background: #14532d;
+                border: 1px solid transparent;
+            }
+            .contribution-level-2 {
+                background: #166534;
+                border: 1px solid transparent;
+            }
+            .contribution-level-3 {
+                background: #15803d;
+                border: 1px solid transparent;
+            }
+            .contribution-level-4 {
+                background: #22c55e;
+                border: 1px solid transparent;
+            }
+            .query-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+            }
+            .query-table th,
+            .query-table td {
+                text-align: left;
+                padding: 8px 10px;
+                border-bottom: 1px solid #27272a;
+                white-space: nowrap;
+                color: var(--on-surface);
+            }
+            .query-table th {
+                color: var(--on-surface-variant);
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 11px;
+                letter-spacing: 0.05em;
+                background: rgba(9, 9, 11, 0.6);
+                position: sticky;
+                top: 0;
+            }
+            .query-table tr:last-child td {
+                border-bottom: 0;
+            }
+        </style>
+    </head>
+    <body class="bg-surface text-on-surface antialiased min-h-screen">
+        <div class="dashboard-layout flex min-h-screen">
+            {{template "sidebar" "tracker"}}
+            <main
+                class="main-content flex-1 ml-56 min-h-screen transition-all duration-200"
+            >
+                <div class="content-wrapper max-w-6xl mx-auto px-6 py-8">
+                    <header class="page-header mb-8">
+                        <h1
+                            class="page-title text-2xl font-bold text-on-surface"
+                        >
+                            Job Tracker
+                        </h1>
+                        <p class="page-subtitle text-on-surface-muted mt-1">
+                            Track companies, applications, and your job-hunt
+                            momentum over time.
+                        </p>
+                    </header>
 
-                <section class="tracker-stats" id="statsGrid">
-                    <div class="tracker-stat col-3"><div class="label">Companies</div><div class="value" id="statCompanies">—</div><div class="sub" id="statCompaniesSub">distinct organizations</div></div>
-                    <div class="tracker-stat col-3"><div class="label">Applications</div><div class="value" id="statApps">—</div><div class="sub" id="statAppsSub">total submitted</div></div>
-                    <div class="tracker-stat col-3"><div class="label">Applied</div><div class="value" id="statApplied">—</div><div class="sub success" id="statAppliedSub">— % of companies</div></div>
-                    <div class="tracker-stat col-3"><div class="label">Rejected</div><div class="value" id="statRejected">—</div><div class="sub error" id="statRejectedSub">— % of companies</div></div>
-                    <div class="tracker-stat col-4"><div class="label">Today</div><div class="value" id="statTodayCompanies">—</div><div class="sub" id="statTodaySub">apps: —</div></div>
-                    <div class="tracker-stat col-4"><div class="label">This Week</div><div class="value" id="statWeekCompanies">—</div><div class="sub" id="statWeekSub">apps: —</div></div>
-                    <div class="tracker-stat col-4"><div class="label">Avg/Company</div><div class="value" id="statAvg">—</div><div class="sub" id="statAvgSub">top: —</div></div>
-                </section>
+                    <section class="tracker-stats" id="statsGrid">
+                        <div class="tracker-stat col-3">
+                            <div class="label">Companies</div>
+                            <div class="value" id="statCompanies">—</div>
+                            <div class="sub" id="statCompaniesSub">
+                                distinct organizations
+                            </div>
+                        </div>
+                        <div class="tracker-stat col-3">
+                            <div class="label">Applications</div>
+                            <div class="value" id="statApps">—</div>
+                            <div class="sub" id="statAppsSub">
+                                total submitted
+                            </div>
+                        </div>
+                        <div class="tracker-stat col-3">
+                            <div class="label">Applied</div>
+                            <div class="value" id="statApplied">—</div>
+                            <div class="sub success" id="statAppliedSub">
+                                — % of companies
+                            </div>
+                        </div>
+                        <div class="tracker-stat col-3">
+                            <div class="label">Rejected</div>
+                            <div class="value" id="statRejected">—</div>
+                            <div class="sub error" id="statRejectedSub">
+                                — % of companies
+                            </div>
+                        </div>
+                        <div class="tracker-stat col-4">
+                            <div class="label">Today</div>
+                            <div class="value" id="statTodayCompanies">—</div>
+                            <div class="sub" id="statTodaySub">
+                                applications: —
+                            </div>
+                        </div>
+                        <div class="tracker-stat col-4">
+                            <div class="label">This Week</div>
+                            <div class="value" id="statWeekCompanies">—</div>
+                            <div class="sub" id="statWeekSub">
+                                applications: —
+                            </div>
+                        </div>
+                        <div class="tracker-stat col-4">
+                            <div class="label">Avg/Company</div>
+                            <div class="value" id="statAvg">—</div>
+                            <div class="sub" id="statAvgSub">top: —</div>
+                        </div>
+                    </section>
 
-                <section class="tracker-card">
-                    <h2 class="text-lg font-semibold text-on-surface mb-1">Quick Lookup</h2>
-                    <p class="text-sm text-on-surface-muted mb-6">Check whether you've already applied to a company.</p>
-                    <div class="lookup-row">
-                        <input type="text" id="lookupInput" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="Type a company name (e.g. Adobe)" autocomplete="off">
-                        <div id="lookupSuggestions" class="lookup-suggestions"></div>
-                    </div>
-                    <div id="lookupResult" class="lookup-result"></div>
-                </section>
+                    <section class="tracker-card">
+                        <h2 class="text-lg font-semibold text-on-surface mb-1">
+                            Quick Lookup
+                        </h2>
+                        <p class="text-sm text-on-surface-muted mb-6">
+                            Check whether you've already applied to a company.
+                        </p>
+                        <div class="relative">
+                            <input
+                                type="text"
+                                id="lookupInput"
+                                class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                                placeholder="Type a company name (e.g. Adobe)"
+                                autocomplete="off"
+                            />
+                            <div
+                                id="lookupSuggestions"
+                                class="lookup-suggestions"
+                            ></div>
+                        </div>
+                        <div id="lookupResult" class="lookup-result"></div>
+                    </section>
 
-                <section class="tracker-card">
-                    <h2 class="text-lg font-semibold text-on-surface mb-1">Add / Update Company</h2>
-                    <p class="text-sm text-on-surface-muted mb-6">If the organization already exists, the count you enter will be added to the existing total.</p>
-                    <form id="upsertForm">
-                        <div class="flex justify-end mb-4">
-                            <button type="submit" id="upsertBtn" class="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
-                                <span>Save</span>
-                                <span class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></span>
+                    <section class="tracker-card">
+                        <h2 class="text-lg font-semibold text-on-surface mb-1">
+                            Add / Update Company
+                        </h2>
+                        <p class="text-sm text-on-surface-muted mb-6">
+                            If the organization already exists, the count you
+                            enter will be added to the existing total.
+                        </p>
+                        <form id="upsertForm">
+                            <div class="flex justify-end mb-4">
+                                <button
+                                    type="submit"
+                                    id="upsertBtn"
+                                    class="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none"
+                                >
+                                    <span>Save</span>
+                                    <span
+                                        class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"
+                                    ></span>
+                                </button>
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="org"
+                                        >Organization *</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="org"
+                                        name="organization"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                                        required
+                                        autocomplete="off"
+                                    />
+                                    <div
+                                        class="text-xs text-on-surface-muted mt-1 min-h-[16px]"
+                                        id="upsertHint"
+                                    >
+                                        &nbsp;
+                                    </div>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="count"
+                                        >Applications to add *</label
+                                    >
+                                    <input
+                                        type="number"
+                                        id="count"
+                                        name="count"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm"
+                                        min="1"
+                                        value="1"
+                                        required
+                                    />
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="status"
+                                        >Status</label
+                                    >
+                                    <select
+                                        id="status"
+                                        name="status"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm"
+                                    >
+                                        <option value="Applied" selected>
+                                            Applied
+                                        </option>
+                                        <option value="Rejected">
+                                            Rejected
+                                        </option>
+                                        <option value="Interview">
+                                            Interview
+                                        </option>
+                                        <option value="Offer">Offer</option>
+                                        <option value="Accepted">
+                                            Accepted
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="category"
+                                        >Category</label
+                                    >
+                                    <select
+                                        id="category"
+                                        name="category"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm"
+                                    >
+                                        <option value="Fulltime" selected>
+                                            Fulltime
+                                        </option>
+                                        <option value="Internship">
+                                            Internship
+                                        </option>
+                                        <option value="Contract">
+                                            Contract
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="appliedDates"
+                                        >Applied Date</label
+                                    >
+                                    <input
+                                        type="date"
+                                        id="appliedDates"
+                                        name="applied_dates"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm"
+                                    />
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="location"
+                                        >Location</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="location"
+                                        name="location"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                                        autocomplete="off"
+                                    />
+                                </div>
+                                <div class="form-group mb-4 full">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="jobRole"
+                                        >Job Role / Posting URL</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="jobRole"
+                                        name="job_role"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                                        autocomplete="off"
+                                    />
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="contacts"
+                                        >Contacts</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="contacts"
+                                        name="contacts"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                                        autocomplete="off"
+                                    />
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="usernamePassword"
+                                        >Username / Notes</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="usernamePassword"
+                                        name="username_password"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                                        autocomplete="off"
+                                    />
+                                </div>
+                                <div class="form-group full">
+                                    <label
+                                        class="block text-sm font-medium text-on-surface-variant mb-1"
+                                        for="remarks"
+                                        >Remarks</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="remarks"
+                                        name="remarks"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                                        autocomplete="off"
+                                    />
+                                </div>
+                            </div>
+                            <div
+                                id="upsertStatus"
+                                class="mt-4 px-4 py-3 rounded-lg text-sm hidden"
+                            ></div>
+                        </form>
+                    </section>
+
+                    <section class="tracker-card">
+                        <div
+                            class="flex justify-between items-center mb-4 flex-wrap gap-4"
+                        >
+                            <div>
+                                <h2
+                                    class="text-lg font-semibold text-on-surface mb-1"
+                                >
+                                    Timeline
+                                </h2>
+                                <p class="text-sm text-on-surface-muted">
+                                    Application activity and active companies
+                                    over time.
+                                </p>
+                            </div>
+                            <div class="flex gap-2 items-center flex-wrap">
+                                <div class="freq-tabs" id="freqTabs">
+                                    <div class="freq-tab" data-freq="day">
+                                        Day
+                                    </div>
+                                    <div class="freq-tab" data-freq="week">
+                                        Week
+                                    </div>
+                                    <div
+                                        class="freq-tab active"
+                                        data-freq="month"
+                                    >
+                                        Month
+                                    </div>
+                                </div>
+                                <div class="freq-tabs" id="chartModeTabs">
+                                    <div
+                                        class="freq-tab active"
+                                        data-mode="bars"
+                                    >
+                                        Bars
+                                    </div>
+                                    <div class="freq-tab" data-mode="line">
+                                        Smooth line
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="flex gap-4 text-xs text-on-surface-variant mb-4"
+                        >
+                            <span
+                                ><span
+                                    class="inline-block w-2.5 h-2.5 rounded bg-primary-container mr-1.5 align-middle"
+                                ></span
+                                >Applications</span
+                            >
+                            <span
+                                ><span
+                                    class="inline-block w-2.5 h-2.5 rounded bg-[#52525b] mr-1.5 align-middle"
+                                ></span
+                                >Companies</span
+                            >
+                        </div>
+                        <div class="chart-wrap" id="chartWrap">
+                            <div
+                                class="empty-chart text-center py-12 text-on-surface-muted text-sm"
+                            >
+                                Loading…
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="tracker-card">
+                        <h2 class="text-lg font-semibold text-on-surface mb-1">
+                            Applications by day
+                        </h2>
+                        <p class="text-sm text-on-surface-muted mb-6">
+                            Contribution-style activity heatmap. Weeks start on
+                            Sunday.
+                        </p>
+                        <div class="flex items-center gap-4 mb-4 flex-wrap">
+                            <label
+                                class="text-sm text-on-surface-variant"
+                                for="contributionMonth"
+                                >Month</label
+                            >
+                            <select
+                                id="contributionMonth"
+                                class="px-3 py-1.5 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none text-sm min-w-[200px]"
+                                aria-label="Select month"
+                            ></select>
+                        </div>
+                        <div
+                            class="grid grid-cols-7 gap-2 mb-2 text-[10px] text-on-surface-muted text-center"
+                        >
+                            <span>Sun</span><span>Mon</span><span>Tue</span
+                            ><span>Wed</span><span>Thu</span><span>Fri</span
+                            ><span>Sat</span>
+                        </div>
+                        <div id="contributionGrid" class="contribution-grid">
+                            <div
+                                class="text-center py-8 text-on-surface-muted text-sm col-span-7"
+                            >
+                                Loading…
+                            </div>
+                        </div>
+                        <div
+                            id="contributionPop"
+                            class="mt-1 hidden w-fit px-2.5 py-1.5 border border-outline rounded bg-surface text-on-surface text-xs"
+                        ></div>
+                        <div
+                            class="flex items-center gap-1.5 mt-4 text-[11px] text-on-surface-muted flex-wrap"
+                        >
+                            <span>Less</span>
+                            <span
+                                class="w-2.5 h-2.5 rounded contribution-level-0 inline-block"
+                            ></span>
+                            <span
+                                class="w-2.5 h-2.5 rounded contribution-level-1 inline-block"
+                            ></span>
+                            <span
+                                class="w-2.5 h-2.5 rounded contribution-level-2 inline-block"
+                            ></span>
+                            <span
+                                class="w-2.5 h-2.5 rounded contribution-level-3 inline-block"
+                            ></span>
+                            <span
+                                class="w-2.5 h-2.5 rounded contribution-level-4 inline-block"
+                            ></span>
+                            <span>More</span>
+                        </div>
+                    </section>
+
+                    <section class="tracker-card">
+                        <div
+                            class="flex justify-between items-center mb-4 flex-wrap gap-4"
+                        >
+                            <div>
+                                <h2
+                                    class="text-lg font-semibold text-on-surface mb-1"
+                                >
+                                    Query your data
+                                </h2>
+                                <p class="text-sm text-on-surface-muted">
+                                    Ask in plain English or run a raw SELECT.
+                                    Read-only.
+                                </p>
+                            </div>
+                            <div class="freq-tabs" id="queryModeTabs">
+                                <div class="freq-tab active" data-mode="nl">
+                                    Natural language
+                                </div>
+                                <div class="freq-tab" data-mode="sql">
+                                    Raw SQL
+                                </div>
+                            </div>
+                        </div>
+                        <textarea
+                            id="queryInput"
+                            class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm resize-vertical min-h-[88px]"
+                            rows="3"
+                            placeholder="e.g. top 10 companies by application count"
+                        ></textarea>
+                        <div class="flex justify-end mt-4">
+                            <button
+                                type="button"
+                                id="queryRunBtn"
+                                class="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none"
+                            >
+                                <span>Run</span>
+                                <span
+                                    class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"
+                                ></span>
                             </button>
                         </div>
-                        <div class="form-grid">
-                            <div class="form-group mb-4">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="org">Organization *</label>
-                                <input type="text" id="org" name="organization" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" required autocomplete="off">
-                                <div class="text-xs text-on-surface-muted mt-1 min-h-[16px]" id="upsertHint">&nbsp;</div>
-                            </div>
-                            <div class="form-group mb-4">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="count">Applications to add *</label>
-                                <input type="number" id="count" name="count" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm" min="1" value="1" required>
-                            </div>
-                            <div class="form-group mb-4">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="status">Status</label>
-                                <select id="status" name="status" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm">
-                                    <option value="Applied" selected>Applied</option>
-                                    <option value="Rejected">Rejected</option>
-                                    <option value="Interview">Interview</option>
-                                    <option value="Offer">Offer</option>
-                                    <option value="Accepted">Accepted</option>
-                                </select>
-                            </div>
-                            <div class="form-group mb-4">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="category">Category</label>
-                                <select id="category" name="category" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm">
-                                    <option value="Fulltime" selected>Fulltime</option>
-                                    <option value="Internship">Internship</option>
-                                    <option value="Contract">Contract</option>
-                                </select>
-                            </div>
-                            <div class="form-group mb-4">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="appliedDates">Applied Date</label>
-                                <input type="date" id="appliedDates" name="applied_dates" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm">
-                            </div>
-                            <div class="form-group mb-4">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="location">Location</label>
-                                <input type="text" id="location" name="location" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
-                            </div>
-                            <div class="form-group mb-4 full">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="jobRole">Job Role / Posting URL</label>
-                                <input type="text" id="jobRole" name="job_role" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
-                            </div>
-                            <div class="form-group mb-4">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="contacts">Contacts</label>
-                                <input type="text" id="contacts" name="contacts" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
-                            </div>
-                            <div class="form-group mb-4">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="usernamePassword">Username / Notes</label>
-                                <input type="text" id="usernamePassword" name="username_password" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
-                            </div>
-                            <div class="form-group full">
-                                <label class="block text-sm font-medium text-on-surface-variant mb-1" for="remarks">Remarks</label>
-                                <input type="text" id="remarks" name="remarks" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" autocomplete="off">
-                            </div>
-                        </div>
-                        <div id="upsertStatus" class="mt-4 px-4 py-3 rounded-lg text-sm hidden"></div>
-                    </form>
-                </section>
+                        <div
+                            id="queryGeneratedSQL"
+                            class="mt-4 px-4 py-3 rounded-lg bg-surface border border-outline font-mono text-xs text-on-surface-variant whitespace-pre-wrap break-words hidden"
+                        ></div>
+                        <div
+                            id="queryError"
+                            class="mt-4 px-4 py-3 rounded-lg bg-error-soft text-error text-sm hidden"
+                        ></div>
+                        <div
+                            id="queryResult"
+                            class="mt-4 overflow-x-auto border border-outline rounded-lg hidden"
+                        ></div>
+                    </section>
+                </div>
+            </main>
+        </div>
 
-                <section class="tracker-card">
-                    <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
-                        <div><h2 class="text-lg font-semibold text-on-surface mb-1">Timeline</h2><p class="text-sm text-on-surface-muted">Application activity and active companies over time.</p></div>
-                        <div class="flex gap-2 items-center flex-wrap">
-                            <div class="freq-tabs" id="freqTabs"><div class="freq-tab" data-freq="day">Day</div><div class="freq-tab" data-freq="week">Week</div><div class="freq-tab active" data-freq="month">Month</div></div>
-                            <div class="freq-tabs" id="chartModeTabs"><div class="freq-tab active" data-mode="bars">Bars</div><div class="freq-tab" data-mode="line">Smooth line</div></div>
-                        </div>
-                    </div>
-                    <div class="flex gap-4 text-xs text-on-surface-variant mb-4">
-                        <span><span class="inline-block w-2.5 h-2.5 rounded bg-primary-container mr-1.5 align-middle"></span>Applications</span>
-                        <span><span class="inline-block w-2.5 h-2.5 rounded bg-[#52525b] mr-1.5 align-middle"></span>Companies</span>
-                    </div>
-                    <div class="chart-wrap" id="chartWrap"><div class="empty-chart text-center py-12 text-on-surface-muted text-sm">Loading…</div></div>
-                </section>
-
-                <section class="tracker-card">
-                    <h2 class="text-lg font-semibold text-on-surface mb-1">Applications by day</h2>
-                    <p class="text-sm text-on-surface-muted mb-6">Contribution-style activity heatmap. Weeks start on Sunday.</p>
-                    <div class="flex items-center gap-4 mb-4 flex-wrap">
-                        <label class="text-sm text-on-surface-variant" for="contributionMonth">Month</label>
-                        <select id="contributionMonth" class="px-3 py-1.5 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none text-sm min-w-[200px]" aria-label="Select month"></select>
-                    </div>
-                    <div class="grid grid-cols-7 gap-2 mb-2 text-[10px] text-on-surface-muted text-center"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
-                    <div id="contributionGrid" class="contribution-grid"><div class="text-center py-8 text-on-surface-muted text-sm col-span-7">Loading…</div></div>
-                    <div id="contributionPop" class="mt-1 hidden w-fit px-2.5 py-1.5 border border-outline rounded bg-surface text-on-surface text-xs"></div>
-                    <div class="flex items-center gap-1.5 mt-4 text-[11px] text-on-surface-muted flex-wrap">
-                        <span>Less</span>
-                        <span class="w-2.5 h-2.5 rounded contribution-level-0 inline-block"></span>
-                        <span class="w-2.5 h-2.5 rounded contribution-level-1 inline-block"></span>
-                        <span class="w-2.5 h-2.5 rounded contribution-level-2 inline-block"></span>
-                        <span class="w-2.5 h-2.5 rounded contribution-level-3 inline-block"></span>
-                        <span class="w-2.5 h-2.5 rounded contribution-level-4 inline-block"></span>
-                        <span>More</span>
-                    </div>
-                </section>
-
-                <section class="tracker-card">
-                    <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
-                        <div><h2 class="text-lg font-semibold text-on-surface mb-1">Query your data</h2><p class="text-sm text-on-surface-muted">Ask in plain English or run a raw SELECT. Read-only.</p></div>
-                        <div class="freq-tabs" id="queryModeTabs">
-                            <div class="freq-tab active" data-mode="nl">Natural language</div>
-                            <div class="freq-tab" data-mode="sql">Raw SQL</div>
-                        </div>
-                    </div>
-                    <textarea id="queryInput" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm resize-vertical min-h-[88px]" rows="3" placeholder="e.g. top 10 companies by application count"></textarea>
-                    <div class="flex justify-end mt-4">
-                        <button type="button" id="queryRunBtn" class="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
-                            <span>Run</span>
-                            <span class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></span>
-                        </button>
-                    </div>
-                    <div id="queryGeneratedSQL" class="mt-4 px-4 py-3 rounded-lg bg-surface border border-outline font-mono text-xs text-on-surface-variant whitespace-pre-wrap break-words hidden"></div>
-                    <div id="queryError" class="mt-4 px-4 py-3 rounded-lg bg-error-soft text-error text-sm hidden"></div>
-                    <div id="queryResult" class="mt-4 overflow-x-auto border border-outline rounded-lg hidden"></div>
-                </section>
-            </div>
-        </main>
-    </div>
-
-    <script>
-    const $ = (id) => document.getElementById(id);
-    function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-    function fmtNum(n) { if(n===null||n===undefined)return'—';return new Intl.NumberFormat().format(n); }
-    function fmtPct(n) { if(n===null||n===undefined)return'—';return n.toFixed(1)+'%'; }
-    function debounce(fn, ms) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }; }
-
-    async function fetchJson(url, options) {
-        const res = await fetch(url, options);
-        const ct = (res.headers.get('content-type') || '').toLowerCase();
-        const text = await res.text();
-        if (!ct.includes('application/json')) {
-            if (res.status === 401) throw new Error('Session expired.');
-            throw new Error('Unexpected response.');
-        }
-        let data;
-        try { data = JSON.parse(text); } catch { throw new Error('Invalid server response.'); }
-        if (!res.ok || data.success === false) {
-            const err = new Error(data.error || `Request failed (${res.status})`);
-            err.payload = data; throw err;
-        }
-        return data;
-    }
-
-    async function loadStats() {
-        try {
-            const data = await fetchJson('/api/applications/stats');
-            const s = data.stats;
-            $('statCompanies').textContent = fmtNum(s.companies);
-            $('statApps').textContent = fmtNum(s.applications);
-            $('statApplied').textContent = fmtNum(s.applied);
-            $('statAppliedSub').textContent = fmtPct(s.applied_pct) + ' of companies';
-            $('statRejected').textContent = fmtNum(s.rejected);
-            $('statRejectedSub').textContent = fmtPct(s.rejected_pct) + ' of companies';
-            $('statTodayCompanies').textContent = fmtNum(s.today_companies) + ' companies';
-            $('statTodaySub').textContent = 'apps: ' + fmtNum(s.today_applications);
-            $('statWeekCompanies').textContent = fmtNum(s.week_companies) + ' companies';
-            $('statWeekSub').textContent = 'apps: ' + fmtNum(s.week_applications);
-            $('statAvg').textContent = (s.avg_per_company || 0).toFixed(1);
-            $('statAvgSub').textContent = s.top_company ? 'top: ' + s.top_company + ' (' + s.max_per_company + ')' : '—';
-        } catch (err) { console.error('stats', err); }
-    }
-
-    async function checkCompany(name) { return fetchJson('/api/applications/check?company=' + encodeURIComponent(name)); }
-    async function suggestCompanies(q) { return fetchJson('/api/applications/suggest?q=' + encodeURIComponent(q) + '&limit=3'); }
-
-    const lookupInput = $('lookupInput');
-    const lookupResult = $('lookupResult');
-    const lookupSuggestions = $('lookupSuggestions');
-    const runSuggestions = debounce(async (val) => {
-        const q = (val || '').trim();
-        if (!q) { lookupSuggestions.classList.remove('show'); lookupSuggestions.innerHTML = ''; return; }
-        try {
-            const data = await suggestCompanies(q);
-            const list = (data.data || data.suggestions || []).slice(0, 3);
-            if (!list.length) { lookupSuggestions.classList.remove('show'); lookupSuggestions.innerHTML = ''; return; }
-            lookupSuggestions.innerHTML = list.map((s) =>
-                '<button type="button" class="lookup-suggestion" data-company="' + escapeHtml(s.organization || s) + '">' + escapeHtml(s.organization || s) + '</button>'
-            ).join('');
-            lookupSuggestions.classList.add('show');
-        } catch { lookupSuggestions.classList.remove('show'); lookupSuggestions.innerHTML = ''; }
-    }, 220);
-
-    async function runLookupNow(val) {
-        if (!val) { lookupResult.classList.remove('show'); return; }
-        try {
-            const data = await checkCompany(val);
-            lookupResult.classList.remove('found', 'empty');
-            lookupResult.classList.add('show');
-            if (data.exists) {
-                const status = data.status || '';
-                const pillCls = status.toLowerCase() === 'applied' ? 'applied' : status.toLowerCase() === 'rejected' ? 'rejected' : status.toLowerCase() === 'interview' ? 'interview' : status.toLowerCase() === 'offer' ? 'offer' : status.toLowerCase() === 'accepted' ? 'accepted' : '';
-                lookupResult.classList.add('found');
-                lookupResult.innerHTML =
-                    '<strong>' + escapeHtml(data.organization) + '</strong> — '
-                    + '<strong>' + data.count + '</strong> application' + (data.count === 1 ? '' : 's')
-                    + (status ? ' <span class="pill ' + pillCls + '">' + escapeHtml(status) + '</span>' : '')
-                    + '<div class="flex gap-2 mt-4 items-center flex-wrap">'
-                    + '<select class="px-3 py-1.5 rounded-lg bg-surface-high text-on-surface border border-outline text-sm" id="lookupStatusSelect">'
-                    + '<option value="Applied"' + (status === 'Applied' ? ' selected' : '') + '>Applied</option>'
-                    + '<option value="Interview"' + (status === 'Interview' ? ' selected' : '') + '>Interview</option>'
-                    + '<option value="Offer"' + (status === 'Offer' ? ' selected' : '') + '>Offer</option>'
-                    + '<option value="Accepted"' + (status === 'Accepted' ? ' selected' : '') + '>Accepted</option>'
-                    + '<option value="Rejected"' + (status === 'Rejected' ? ' selected' : '') + '>Rejected</option>'
-                    + '</select>'
-                    + '<button type="button" class="px-3 py-1.5 rounded-lg text-sm bg-surface-high text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" id="lookupUpdateBtn" data-org="' + escapeHtml(data.organization) + '">Update Status</button>'
-                    + '<span class="text-xs text-on-surface-variant" id="lookupInlineStatus"></span>'
-                    + '</div>';
-            } else {
-                lookupResult.classList.add('empty');
-                lookupResult.textContent = 'No application logged for "' + val + '" yet.';
+        <script>
+            const $ = (id) => document.getElementById(id);
+            function escapeHtml(s) {
+                var d = document.createElement("div");
+                d.textContent = s;
+                return d.innerHTML;
             }
-        } catch (err) {
-            lookupResult.classList.add('show', 'empty');
-            lookupResult.textContent = 'Lookup failed: ' + err.message;
-        }
-    }
-    const runLookup = debounce(runLookupNow, 300);
-
-    lookupInput.addEventListener('input', (e) => { const v = e.target.value.trim(); runSuggestions(v); runLookup(v); });
-    lookupInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') lookupSuggestions.classList.remove('show'); });
-    lookupInput.addEventListener('blur', () => { setTimeout(() => lookupSuggestions.classList.remove('show'), 120); });
-    lookupInput.addEventListener('focus', () => { const v = lookupInput.value.trim(); if (v) runSuggestions(v); });
-    lookupSuggestions.addEventListener('click', (e) => {
-        const btn = e.target.closest('.lookup-suggestion');
-        if (!btn) return;
-        const company = btn.dataset.company || '';
-        lookupInput.value = company;
-        lookupSuggestions.classList.remove('show');
-        runLookup(company);
-    });
-
-    let lastOrgCheck = { name: '', exists: false, count: 0, status: '' };
-    const orgInput = $('org');
-    const upsertHint = $('upsertHint');
-    const countInput = $('count');
-
-    const runOrgCheck = debounce(async (val) => {
-        if (!val) { upsertHint.textContent = '\u00A0'; upsertHint.classList.remove('exists'); lastOrgCheck = { name: '', exists: false, count: 0, status: '' }; return; }
-        try {
-            const data = await checkCompany(val);
-            if (data.exists) {
-                lastOrgCheck = { name: data.organization, exists: true, count: data.count, status: data.status || '' };
-                const add = parseInt(countInput.value, 10) || 0;
-                upsertHint.textContent = lastOrgCheck.name + ' exists with ' + lastOrgCheck.count + ' app(s). Will set total to ' + (lastOrgCheck.count + add) + '.';
-                upsertHint.classList.add('exists');
-            } else {
-                lastOrgCheck = { name: val, exists: false, count: 0, status: '' };
-                upsertHint.textContent = 'New company — will be inserted.';
+            function fmtNum(n) {
+                if (n === null || n === undefined) return "—";
+                return new Intl.NumberFormat().format(n);
             }
-        } catch { upsertHint.textContent = '\u00A0'; }
-    }, 300);
+            function fmtPct(n) {
+                if (n === null || n === undefined) return "—";
+                return n.toFixed(1) + "%";
+            }
+            function debounce(fn, ms) {
+                let t;
+                return (...args) => {
+                    clearTimeout(t);
+                    t = setTimeout(() => fn(...args), ms);
+                };
+            }
 
-    orgInput.addEventListener('input', (e) => runOrgCheck(e.target.value.trim()));
+            async function fetchJson(url, options) {
+                const res = await fetch(url, options);
+                const ct = (
+                    res.headers.get("content-type") || ""
+                ).toLowerCase();
+                const text = await res.text();
+                if (!ct.includes("application/json")) {
+                    if (res.status === 401) throw new Error("Session expired.");
+                    throw new Error("Unexpected response.");
+                }
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    throw new Error("Invalid server response.");
+                }
+                if (!res.ok || data.success === false) {
+                    const err = new Error(
+                        data.error || `Request failed (${res.status})`,
+                    );
+                    err.payload = data;
+                    throw err;
+                }
+                return data;
+            }
 
-    $('upsertForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = $('upsertBtn');
-        const status = $('upsertStatus');
-        status.classList.add('hidden');
-        btn.querySelector('.btn-loader').classList.remove('hidden'); btn.disabled = true;
-        try {
-            const data = await fetchJson('/api/applications', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    organization: $('org').value.trim(),
-                    count: parseInt($('count').value, 10) || 1,
-                    status: $('status').value,
-                    category: $('category').value,
-                    applied_dates: $('appliedDates').value,
-                    location: $('location').value,
-                    job_role: $('jobRole').value,
-                    contacts: $('contacts').value,
-                    username_password: $('usernamePassword').value,
-                    remarks: $('remarks').value,
+            async function loadStats() {
+                try {
+                    const data = await fetchJson("/api/applications/stats");
+                    const s = data.stats;
+                    $("statCompanies").textContent = fmtNum(s.companies);
+                    $("statApps").textContent = fmtNum(s.applications);
+                    $("statApplied").textContent = fmtNum(s.applied);
+                    $("statAppliedSub").textContent =
+                        fmtPct(s.applied_pct) + " of companies";
+                    $("statRejected").textContent = fmtNum(s.rejected);
+                    $("statRejectedSub").textContent =
+                        fmtPct(s.rejected_pct) + " of companies";
+                    $("statTodayCompanies").textContent =
+                        fmtNum(s.today_companies) + " companies";
+                    $("statTodaySub").textContent =
+                        "apps: " + fmtNum(s.today_applications);
+                    $("statWeekCompanies").textContent =
+                        fmtNum(s.week_companies) + " companies";
+                    $("statWeekSub").textContent =
+                        "apps: " + fmtNum(s.week_applications);
+                    $("statAvg").textContent = (s.avg_per_company || 0).toFixed(
+                        1,
+                    );
+                    $("statAvgSub").textContent = s.top_company
+                        ? "top: " +
+                          s.top_company +
+                          " (" +
+                          s.max_per_company +
+                          ")"
+                        : "—";
+                } catch (err) {
+                    console.error("stats", err);
+                }
+            }
+
+            async function checkCompany(name) {
+                return fetchJson(
+                    "/api/applications/check?company=" +
+                        encodeURIComponent(name),
+                );
+            }
+            async function suggestCompanies(q) {
+                return fetchJson(
+                    "/api/applications/suggest?q=" +
+                        encodeURIComponent(q) +
+                        "&limit=3",
+                );
+            }
+
+            const lookupInput = $("lookupInput");
+            const lookupResult = $("lookupResult");
+            const lookupSuggestions = $("lookupSuggestions");
+            const runSuggestions = debounce(async (val) => {
+                const q = (val || "").trim();
+                if (!q) {
+                    lookupSuggestions.classList.remove("show");
+                    lookupSuggestions.innerHTML = "";
+                    return;
+                }
+                try {
+                    const data = await suggestCompanies(q);
+                    const list = (data.data || data.suggestions || []).slice(
+                        0,
+                        3,
+                    );
+                    if (!list.length) {
+                        lookupSuggestions.classList.remove("show");
+                        lookupSuggestions.innerHTML = "";
+                        return;
+                    }
+                    lookupSuggestions.innerHTML = list
+                        .map(
+                            (s) =>
+                                '<button type="button" class="lookup-suggestion" data-company="' +
+                                escapeHtml(s.organization || s) +
+                                '">' +
+                                escapeHtml(s.organization || s) +
+                                "</button>",
+                        )
+                        .join("");
+                    lookupSuggestions.classList.add("show");
+                } catch {
+                    lookupSuggestions.classList.remove("show");
+                    lookupSuggestions.innerHTML = "";
+                }
+            }, 220);
+
+            async function runLookupNow(val) {
+                if (!val) {
+                    lookupResult.classList.remove("show");
+                    return;
+                }
+                try {
+                    const data = await checkCompany(val);
+                    lookupResult.classList.remove("found", "empty");
+                    lookupResult.classList.add("show");
+                    if (data.exists) {
+                        const status = data.status || "";
+                        const pillCls =
+                            status.toLowerCase() === "applied"
+                                ? "applied"
+                                : status.toLowerCase() === "rejected"
+                                  ? "rejected"
+                                  : status.toLowerCase() === "interview"
+                                    ? "interview"
+                                    : status.toLowerCase() === "offer"
+                                      ? "offer"
+                                      : status.toLowerCase() === "accepted"
+                                        ? "accepted"
+                                        : "";
+                        lookupResult.classList.add("found");
+                        lookupResult.innerHTML =
+                            "<strong>" +
+                            escapeHtml(data.organization) +
+                            "</strong> — " +
+                            "<strong>" +
+                            data.count +
+                            "</strong> application" +
+                            (data.count === 1 ? "" : "s") +
+                            (status
+                                ? ' <span class="pill ' +
+                                  pillCls +
+                                  '">' +
+                                  escapeHtml(status) +
+                                  "</span>"
+                                : "") +
+                            '<div class="flex gap-2 mt-4 items-center flex-wrap">' +
+                            '<select class="px-3 py-1.5 rounded-lg bg-surface-high text-on-surface border border-outline text-sm" id="lookupStatusSelect">' +
+                            '<option value="Applied"' +
+                            (status === "Applied" ? " selected" : "") +
+                            ">Applied</option>" +
+                            '<option value="Interview"' +
+                            (status === "Interview" ? " selected" : "") +
+                            ">Interview</option>" +
+                            '<option value="Offer"' +
+                            (status === "Offer" ? " selected" : "") +
+                            ">Offer</option>" +
+                            '<option value="Accepted"' +
+                            (status === "Accepted" ? " selected" : "") +
+                            ">Accepted</option>" +
+                            '<option value="Rejected"' +
+                            (status === "Rejected" ? " selected" : "") +
+                            ">Rejected</option>" +
+                            "</select>" +
+                            '<button type="button" class="px-3 py-1.5 rounded-lg text-sm bg-surface-high text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" id="lookupUpdateBtn" data-org="' +
+                            escapeHtml(data.organization) +
+                            '">Update Status</button>' +
+                            '<span class="text-xs text-on-surface-variant" id="lookupInlineStatus"></span>' +
+                            "</div>";
+                    } else {
+                        lookupResult.classList.add("empty");
+                        lookupResult.textContent =
+                            'No application logged for "' + val + '" yet.';
+                    }
+                } catch (err) {
+                    lookupResult.classList.add("show", "empty");
+                    lookupResult.textContent = "Lookup failed: " + err.message;
+                }
+            }
+            const runLookup = debounce(runLookupNow, 300);
+
+            lookupInput.addEventListener("input", (e) => {
+                const v = e.target.value.trim();
+                runSuggestions(v);
+                runLookup(v);
+            });
+            lookupInput.addEventListener("keydown", (e) => {
+                if (e.key === "Escape")
+                    lookupSuggestions.classList.remove("show");
+            });
+            lookupInput.addEventListener("blur", () => {
+                setTimeout(
+                    () => lookupSuggestions.classList.remove("show"),
+                    120,
+                );
+            });
+            lookupInput.addEventListener("focus", () => {
+                const v = lookupInput.value.trim();
+                if (v) runSuggestions(v);
+            });
+            lookupSuggestions.addEventListener("click", (e) => {
+                const btn = e.target.closest(".lookup-suggestion");
+                if (!btn) return;
+                const company = btn.dataset.company || "";
+                lookupInput.value = company;
+                lookupSuggestions.classList.remove("show");
+                runLookup(company);
+            });
+
+            let lastOrgCheck = {
+                name: "",
+                exists: false,
+                count: 0,
+                status: "",
+            };
+            const orgInput = $("org");
+            const upsertHint = $("upsertHint");
+            const countInput = $("count");
+
+            const runOrgCheck = debounce(async (val) => {
+                if (!val) {
+                    upsertHint.textContent = "\u00A0";
+                    upsertHint.classList.remove("exists");
+                    lastOrgCheck = {
+                        name: "",
+                        exists: false,
+                        count: 0,
+                        status: "",
+                    };
+                    return;
+                }
+                try {
+                    const data = await checkCompany(val);
+                    if (data.exists) {
+                        lastOrgCheck = {
+                            name: data.organization,
+                            exists: true,
+                            count: data.count,
+                            status: data.status || "",
+                        };
+                        const add = parseInt(countInput.value, 10) || 0;
+                        upsertHint.textContent =
+                            lastOrgCheck.name +
+                            " exists with " +
+                            lastOrgCheck.count +
+                            " app(s). Will set total to " +
+                            (lastOrgCheck.count + add) +
+                            ".";
+                        upsertHint.classList.add("exists");
+                    } else {
+                        lastOrgCheck = {
+                            name: val,
+                            exists: false,
+                            count: 0,
+                            status: "",
+                        };
+                        upsertHint.textContent =
+                            "New company — will be inserted.";
+                    }
+                } catch {
+                    upsertHint.textContent = "\u00A0";
+                }
+            }, 300);
+
+            orgInput.addEventListener("input", (e) =>
+                runOrgCheck(e.target.value.trim()),
+            );
+
+            $("upsertForm").addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const btn = $("upsertBtn");
+                const status = $("upsertStatus");
+                status.classList.add("hidden");
+                btn.querySelector(".btn-loader").classList.remove("hidden");
+                btn.disabled = true;
+                try {
+                    const data = await fetchJson("/api/applications", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            organization: $("org").value.trim(),
+                            count: parseInt($("count").value, 10) || 1,
+                            status: $("status").value,
+                            category: $("category").value,
+                            applied_dates: $("appliedDates").value,
+                            location: $("location").value,
+                            job_role: $("jobRole").value,
+                            contacts: $("contacts").value,
+                            username_password: $("usernamePassword").value,
+                            remarks: $("remarks").value,
+                        }),
+                    });
+                    status.classList.remove(
+                        "hidden",
+                        "bg-error-soft",
+                        "text-error",
+                    );
+                    status.classList.add("bg-success-soft", "text-success");
+                    status.textContent =
+                        (data.action === "created" ? "Created" : "Updated") +
+                        " " +
+                        data.organization +
+                        ".";
+                    $("upsertForm").reset();
+                    $("count").value = 1;
+                    upsertHint.textContent = "\u00A0";
+                    loadStats();
+                    loadTimeline(currentFreq);
+                } catch (err) {
+                    status.classList.remove(
+                        "hidden",
+                        "bg-success-soft",
+                        "text-success",
+                    );
+                    status.classList.add("bg-error-soft", "text-error");
+                    status.textContent = "Failed: " + err.message;
+                } finally {
+                    btn.querySelector(".btn-loader").classList.add("hidden");
+                    btn.disabled = false;
+                }
+            });
+
+            let currentFreq = "month",
+                currentChartMode = "bars",
+                latestTimelineBuckets = [];
+
+            document.querySelectorAll("#freqTabs .freq-tab").forEach((tab) => {
+                tab.addEventListener("click", () => {
+                    document
+                        .querySelectorAll("#freqTabs .freq-tab")
+                        .forEach((t) => t.classList.remove("active"));
+                    tab.classList.add("active");
+                    currentFreq = tab.dataset.freq;
+                    loadTimeline(currentFreq);
+                });
+            });
+            document
+                .querySelectorAll("#chartModeTabs .freq-tab")
+                .forEach((tab) => {
+                    tab.addEventListener("click", () => {
+                        document
+                            .querySelectorAll("#chartModeTabs .freq-tab")
+                            .forEach((t) => t.classList.remove("active"));
+                        tab.classList.add("active");
+                        currentChartMode = tab.dataset.mode || "bars";
+                        renderChart(latestTimelineBuckets);
+                    });
+                });
+
+            async function loadTimeline(freq) {
+                const wrap = $("chartWrap");
+                wrap.classList.add("chart-wrap--busy");
+                try {
+                    const data = await fetchJson(
+                        "/api/applications/timeline?freq=" + freq,
+                    );
+                    latestTimelineBuckets = data.data || data.buckets || [];
+                    renderChart(latestTimelineBuckets);
+                } catch (err) {
+                    wrap.innerHTML =
+                        '<div class="empty-chart text-center py-12 text-on-surface-muted text-sm">Failed: ' +
+                        escapeHtml(err.message) +
+                        "</div>";
+                } finally {
+                    wrap.classList.remove("chart-wrap--busy");
+                }
+            }
+
+            function renderChart(buckets) {
+                const wrap = $("chartWrap");
+                if (!buckets || !buckets.length) {
+                    wrap.innerHTML =
+                        '<div class="empty-chart text-center py-12 text-on-surface-muted text-sm">No data yet.</div>';
+                    return;
+                }
+                var W = wrap.clientWidth - 20,
+                    H = 260,
+                    pad = { t: 20, r: 10, b: 30, l: 40 };
+                var iw = W - pad.l - pad.r,
+                    ih = H - pad.t - pad.b;
+                var maxV = 0;
+                buckets.forEach(function (b) {
+                    if (b.applications > maxV) maxV = b.applications;
+                    if (b.companies > maxV) maxV = b.companies;
+                });
+                maxV = Math.max(maxV, 1);
+                var bw = Math.max(2, iw / buckets.length - 1);
+                var html =
+                    '<svg class="chart-svg" width="' +
+                    W +
+                    '" height="' +
+                    H +
+                    '" viewBox="0 0 ' +
+                    W +
+                    " " +
+                    H +
+                    '">';
+                var ySteps = 4;
+                for (var i = 0; i <= ySteps; i++) {
+                    var y = pad.t + (ih / ySteps) * i;
+                    var v = maxV - (maxV / ySteps) * i;
+                    html +=
+                        '<line class="grid-line" x1="' +
+                        pad.l +
+                        '" y1="' +
+                        y +
+                        '" x2="' +
+                        (W - pad.r) +
+                        '" y2="' +
+                        y +
+                        '"/>';
+                    html +=
+                        '<text x="' +
+                        (pad.l - 6) +
+                        '" y="' +
+                        (y + 3) +
+                        '" text-anchor="end">' +
+                        Math.round(v) +
+                        "</text>";
+                }
+                if (currentChartMode === "line") {
+                    var ptsA = "",
+                        ptsC = "";
+                    buckets.forEach(function (b, i) {
+                        var x = pad.l + (iw / (buckets.length - 1 || 1)) * i;
+                        var yA = pad.t + ih - (b.applications / maxV) * ih;
+                        var yC = pad.t + ih - (b.companies / maxV) * ih;
+                        ptsA += (i === 0 ? "M" : "L") + x + "," + yA;
+                        ptsC += (i === 0 ? "M" : "L") + x + "," + yC;
+                    });
+                    html += '<path class="line-apps" d="' + ptsA + '"/>';
+                    html += '<path class="line-cos" d="' + ptsC + '"/>';
+                } else {
+                    buckets.forEach(function (b, i) {
+                        var x = pad.l + (iw / buckets.length) * i + 0.5;
+                        var hA = (b.applications / maxV) * ih,
+                            hC = (b.companies / maxV) * ih;
+                        html +=
+                            '<rect class="bar-apps" x="' +
+                            x +
+                            '" y="' +
+                            (pad.t + ih - hA) +
+                            '" width="' +
+                            bw +
+                            '" height="' +
+                            hA +
+                            '"/>';
+                        html +=
+                            '<rect class="bar-cos" x="' +
+                            (x + bw + 1) +
+                            '" y="' +
+                            (pad.t + ih - hC) +
+                            '" width="' +
+                            bw +
+                            '" height="' +
+                            hC +
+                            '"/>';
+                    });
+                }
+                html += "</svg>";
+                wrap.innerHTML = html;
+            }
+
+            async function loadContribution() {
+                try {
+                    const data = await fetchJson(
+                        "/api/applications/contribution?year=" +
+                            new Date().getFullYear(),
+                    );
+                    const days = data.data || data.days || [];
+                    const grid = $("contributionGrid");
+                    if (!days.length) {
+                        grid.innerHTML =
+                            '<div class="text-center py-8 text-on-surface-muted text-sm col-span-7">No data.</div>';
+                        return;
+                    }
+                    grid.innerHTML = days
+                        .map(function (d) {
+                            var l = d.level || 0;
+                            return (
+                                '<div class="contribution-cell contribution-level-' +
+                                l +
+                                '" title="' +
+                                d.date +
+                                ": " +
+                                d.count +
+                                ' apps">' +
+                                parseInt(d.date.slice(-2), 10) +
+                                "</div>"
+                            );
+                        })
+                        .join("");
+                } catch (err) {
+                    $("contributionGrid").innerHTML =
+                        '<div class="text-center py-8 text-error text-sm col-span-7">' +
+                        escapeHtml(err.message) +
+                        "</div>";
+                }
+            }
+
+            var queryMode = "nl";
+            document
+                .querySelectorAll("#queryModeTabs .freq-tab")
+                .forEach(function (tab) {
+                    tab.addEventListener("click", function () {
+                        document
+                            .querySelectorAll("#queryModeTabs .freq-tab")
+                            .forEach(function (t) {
+                                t.classList.remove("active");
+                            });
+                        tab.classList.add("active");
+                        queryMode = tab.dataset.mode;
+                        $("queryInput").placeholder =
+                            queryMode === "nl"
+                                ? "e.g. top 10 companies by application count"
+                                : "e.g. SELECT * FROM applications LIMIT 10";
+                    });
+                });
+
+            $("queryRunBtn").addEventListener("click", async function () {
+                var btn = this,
+                    sqlDiv = $("queryGeneratedSQL"),
+                    errDiv = $("queryError"),
+                    resultDiv = $("queryResult");
+                sqlDiv.classList.add("hidden");
+                errDiv.classList.add("hidden");
+                resultDiv.classList.add("hidden");
+                var query = $("queryInput").value.trim();
+                if (!query) return;
+                btn.querySelector(".btn-loader").classList.remove("hidden");
+                btn.disabled = true;
+                try {
+                    var data = await fetchJson("/api/applications/query", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ mode: queryMode, query: query }),
+                    });
+                    if (data.sql) {
+                        sqlDiv.textContent = data.sql;
+                        sqlDiv.classList.remove("hidden");
+                    }
+                    if (data.columns && data.rows) {
+                        var html =
+                            '<table class="query-table"><thead><tr>' +
+                            data.columns
+                                .map(function (c) {
+                                    return "<th>" + escapeHtml(c) + "</th>";
+                                })
+                                .join("") +
+                            "</tr></thead><tbody>";
+                        data.rows.forEach(function (r) {
+                            html +=
+                                "<tr>" +
+                                r
+                                    .map(function (v) {
+                                        return (
+                                            "<td>" +
+                                            escapeHtml(String(v ?? "")) +
+                                            "</td>"
+                                        );
+                                    })
+                                    .join("") +
+                                "</tr>";
+                        });
+                        html += "</tbody></table>";
+                        if (data.truncated)
+                            html +=
+                                '<div class="px-4 py-3 text-xs text-on-surface-muted">Results truncated at 500 rows.</div>';
+                        resultDiv.innerHTML = html;
+                        resultDiv.classList.remove("hidden");
+                    }
+                } catch (err) {
+                    errDiv.textContent = err.message;
+                    errDiv.classList.remove("hidden");
+                } finally {
+                    btn.querySelector(".btn-loader").classList.add("hidden");
+                    btn.disabled = false;
+                }
+            });
+
+            loadStats();
+            loadTimeline("month");
+            loadContribution();
+
+            document.addEventListener("click", function (e) {
+                var btn = e.target.closest("#lookupUpdateBtn");
+                if (!btn) return;
+                var org = btn.dataset.org,
+                    select = $("lookupStatusSelect");
+                if (!org || !select) return;
+                btn.disabled = true;
+                btn.textContent = "...";
+                fetchJson("/api/applications", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        organization: org,
+                        count: 0,
+                        status: select.value,
+                        applied_dates: "",
+                    }),
                 })
+                    .then(function () {
+                        runLookupNow(org);
+                        loadStats();
+                        loadTimeline(currentFreq);
+                    })
+                    .finally(function () {
+                        btn.disabled = false;
+                        btn.textContent = "Update Status";
+                    });
             });
-            status.classList.remove('hidden', 'bg-error-soft', 'text-error');
-            status.classList.add('bg-success-soft', 'text-success');
-            status.textContent = (data.action === 'created' ? 'Created' : 'Updated') + ' ' + data.organization + '.';
-            $('upsertForm').reset(); $('count').value = 1; upsertHint.textContent = '\u00A0';
-            loadStats(); loadTimeline(currentFreq);
-        } catch (err) {
-            status.classList.remove('hidden', 'bg-success-soft', 'text-success');
-            status.classList.add('bg-error-soft', 'text-error');
-            status.textContent = 'Failed: ' + err.message;
-        } finally {
-            btn.querySelector('.btn-loader').classList.add('hidden'); btn.disabled = false;
-        }
-    });
-
-    let currentFreq = 'month', currentChartMode = 'bars', latestTimelineBuckets = [];
-
-    document.querySelectorAll('#freqTabs .freq-tab').forEach((tab) => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('#freqTabs .freq-tab').forEach((t) => t.classList.remove('active'));
-            tab.classList.add('active'); currentFreq = tab.dataset.freq; loadTimeline(currentFreq);
-        });
-    });
-    document.querySelectorAll('#chartModeTabs .freq-tab').forEach((tab) => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('#chartModeTabs .freq-tab').forEach((t) => t.classList.remove('active'));
-            tab.classList.add('active'); currentChartMode = tab.dataset.mode || 'bars';
-            renderChart(latestTimelineBuckets);
-        });
-    });
-
-    async function loadTimeline(freq) {
-        const wrap = $('chartWrap');
-        wrap.classList.add('chart-wrap--busy');
-        try {
-            const data = await fetchJson('/api/applications/timeline?freq=' + freq);
-            latestTimelineBuckets = data.data || data.buckets || [];
-            renderChart(latestTimelineBuckets);
-        } catch (err) { wrap.innerHTML = '<div class="empty-chart text-center py-12 text-on-surface-muted text-sm">Failed: ' + escapeHtml(err.message) + '</div>'; }
-        finally { wrap.classList.remove('chart-wrap--busy'); }
-    }
-
-    function renderChart(buckets) {
-        const wrap = $('chartWrap');
-        if (!buckets || !buckets.length) { wrap.innerHTML = '<div class="empty-chart text-center py-12 text-on-surface-muted text-sm">No data yet.</div>'; return; }
-        var W = wrap.clientWidth - 20, H = 260, pad = { t: 20, r: 10, b: 30, l: 40 };
-        var iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
-        var maxV = 0; buckets.forEach(function(b) { if (b.applications > maxV) maxV = b.applications; if (b.companies > maxV) maxV = b.companies; });
-        maxV = Math.max(maxV, 1);
-        var bw = Math.max(2, (iw / buckets.length) - 1);
-        var html = '<svg class="chart-svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
-        var ySteps = 4;
-        for (var i = 0; i <= ySteps; i++) {
-            var y = pad.t + (ih / ySteps) * i;
-            var v = maxV - (maxV / ySteps) * i;
-            html += '<line class="grid-line" x1="' + pad.l + '" y1="' + y + '" x2="' + (W - pad.r) + '" y2="' + y + '"/>';
-            html += '<text x="' + (pad.l - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + Math.round(v) + '</text>';
-        }
-        if (currentChartMode === 'line') {
-            var ptsA = '', ptsC = '';
-            buckets.forEach(function(b, i) {
-                var x = pad.l + (iw / (buckets.length - 1 || 1)) * i;
-                var yA = pad.t + ih - (b.applications / maxV) * ih;
-                var yC = pad.t + ih - (b.companies / maxV) * ih;
-                ptsA += (i === 0 ? 'M' : 'L') + x + ',' + yA;
-                ptsC += (i === 0 ? 'M' : 'L') + x + ',' + yC;
-            });
-            html += '<path class="line-apps" d="' + ptsA + '"/>';
-            html += '<path class="line-cos" d="' + ptsC + '"/>';
-        } else {
-            buckets.forEach(function(b, i) {
-                var x = pad.l + (iw / buckets.length) * i + 0.5;
-                var hA = (b.applications / maxV) * ih, hC = (b.companies / maxV) * ih;
-                html += '<rect class="bar-apps" x="' + x + '" y="' + (pad.t + ih - hA) + '" width="' + bw + '" height="' + hA + '"/>';
-                html += '<rect class="bar-cos" x="' + (x + bw + 1) + '" y="' + (pad.t + ih - hC) + '" width="' + bw + '" height="' + hC + '"/>';
-            });
-        }
-        html += '</svg>';
-        wrap.innerHTML = html;
-    }
-
-    async function loadContribution() {
-        try {
-            const data = await fetchJson('/api/applications/contribution?year=' + new Date().getFullYear());
-            const days = data.data || data.days || [];
-            const grid = $('contributionGrid');
-            if (!days.length) { grid.innerHTML = '<div class="text-center py-8 text-on-surface-muted text-sm col-span-7">No data.</div>'; return; }
-            grid.innerHTML = days.map(function(d) {
-                var l = d.level || 0;
-                return '<div class="contribution-cell contribution-level-' + l + '" title="' + d.date + ': ' + d.count + ' apps">' + parseInt(d.date.slice(-2), 10) + '</div>';
-            }).join('');
-        } catch (err) { $('contributionGrid').innerHTML = '<div class="text-center py-8 text-error text-sm col-span-7">' + escapeHtml(err.message) + '</div>'; }
-    }
-
-    var queryMode = 'nl';
-    document.querySelectorAll('#queryModeTabs .freq-tab').forEach(function(tab) {
-        tab.addEventListener('click', function() {
-            document.querySelectorAll('#queryModeTabs .freq-tab').forEach(function(t) { t.classList.remove('active'); });
-            tab.classList.add('active'); queryMode = tab.dataset.mode;
-            $('queryInput').placeholder = queryMode === 'nl' ? 'e.g. top 10 companies by application count' : 'e.g. SELECT * FROM applications LIMIT 10';
-        });
-    });
-
-    $('queryRunBtn').addEventListener('click', async function() {
-        var btn = this, sqlDiv = $('queryGeneratedSQL'), errDiv = $('queryError'), resultDiv = $('queryResult');
-        sqlDiv.classList.add('hidden'); errDiv.classList.add('hidden'); resultDiv.classList.add('hidden');
-        var query = $('queryInput').value.trim();
-        if (!query) return;
-        btn.querySelector('.btn-loader').classList.remove('hidden'); btn.disabled = true;
-        try {
-            var data = await fetchJson('/api/applications/query', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mode: queryMode, query: query })
-            });
-            if (data.sql) { sqlDiv.textContent = data.sql; sqlDiv.classList.remove('hidden'); }
-            if (data.columns && data.rows) {
-                var html = '<table class="query-table"><thead><tr>' + data.columns.map(function(c) { return '<th>' + escapeHtml(c) + '</th>'; }).join('') + '</tr></thead><tbody>';
-                data.rows.forEach(function(r) { html += '<tr>' + r.map(function(v) { return '<td>' + escapeHtml(String(v ?? '')) + '</td>'; }).join('') + '</tr>'; });
-                html += '</tbody></table>';
-                if (data.truncated) html += '<div class="px-4 py-3 text-xs text-on-surface-muted">Results truncated at 500 rows.</div>';
-                resultDiv.innerHTML = html; resultDiv.classList.remove('hidden');
-            }
-        } catch (err) {
-            errDiv.textContent = err.message; errDiv.classList.remove('hidden');
-        } finally {
-            btn.querySelector('.btn-loader').classList.add('hidden'); btn.disabled = false;
-        }
-    });
-
-    loadStats(); loadTimeline('month'); loadContribution();
-
-    document.addEventListener('click', function(e) {
-        var btn = e.target.closest('#lookupUpdateBtn');
-        if (!btn) return;
-        var org = btn.dataset.org, select = $('lookupStatusSelect');
-        if (!org || !select) return;
-        btn.disabled = true; btn.textContent = '...';
-        fetchJson('/api/applications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ organization: org, count: 0, status: select.value, applied_dates: '' }) })
-            .then(function() { runLookupNow(org); loadStats(); loadTimeline(currentFreq); })
-            .finally(function() { btn.disabled = false; btn.textContent = 'Update Status'; });
-    });
-    </script>
-    <script src="/static/sidebar.js" defer></script>
-</body>
+        </script>
+        <script src="/static/sidebar.js" defer></script>
+    </body>
 </html>
