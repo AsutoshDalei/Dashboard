@@ -109,33 +109,36 @@ func (r *Repository) Upsert(ctx context.Context, app Application) (*UpsertResult
 		newCount = prevCount + app.Count
 	}
 
-	if app.AppliedDates != nil && *app.AppliedDates == "" {
-		app.AppliedDates = nil
-	}
-
-	query := `INSERT INTO applications (organization, job_role, location, contacts, applied_dates, remarks, status, category, count, username_password)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		ON CONFLICT (organization) DO UPDATE SET
-			count = $9,
-			job_role = COALESCE(NULLIF(EXCLUDED.job_role, ''), applications.job_role),
-			status = COALESCE(NULLIF(EXCLUDED.status, ''), applications.status),
-			category = COALESCE(NULLIF(EXCLUDED.category, ''), applications.category),
-			location = COALESCE(NULLIF(EXCLUDED.location, ''), applications.location),
-			contacts = COALESCE(NULLIF(EXCLUDED.contacts, ''), applications.contacts),
-			applied_dates = COALESCE(NULLIF(EXCLUDED.applied_dates, ''), applications.applied_dates),
-			remarks = COALESCE(NULLIF(EXCLUDED.remarks, ''), applications.remarks),
-			username_password = COALESCE(NULLIF(EXCLUDED.username_password, ''), applications.username_password),
-			updated_at = NOW()
-		RETURNING id, organization, count`
-
 	var resultID int
 	var resultOrg string
 	var resultCount int
-	err = r.pool.QueryRow(ctx, query,
-		orgName, app.JobRole, app.Location, app.Contacts,
-		app.AppliedDates, app.Remarks, app.Status, app.Category,
-		newCount, app.UsernamePassword,
-	).Scan(&resultID, &resultOrg, &resultCount)
+
+	if exists {
+		err = r.pool.QueryRow(ctx, `UPDATE applications SET
+			count = $1,
+			job_role = COALESCE(NULLIF($2, ''), job_role),
+			status = COALESCE(NULLIF($3, ''), status),
+			category = COALESCE(NULLIF($4, ''), category),
+			location = COALESCE(NULLIF($5, ''), location),
+			contacts = COALESCE(NULLIF($6, ''), contacts),
+			applied_dates = COALESCE(NULLIF($7::text, '')::date, applied_dates),
+			remarks = COALESCE(NULLIF($8, ''), remarks),
+			username_password = COALESCE(NULLIF($9, ''), username_password)
+			WHERE organization = $10
+			RETURNING id, organization, count`,
+			newCount, app.JobRole, app.Status, app.Category,
+			app.Location, app.Contacts, app.AppliedDates, app.Remarks,
+			app.UsernamePassword, orgName,
+		).Scan(&resultID, &resultOrg, &resultCount)
+	} else {
+		err = r.pool.QueryRow(ctx, `INSERT INTO applications (organization, job_role, location, contacts, applied_dates, remarks, status, category, count, username_password)
+			VALUES ($1, $2, $3, $4, NULLIF($5::text, '')::date, $6, $7, $8, $9, $10)
+			RETURNING id, organization, count`,
+			orgName, app.JobRole, app.Location, app.Contacts,
+			app.AppliedDates, app.Remarks, app.Status, app.Category,
+			newCount, app.UsernamePassword,
+		).Scan(&resultID, &resultOrg, &resultCount)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("upsert: %w", err)
 	}
