@@ -8,16 +8,18 @@ import (
 	"strings"
 	"time"
 
-	"pi_dashboard/pkg/llm"
+	"pi_dashboard/internal/llm"
+	pkgllm "pi_dashboard/pkg/llm"
 )
 
 type Service struct {
 	repo     *Repository
-	llm      llm.Provider
+	llm      pkgllm.Provider
 	timezone *time.Location
+	prompts  *llm.Prompts
 }
 
-func NewService(repo *Repository, llmProvider llm.Provider, tz string) *Service {
+func NewService(repo *Repository, llmProvider pkgllm.Provider, tz string, prompts *llm.Prompts) *Service {
 	loc := time.Local
 	if tz != "" {
 		if l, err := time.LoadLocation(tz); err == nil {
@@ -25,9 +27,10 @@ func NewService(repo *Repository, llmProvider llm.Provider, tz string) *Service 
 		}
 	}
 	return &Service{
-		repo:     repo,
-		llm:      llmProvider,
+		repo:    repo,
+		llm:     llmProvider,
 		timezone: loc,
+		prompts: prompts,
 	}
 }
 
@@ -84,35 +87,12 @@ func (s *Service) LogActivity(ctx context.Context, org string, delta int, date s
 	return s.repo.LogActivity(ctx, org, delta, date, action)
 }
 
-const schemaDoc = `You are a PostgreSQL query generator for a personal job-application tracker.
-The only table you may query is:
-
-TABLE applications (
-  id                SERIAL PRIMARY KEY,
-  organization      VARCHAR(255),
-  job_role          TEXT,
-  location          VARCHAR(255),
-  contacts          VARCHAR(255),
-  applied_dates     DATE,
-  remarks           TEXT,
-  status            VARCHAR(50),
-  category          VARCHAR(100),
-  count             INTEGER,
-  username_password TEXT,
-  created_at        TIMESTAMP
-)
-
-Rules:
-- Only SELECT or WITH (CTE) read queries.
-- Use PostgreSQL syntax.
-- Prefer explicit column lists over SELECT *.
-- Return ONLY the SQL statement. No markdown, prose, or multiple statements.`
-
 var sqlFenceRe = regexp.MustCompile("(?is)```(?:sql)?\\s*(.*?)```")
 var writeKeywordRe = regexp.MustCompile(`(?i)\b(insert|update|delete|merge|drop|alter|truncate|create|grant|revoke|copy|vacuum|call|reindex|refresh)\b`)
 
 func (s *Service) NaturalLanguageQuery(ctx context.Context, nl string) (string, error) {
-	messages := []llm.Message{
+	schemaDoc := s.prompts.Get("sql_assistant")
+	messages := []pkgllm.Message{
 		{Role: "system", Content: schemaDoc},
 		{Role: "user", Content: nl},
 	}

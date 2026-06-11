@@ -159,4 +159,26 @@
     .status-message.show {
         @apply block;
     }
+
+    .markdown-content h1,
+    .markdown-content h2,
+    .markdown-content h3 {
+        @apply font-bold text-on-surface mb-2 mt-3 first:mt-0;
+    }
+    .markdown-content h1 { @apply text-lg; }
+    .markdown-content h2 { @apply text-base; }
+    .markdown-content h3 { @apply text-sm; }
+    .markdown-content p { @apply mb-2 last:mb-0; }
+    .markdown-content strong { @apply font-semibold; }
+    .markdown-content em { @apply italic; }
+    .markdown-content code {
+        @apply bg-surface-high px-1 py-0.5 rounded text-xs font-mono;
+    }
+    .markdown-content pre {
+        @apply bg-surface-high p-3 rounded-lg overflow-x-auto text-xs font-mono mb-2;
+    }
+    .markdown-content pre code {
+        @apply bg-transparent p-0;
+    }
+    .markdown-content br { @apply block mb-1; }
 }

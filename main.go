@@ -136,12 +136,24 @@ func main() {
 	clipboardSvc := clipboard.NewService(clipboardRepo)
 	clipboardHandler := clipboard.NewHandler(clipboardSvc, templates)
 
+	var prompts *llm.Prompts
+	if path := cfg.SystemPromptsPath; path != "" {
+		prompts, _ = llm.LoadPrompts(path)
+	}
+	if prompts == nil {
+		if _, err := os.Stat("pi_bundle/system_prompts.json"); err == nil {
+			prompts, _ = llm.LoadPrompts("pi_bundle/system_prompts.json")
+		} else {
+			prompts, _ = llm.LoadPrompts("templates/system_prompts.json")
+		}
+	}
+
 	trackerRepo := tracker.NewRepository(dbPool.Pool)
-	trackerSvc := tracker.NewService(trackerRepo, llmProvider, cfg.ActivityStatsTimezone)
+	trackerSvc := tracker.NewService(trackerRepo, llmProvider, cfg.ActivityStatsTimezone, prompts)
 	trackerHandler := tracker.NewHandler(trackerSvc, templates)
 
-	workspaceSvc := workspace.NewService(llmProvider, "")
-	workspaceHandler := workspace.NewHandler(workspaceSvc, templates)
+	workspaceSvc := workspace.NewService(llmProvider, "", prompts)
+	workspaceHandler := workspace.NewHandler(workspaceSvc, templates, prompts)
 
 	deps := router.Dependencies{
 		Auth:        authHandler,

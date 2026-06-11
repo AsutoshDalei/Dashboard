@@ -10,12 +10,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"pi_dashboard/internal/llm"
 	"pi_dashboard/internal/middleware"
 )
 
 type Handler struct {
-	svc  *Service
-	tmpl *template.Template
+	svc     *Service
+	tmpl    *template.Template
+	prompts *llm.Prompts
+}
+
+func NewHandler(svc *Service, tmpl *template.Template, prompts *llm.Prompts) *Handler {
+	return &Handler{svc: svc, tmpl: tmpl, prompts: prompts}
 }
 
 type resumeAnalysisResponse struct {
@@ -24,10 +30,6 @@ type resumeAnalysisResponse struct {
 	Analysis        string   `json:"analysis"`
 	Recommendations string   `json:"recommendations"`
 	Archetype       string   `json:"archetype"`
-}
-
-func NewHandler(svc *Service, tmpl *template.Template) *Handler {
-	return &Handler{svc: svc, tmpl: tmpl}
 }
 
 func parseResumeAnalysis(raw string) resumeAnalysisResponse {
@@ -103,8 +105,7 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 	stream := r.URL.Query().Get("stream") == "true"
 
 	var req struct {
-		Message      string `json:"message"`
-		SystemPrompt string `json:"system_prompt"`
+		Message string `json:"message"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
@@ -117,10 +118,7 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	systemPrompt := req.SystemPrompt
-	if systemPrompt == "" {
-		systemPrompt = "You are a helpful assistant."
-	}
+	systemPrompt := h.prompts.Get("chat_system")
 
 	if stream {
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -139,7 +137,6 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Send response in chunks to simulate streaming
 		chunkSize := 10
 		runes := []rune(resp)
 		for i := 0; i < len(runes); i += chunkSize {
@@ -204,7 +201,6 @@ func (h *Handler) HandleResumeAnalyze(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		JobDescription string `json:"job_description"`
-		SystemPrompt   string `json:"system_prompt"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
@@ -216,10 +212,7 @@ func (h *Handler) HandleResumeAnalyze(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	systemPrompt := req.SystemPrompt
-	if systemPrompt == "" {
-		systemPrompt = "Analyze this resume against the job description. Return valid JSON only with keys: score (0-5), keywords (array), analysis (string), recommendations (string), archetype (string)."
-	}
+	systemPrompt := h.prompts.Get("resume_analyze")
 
 	result, err := h.svc.AnalyzeResume(r.Context(), req.JobDescription, systemPrompt)
 	if err != nil {
@@ -240,17 +233,13 @@ func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		JobDescription string `json:"job_description"`
 		Analysis       string `json:"analysis"`
-		SystemPrompt   string `json:"system_prompt"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
 		return
 	}
 
-	systemPrompt := req.SystemPrompt
-	if systemPrompt == "" {
-		systemPrompt = "Generate a tailored resume based on the analysis."
-	}
+	systemPrompt := h.prompts.Get("resume_generate")
 
 	result, err := h.svc.GenerateResume(r.Context(), req.JobDescription, req.Analysis, systemPrompt)
 	if err != nil {
@@ -343,8 +332,8 @@ func (h *Handler) HandleResumeChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prompt := fmt.Sprintf("You are helping refine a tailored resume. Keep the response concise and actionable.\n\nJob description:\n%s\n\nCurrent LaTeX resume:\n%s\n\nUser request:\n%s", req.JobDescription, req.CurrentLatex, req.Message)
-	resp, err := h.svc.Chat(r.Context(), sessionID, prompt, "You are a resume tailoring assistant.")
+	systemPrompt := h.prompts.Get("resume_chat")
+	resp, err := h.svc.Chat(r.Context(), sessionID, req.Message, systemPrompt)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
@@ -441,20 +430,16 @@ func (h *Handler) HandleSQLAssistant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Query     string `json:"query"`
-		SchemaDoc string `json:"schema_doc"`
+		Query string `json:"query"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
 		return
 	}
 
-	schemaDoc := req.SchemaDoc
-	if schemaDoc == "" {
-		schemaDoc = "You are a PostgreSQL query generator. Return ONLY the SQL statement."
-	}
+	systemPrompt := h.prompts.Get("sql_assistant")
 
-	result, err := h.svc.GenerateSQL(r.Context(), req.Query, schemaDoc)
+	result, err := h.svc.GenerateSQL(r.Context(), req.Query, systemPrompt)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return

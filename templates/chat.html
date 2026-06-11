@@ -39,7 +39,6 @@
                             <div class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></div>
                         </button>
                         <button class="px-3 py-2 rounded-lg text-xs font-medium bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer hidden" id="stopBtn">Stop</button>
-                        <button class="px-3 py-2 rounded-lg text-xs font-medium bg-surface-high text-error hover:bg-error-soft transition-colors border-none cursor-pointer" id="clearBtn" title="Clear chat">✕</button>
                     </div>
                     <div class="mt-2 text-xs text-on-surface-muted">Enter to send · Shift+Enter for new line</div>
                 </div>
@@ -51,7 +50,6 @@
     var chatInput = document.getElementById('chatInput');
     var sendBtn = document.getElementById('sendBtn');
     var stopBtn = document.getElementById('stopBtn');
-    var clearBtn = document.getElementById('clearBtn');
     var emptyState = document.getElementById('emptyState');
     var promptsRow = document.getElementById('promptsRow');
     var promptsToggle = document.getElementById('promptsToggle');
@@ -70,13 +68,42 @@
         promptsRow.classList.toggle('hidden');
     });
 
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function renderMarkdown(text) {
+        var html = text;
+        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+        html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+        html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        html = '<p>' + html.split('\n\n').map(function(p) {
+            return p.trim() ? '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>' : '';
+        }).join('') + '</p>';
+        var temp = document.createElement('div');
+        temp.innerHTML = html;
+        var paragraphs = temp.querySelectorAll('p');
+        paragraphs.forEach(function(p) {
+            if (!p.innerHTML.trim()) p.remove();
+        });
+        return temp.innerHTML;
+    }
+
     function addMessage(role, content) {
         emptyState.style.display = 'none';
         var div = document.createElement('div');
         div.className = 'flex gap-3 ' + (role === 'user' ? 'justify-end' : 'justify-start');
+        var contentHtml = role === 'user' ? escapeHtml(content) : renderMarkdown(content);
         div.innerHTML = '<div class="max-w-[80%] px-4 py-2.5 rounded-xl text-sm ' +
             (role === 'user' ? 'bg-primary text-on-primary-container' : 'bg-surface-high text-on-surface') + '">' +
-            '<div class="whitespace-pre-wrap">' + escapeHtml(content) + '</div></div>';
+            '<div class="markdown-content">' + contentHtml + '</div></div>';
         div.dataset.role = role;
         chatMessages.appendChild(div);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -132,15 +159,16 @@
                         responseDiv = addMessage('assistant', '');
                     }
                     fullResponse += data;
-                    var msgDiv = responseDiv.querySelector('div');
-                    if (msgDiv) msgDiv.textContent = fullResponse;
+                    var msgDiv = responseDiv.querySelector('.markdown-content');
+                    if (msgDiv) msgDiv.innerHTML = renderMarkdown(fullResponse);
                 }
             }
         };
 
         xhr.onerror = function() {
             removeLoader();
-            addMessage('assistant', 'Error: Connection failed');
+            var errDiv = addMessage('assistant', 'Error: Connection failed');
+            errDiv.querySelector('.markdown-content').innerHTML = 'Error: Connection failed';
             sendBtn.disabled = false;
             stopBtn.classList.add('hidden');
         };
@@ -154,13 +182,6 @@
     });
 
     sendBtn.addEventListener('click', sendMessage);
-
-    clearBtn.addEventListener('click', function() {
-        if (abortController) abortController.abort();
-        chatMessages.querySelectorAll('[data-role]').forEach(function(el) { el.remove(); });
-        emptyState.style.display = 'block';
-        fetch('/api/chat/clear', {method: 'POST'});
-    });
     </script>
     <script src="/static/sidebar.js" defer></script>
 </body>

@@ -6,12 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"pi_dashboard/pkg/llm"
+	llm "pi_dashboard/internal/llm"
+	pkgllm "pi_dashboard/pkg/llm"
 )
 
 type Session struct {
 	ID        string
-	Messages  []llm.Message
+	Messages  []pkgllm.Message
 	CreatedAt time.Time
 }
 
@@ -34,14 +35,14 @@ func (s *ChatStore) GetOrCreate(sessionID string) *Session {
 	}
 	sess := &Session{
 		ID:        sessionID,
-		Messages:  []llm.Message{},
+		Messages:  []pkgllm.Message{},
 		CreatedAt: time.Now(),
 	}
 	s.sessions[sessionID] = sess
 	return sess
 }
 
-func (s *ChatStore) AddMessage(sessionID string, msg llm.Message) {
+func (s *ChatStore) AddMessage(sessionID string, msg pkgllm.Message) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if sess, ok := s.sessions[sessionID]; ok {
@@ -66,35 +67,37 @@ func (s *ChatStore) Prune(validSessions map[string]bool) {
 }
 
 type Service struct {
-	provider   llm.Provider
+	provider   pkgllm.Provider
 	chatStore  *ChatStore
 	resumeText string
+	prompts    *llm.Prompts
 }
 
-func NewService(provider llm.Provider, resumeText string) *Service {
+func NewService(provider pkgllm.Provider, resumeText string, prompts *llm.Prompts) *Service {
 	return &Service{
 		provider:   provider,
 		chatStore:  NewChatStore(),
 		resumeText: resumeText,
+		prompts:    prompts,
 	}
 }
 
 func (s *Service) Chat(ctx context.Context, sessionID string, message string, systemPrompt string) (string, error) {
 	session := s.chatStore.GetOrCreate(sessionID)
 
-	messages := []llm.Message{
+	messages := []pkgllm.Message{
 		{Role: "system", Content: systemPrompt},
 	}
 	messages = append(messages, session.Messages...)
-	messages = append(messages, llm.Message{Role: "user", Content: message})
+	messages = append(messages, pkgllm.Message{Role: "user", Content: message})
 
 	resp, err := s.provider.Chat(ctx, messages)
 	if err != nil {
 		return "", fmt.Errorf("chat: %w", err)
 	}
 
-	s.chatStore.AddMessage(sessionID, llm.Message{Role: "user", Content: message})
-	s.chatStore.AddMessage(sessionID, llm.Message{Role: "assistant", Content: resp.Content})
+	s.chatStore.AddMessage(sessionID, pkgllm.Message{Role: "user", Content: message})
+	s.chatStore.AddMessage(sessionID, pkgllm.Message{Role: "assistant", Content: resp.Content})
 
 	return resp.Content, nil
 }
@@ -104,7 +107,7 @@ func (s *Service) ClearChat(sessionID string) {
 }
 
 func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, systemPrompt string) (string, error) {
-	messages := []llm.Message{
+	messages := []pkgllm.Message{
 		{Role: "system", Content: systemPrompt},
 		{Role: "user", Content: fmt.Sprintf("Job Description:\n%s\n\nResume:\n%s", jobDescription, s.resumeText)},
 	}
@@ -116,7 +119,7 @@ func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, syst
 }
 
 func (s *Service) GenerateResume(ctx context.Context, jobDescription string, analysis string, systemPrompt string) (string, error) {
-	messages := []llm.Message{
+	messages := []pkgllm.Message{
 		{Role: "system", Content: systemPrompt},
 		{Role: "user", Content: fmt.Sprintf("Job Description: %s\n\nAnalysis: %s\n\nResume: %s", jobDescription, analysis, s.resumeText)},
 	}
@@ -128,7 +131,7 @@ func (s *Service) GenerateResume(ctx context.Context, jobDescription string, ana
 }
 
 func (s *Service) GenerateSQL(ctx context.Context, naturalLanguage string, schemaDoc string) (string, error) {
-	messages := []llm.Message{
+	messages := []pkgllm.Message{
 		{Role: "system", Content: schemaDoc},
 		{Role: "user", Content: naturalLanguage},
 	}
@@ -140,8 +143,8 @@ func (s *Service) GenerateSQL(ctx context.Context, naturalLanguage string, schem
 }
 
 func (s *Service) DraftEmail(ctx context.Context, name, company string) (string, error) {
-	prompt := fmt.Sprintf("Draft a professional email expressing interest in ML Engineer and Applied Scientist roles at %s. Address it to %s.", company, name)
-	resp, err := s.provider.Generate(ctx, prompt)
+	template := s.prompts.Format("email_draft", map[string]string{"company": company, "name": name})
+	resp, err := s.provider.Generate(ctx, template)
 	if err != nil {
 		return "", fmt.Errorf("email draft: %w", err)
 	}
@@ -149,7 +152,8 @@ func (s *Service) DraftEmail(ctx context.Context, name, company string) (string,
 }
 
 func (s *Service) DraftCoverLetter(ctx context.Context, company string) (string, error) {
-	prompt := fmt.Sprintf("Write a professional cover letter for %s.\n\nResume context:\n%s", company, s.resumeText)
+	template := s.prompts.Format("coverletter_draft", map[string]string{"company": company})
+	prompt := fmt.Sprintf("%s\n\nResume context:\n%s", template, s.resumeText)
 	resp, err := s.provider.Generate(ctx, prompt)
 	if err != nil {
 		return "", fmt.Errorf("cover letter draft: %w", err)
@@ -158,7 +162,7 @@ func (s *Service) DraftCoverLetter(ctx context.Context, company string) (string,
 }
 
 func (s *Service) AnalyzeJobMatch(ctx context.Context, jobDescription string) (string, error) {
-	prompt := fmt.Sprintf("Analyze how well the following resume matches this job description. Provide a match score, matching skills, missing skills, and recommendations.\n\nResume:\n%s\n\nJob Description:\n%s", s.resumeText, jobDescription)
+	prompt := fmt.Sprintf("%s\n\nResume:\n%s\n\nJob Description:\n%s", s.prompts.Get("job_match"), s.resumeText, jobDescription)
 	resp, err := s.provider.Generate(ctx, prompt)
 	if err != nil {
 		return "", fmt.Errorf("job match: %w", err)
