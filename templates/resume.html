@@ -54,10 +54,10 @@
     }
     </style>
 </head>
-<body class="bg-surface text-on-surface antialiased min-h-screen">
+<body class="bg-surface text-on-surface antialiased min-h-screen overflow-x-hidden">
 <div class="dashboard-layout flex min-h-screen">
     {{template "sidebar" "resume"}}
-    <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200" style="padding:0;overflow:hidden;">
+    <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200 min-w-0" style="padding:0;overflow:hidden;">
         <div class="resume-split" id="resumeLayout">
             <div class="resume-left" id="leftPane">
                 <div>

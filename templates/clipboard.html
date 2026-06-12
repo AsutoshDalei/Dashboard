@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="/static/output.css">
     <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
 </head>
-<body class="bg-surface text-on-surface antialiased min-h-screen">
+<body class="bg-surface text-on-surface antialiased min-h-screen overflow-x-hidden">
     <div class="dashboard-layout flex min-h-screen">
         {{template "sidebar" "clipboard"}}
-        <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200">
+        <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200 min-w-0">
             <div class="content-wrapper max-w-5xl mx-auto px-6 py-8">
                 <header class="page-header mb-8">
                     <h1 class="page-title text-2xl font-bold text-on-surface">Clipboard</h1>

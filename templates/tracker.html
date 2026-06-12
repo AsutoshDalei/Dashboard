@@ -397,11 +397,11 @@
             }
         </style>
     </head>
-    <body class="bg-surface text-on-surface antialiased min-h-screen">
+    <body class="bg-surface text-on-surface antialiased min-h-screen overflow-x-hidden">
         <div class="dashboard-layout flex min-h-screen">
             {{template "sidebar" "tracker"}}
             <main
-                class="main-content flex-1 ml-56 min-h-screen transition-all duration-200"
+                class="main-content flex-1 ml-56 min-h-screen transition-all duration-200 min-w-0"
             >
                 <div class="content-wrapper max-w-6xl mx-auto px-6 py-8">
                     <header class="page-header mb-8">

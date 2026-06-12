@@ -61,6 +61,7 @@ curl -sSfL \
 echo "Extracting to $DEST/ ..."
 mkdir -p "$DEST"
 tar -xzf "$tmpdir/$ASSET" -C "$DEST"
+chmod +x "$DEST/pi_portfolio_arm64"
 
 echo ""
 echo "Done: $tag extracted to $DEST/"
