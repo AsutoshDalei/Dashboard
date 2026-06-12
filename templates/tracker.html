@@ -5,14 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Job Tracker - Asutosh's Dashboard</title>
         <link rel="stylesheet" href="/static/output.css" />
-        <script>
-            if (localStorage.getItem("sidebar_collapsed") === "true") {
-                document.documentElement.setAttribute(
-                    "data-sidebar",
-                    "collapsed",
-                );
-            }
-        </script>
+        <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
+        <style>.preload,.preload *{transition:none!important}html[data-sidebar="collapsed"] .sidebar{width:3.5rem!important;transform:translateX(0)!important}html[data-sidebar="collapsed"] .sidebar .nav-text,html[data-sidebar="collapsed"] .sidebar .sidebar-brand,html[data-sidebar="collapsed"] .sidebar .sidebar-footer .nav-text{display:none!important}html[data-sidebar="collapsed"] .sidebar .sidebar-header{justify-content:center}html[data-sidebar="collapsed"] .sidebar .sidebar-header,html[data-sidebar="collapsed"] .sidebar .sidebar-nav{padding-left:.75rem!important;padding-right:.75rem!important}html[data-sidebar="collapsed"] .sidebar .nav-link{justify-content:center;padding-left:.5rem!important;padding-right:.5rem!important}html[data-sidebar="collapsed"] .main-content{margin-left:3.5rem!important}</style>
         <style>
             :root {
                 --surface-lowest: #09090b;

@@ -6,6 +6,7 @@
     <title>Resume Tailor - Asutosh's Dashboard</title>
     <link rel="stylesheet" href="/static/output.css">
     <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
+    <style>.preload,.preload *{transition:none!important}html[data-sidebar="collapsed"] .sidebar{width:3.5rem!important;transform:translateX(0)!important}html[data-sidebar="collapsed"] .sidebar .nav-text,html[data-sidebar="collapsed"] .sidebar .sidebar-brand,html[data-sidebar="collapsed"] .sidebar .sidebar-footer .nav-text{display:none!important}html[data-sidebar="collapsed"] .sidebar .sidebar-header{justify-content:center}html[data-sidebar="collapsed"] .sidebar .sidebar-header,html[data-sidebar="collapsed"] .sidebar .sidebar-nav{padding-left:.75rem!important;padding-right:.75rem!important}html[data-sidebar="collapsed"] .sidebar .nav-link{justify-content:center;padding-left:.5rem!important;padding-right:.5rem!important}html[data-sidebar="collapsed"] .main-content{margin-left:3.5rem!important}</style>
     <style>
     :root {
         --surface-lowest: #09090b; --surface-low: #0c0c0e; --surface: #09090b;
@@ -99,7 +100,7 @@
                         <div class="score-label">Chat — Suggest refinements</div>
                         <div class="chat-msgs" id="chatMessages"></div>
                         <div class="flex gap-2 items-end mt-2">
-                            <textarea id="chatInput" rows="1" placeholder="Suggest a change..." style="flex:1;resize:none;min-height:36px;max-height:80px;background:var(--surface-low);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 12px;color:var(--on-surface);font-size:13px;font-family:inherit;"></textarea>
+                            <textarea id="chatInput" rows="1" placeholder="Suggest a change..." style="flex:1;resize:none;min-height:36px;max-height:80px;background:var(--surface-low);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 12px;color:var(--on-surface);font-size:13px;font-family:inherit;outline:none;"></textarea>
                             <button type="button" id="chatSendBtn" class="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none" disabled><span>Send</span></button>
                         </div>
                     </div>

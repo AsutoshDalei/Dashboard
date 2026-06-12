@@ -9,6 +9,8 @@
 
     if (!sidebar || !toggle) return;
 
+    document.body.classList.add('preload');
+
     toggles.forEach(function (btn) {
         btn.title = 'Toggle sidebar';
     });
@@ -65,6 +67,12 @@
     }
 
     loadCollapsedState();
+
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            document.body.classList.remove('preload');
+        });
+    });
 
     toggles.forEach(function (btn) {
         btn.addEventListener('click', function () {
