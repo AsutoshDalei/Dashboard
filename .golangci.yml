@@ -14,7 +14,8 @@ linters-settings:
   goimports:
     local-prefixes: pi_dashboard
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
   misspell:
     locale: US
   nolintlint:
