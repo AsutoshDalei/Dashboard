@@ -8,17 +8,17 @@
     <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
 </head>
 <body class="bg-surface text-on-surface antialiased min-h-screen overflow-x-hidden">
-    <div class="dashboard-layout flex min-h-screen">
+    <div class="dashboard-layout flex min-h-screen overflow-hidden">
         {{template "sidebar" "clipboard"}}
-        <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200 min-w-0">
-            <div class="content-wrapper max-w-5xl mx-auto px-6 py-8">
-                <header class="page-header mb-8">
+        <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200 min-w-0 overflow-hidden">
+            <div class="content-wrapper max-w-5xl mx-auto px-6 pt-6 pb-0">
+                <header class="page-header mb-3">
                     <h1 class="page-title text-2xl font-bold text-on-surface">Clipboard</h1>
                     <p class="page-subtitle text-on-surface-muted mt-1">Save and copy text, links, and snippets with one click.</p>
                 </header>
 
-                <div class="flex flex-col lg:flex-row gap-6">
-                    <div class="flex-1">
+                <div class="flex flex-col lg:flex-row gap-6 overflow-hidden">
+                    <div class="flex-1 min-w-0 overflow-hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-base font-semibold text-on-surface">Saved Items</h3>
                             <span id="itemsCount" class="text-sm text-on-surface-muted"></span>
@@ -26,7 +26,7 @@
                         <div class="mb-4">
                             <input type="text" id="searchInput" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="Search items..." autocomplete="off">
                         </div>
-                        <div id="itemsList" class="space-y-2">
+                        <div id="itemsList" class="space-y-2 overflow-y-auto max-h-[calc(100vh-240px)]">
                             <div class="text-center py-12 text-on-surface-muted">
                                 <div class="text-3xl mb-2">📋</div>
                                 <p class="text-sm">No items saved yet. Add your first item.</p>
@@ -34,7 +34,7 @@
                         </div>
                     </div>
 
-                    <div class="lg:w-80">
+                    <div class="w-full lg:w-80 flex-shrink-0">
                         <div class="bg-surface-container rounded-xl p-6 border border-outline-variant sticky top-8">
                             <div class="mb-4">
                                 <h2 class="text-lg font-semibold text-on-surface">Add New Item</h2>
@@ -71,11 +71,17 @@
             return;
         }
         count.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
-        list.innerHTML = items.map(function(item) {
-            return '<div class="flex items-center gap-3 px-4 py-3 bg-surface-container rounded-lg border border-outline-variant group">' +
+        list.innerHTML = items.map(function(item, index) {
+            var isFirst = index === 0;
+            var isLast = index === items.length - 1;
+            return '<div class="flex items-center gap-2 px-4 py-3 bg-surface-container rounded-lg border border-outline-variant group">' +
+                '<div class="flex flex-col gap-0.5">' +
+                '<button onclick="moveItem(\'' + item.id + '\', \'up\')" class="px-1 py-0.5 text-[10px] rounded bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" title="Move up"' + (isFirst ? ' disabled' : '') + '>▲</button>' +
+                '<button onclick="moveItem(\'' + item.id + '\', \'down\')" class="px-1 py-0.5 text-[10px] rounded bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" title="Move down"' + (isLast ? ' disabled' : '') + '>▼</button>' +
+                '</div>' +
                 '<div class="flex-1 min-w-0"><div class="text-sm font-medium text-on-surface truncate">' + escapeHtml(item.label || 'Untitled') + '</div>' +
                 '<div class="text-xs text-on-surface-muted truncate mt-0.5">' + escapeHtml(item.content) + '</div></div>' +
-                '<button onclick="copyItem(\'' + item.id + '\')" class="px-2 py-1 text-xs rounded bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" title="Copy">📋</button>' +
+                '<button onclick="copyItem(\'' + item.id + '\')" class="px-2 py-1 text-xs rounded bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" title="Copy to clipboard">📋</button>' +
                 '<button onclick="deleteItem(\'' + item.id + '\')" class="px-2 py-1 text-xs rounded bg-surface-high text-error hover:bg-error-soft transition-colors border-none cursor-pointer" title="Delete">✕</button></div>';
         }).join('');
     }
@@ -128,6 +134,21 @@
     function deleteItem(id) {
         fetch('/api/clipboard/' + id, {method: 'DELETE'}).then(function(r) { return r.json(); }).then(function(d) {
             if (d.success) loadItems(document.getElementById('searchInput').value);
+        });
+    }
+    function moveItem(id, direction) {
+        var index = itemsCache.findIndex(function(i) { return i.id === id; });
+        if (index === -1) return;
+        var newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= itemsCache.length) return;
+        var temp = itemsCache[index];
+        itemsCache[index] = itemsCache[newIndex];
+        itemsCache[newIndex] = temp;
+        renderItems(itemsCache);
+        fetch('/api/clipboard/reorder', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ids: itemsCache.map(function(i) { return i.id; })})
         });
     }
     document.getElementById('addItemForm').addEventListener('submit', function(e) {

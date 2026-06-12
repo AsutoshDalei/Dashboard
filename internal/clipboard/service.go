@@ -40,3 +40,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 func (s *Service) Search(ctx context.Context, query string) ([]Item, error) {
 	return s.repo.Search(ctx, query)
 }
+
+func (s *Service) Reorder(ctx context.Context, ids []string) error {
+	return s.repo.Reorder(ctx, ids)
+}

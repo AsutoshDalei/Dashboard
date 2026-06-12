@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"pi_dashboard/internal/job"
 	"pi_dashboard/internal/llm"
 	"pi_dashboard/internal/middleware"
 )
@@ -19,10 +21,11 @@ type Handler struct {
 	svc     *Service
 	tmpl    *template.Template
 	prompts *llm.Prompts
+	jobs    *job.Manager
 }
 
 func NewHandler(svc *Service, tmpl *template.Template, prompts *llm.Prompts) *Handler {
-	return &Handler{svc: svc, tmpl: tmpl, prompts: prompts}
+	return &Handler{svc: svc, tmpl: tmpl, prompts: prompts, jobs: job.NewManager()}
 }
 
 type resumeAnalysisResponse struct {
@@ -151,6 +154,55 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"response": resp})
 }
 
+func (h *Handler) HandleChatSendAsync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req struct {
+		JobID   string `json:"job_id"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
+		return
+	}
+
+	if req.Message == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Message required", "")
+		return
+	}
+
+	jobID := req.JobID
+	if jobID == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "job_id required", "")
+		return
+	}
+
+	sessionID := getSessionID(r)
+	if sessionID == "" {
+		middleware.RespondJSON(w, http.StatusUnauthorized, false, "Not authenticated", "")
+		return
+	}
+
+	h.jobs.Create(jobID, "chat")
+
+	systemPrompt := h.prompts.Get("chat_system")
+
+	go func() {
+		h.jobs.Update(jobID, job.StatusRunning, nil, "")
+		resp, err := h.svc.Chat(context.Background(), sessionID, req.Message, systemPrompt)
+		if err != nil {
+			h.jobs.Update(jobID, job.StatusFailed, nil, err.Error())
+			return
+		}
+		h.jobs.Update(jobID, job.StatusCompleted, map[string]string{"response": resp}, "")
+	}()
+
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"job_id": jobID})
+}
+
 func jsonEscape(s string) string {
 	b := strings.Builder{}
 	for _, r := range s {
@@ -217,6 +269,54 @@ func (h *Handler) HandleResumeAnalyze(w http.ResponseWriter, r *http.Request) {
 	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", analysis)
 }
 
+func (h *Handler) HandleResumeAnalyzeAsync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req struct {
+		JobID          string `json:"job_id"`
+		JobDescription string `json:"job_description"`
+		Provider       string `json:"provider"`
+		Model          string `json:"model"`
+		OllamaHost     string `json:"ollama_host"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
+		return
+	}
+
+	if req.JobDescription == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Job description required", "")
+		return
+	}
+
+	jobID := req.JobID
+	if jobID == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "job_id required", "")
+		return
+	}
+
+	h.jobs.Create(jobID, "analyze")
+
+	systemPrompt := h.prompts.Get("resume_analyze")
+	params := &ProviderParams{Provider: req.Provider, Model: req.Model, Host: req.OllamaHost}
+
+	go func() {
+		h.jobs.Update(jobID, job.StatusRunning, nil, "")
+		result, err := h.svc.AnalyzeResume(context.Background(), req.JobDescription, systemPrompt, params)
+		if err != nil {
+			h.jobs.Update(jobID, job.StatusFailed, nil, err.Error())
+			return
+		}
+		analysis := parseResumeAnalysis(result)
+		h.jobs.Update(jobID, job.StatusCompleted, analysis, "")
+	}()
+
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"job_id": jobID})
+}
+
 func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
@@ -247,6 +347,68 @@ func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"modified_latex": result})
+}
+
+func (h *Handler) HandleResumeGenerateAsync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	var req struct {
+		JobID          string `json:"job_id"`
+		JobDescription string `json:"job_description"`
+		Provider       string `json:"provider"`
+		Model          string `json:"model"`
+		OllamaHost     string `json:"ollama_host"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
+		return
+	}
+
+	if req.JobDescription == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Job description required", "")
+		return
+	}
+
+	jobID := req.JobID
+	if jobID == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "job_id required", "")
+		return
+	}
+
+	h.jobs.Create(jobID, "generate")
+
+	params := &ProviderParams{Provider: req.Provider, Model: req.Model, Host: req.OllamaHost}
+
+	go func() {
+		h.jobs.Update(jobID, job.StatusRunning, nil, "")
+		result, err := h.svc.GenerateSkills(context.Background(), req.JobDescription, params)
+		if err != nil {
+			h.jobs.Update(jobID, job.StatusFailed, nil, err.Error())
+			return
+		}
+		h.jobs.Update(jobID, job.StatusCompleted, map[string]string{"modified_latex": result}, "")
+	}()
+
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"job_id": jobID})
+}
+
+func (h *Handler) HandleJobStatus(w http.ResponseWriter, r *http.Request) {
+	jobID := r.URL.Query().Get("job_id")
+	if jobID == "" {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "job_id required", "")
+		return
+	}
+
+	j := h.jobs.Get(jobID)
+	if j == nil {
+		middleware.RespondJSON(w, http.StatusNotFound, false, "Job not found", "")
+		return
+	}
+
+	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", j)
 }
 
 var tectonicCompileSem = make(chan struct{}, 1)

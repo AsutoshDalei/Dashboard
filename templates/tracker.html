@@ -311,7 +311,7 @@
                 stroke-linecap: round;
             }
             .chart-tooltip {
-                position: absolute;
+                position: fixed;
                 display: none;
                 pointer-events: none;
                 background: #09090b;
@@ -321,7 +321,7 @@
                 border-radius: var(--radius-sm);
                 padding: 6px 8px;
                 white-space: nowrap;
-                z-index: 20;
+                z-index: 100;
                 transform: translate(-50%, calc(-100% - 8px));
             }
             .contribution-grid {
@@ -1340,11 +1340,8 @@
                 el.addEventListener("mousemove", function (e) {
                     tip.innerHTML = html;
                     tip.style.display = "block";
-                    var rect = wrap.getBoundingClientRect();
-                    var x = e.clientX - rect.left;
-                    var y = e.clientY - rect.top;
-                    tip.style.left = Math.min(Math.max(x, 70), rect.width - 70) + "px";
-                    tip.style.top = Math.max(18, y - 12) + "px";
+                    tip.style.left = e.clientX + "px";
+                    tip.style.top = (e.clientY - 12) + "px";
                 });
                 el.addEventListener("mouseleave", function () {
                     tip.style.display = "none";
@@ -1520,7 +1517,13 @@
                     }
                 });
                 html += "</svg></div>";
-                wrap.innerHTML = '<div id="chartTooltip" class="chart-tooltip"></div>' + html;
+                if (!$('chartTooltip')) {
+                    var tip = document.createElement('div');
+                    tip.id = 'chartTooltip';
+                    tip.className = 'chart-tooltip';
+                    document.body.appendChild(tip);
+                }
+                wrap.innerHTML = html;
                 wrap.scrollLeft = wrap.scrollWidth;
 
                 var tipFactory = function (p) {

@@ -53,8 +53,10 @@
     var emptyState = document.getElementById('emptyState');
     var promptsRow = document.getElementById('promptsRow');
     var promptsToggle = document.getElementById('promptsToggle');
-    var abortController = null;
     var chatHistory = JSON.parse(localStorage.getItem('chat_history') || '[]');
+    var pendingJobId = localStorage.getItem('chat_pending_job_id') || null;
+
+    function generateJobId(){return 'chat_'+Date.now()+'_'+Math.random().toString(36).substr(2,9)}
 
     function saveChatHistory() {
         localStorage.setItem('chat_history', JSON.stringify(chatHistory));
@@ -68,7 +70,45 @@
         });
     }
 
+    function pollJobStatus(jobId) {
+        showLoader();
+        sendBtn.disabled = true;
+        var pollInterval = setInterval(function() {
+            fetch('/api/job/status?job_id=' + jobId).then(function(r) { return r.json(); }).then(function(data) {
+                if (!data.success || !data.data) return;
+                var job = data.data;
+                if (job.status === 'completed') {
+                    clearInterval(pollInterval);
+                    localStorage.removeItem('chat_pending_job_id');
+                    pendingJobId = null;
+                    removeLoader();
+                    sendBtn.disabled = false;
+                    stopBtn.classList.add('hidden');
+                    var response = job.result && job.result.response ? job.result.response : 'No response';
+                    chatHistory.push({role: 'assistant', content: response});
+                    saveChatHistory();
+                    addMessage('assistant', response);
+                } else if (job.status === 'failed') {
+                    clearInterval(pollInterval);
+                    localStorage.removeItem('chat_pending_job_id');
+                    pendingJobId = null;
+                    removeLoader();
+                    sendBtn.disabled = false;
+                    stopBtn.classList.add('hidden');
+                    var errMsg = job.error || 'Request failed';
+                    chatHistory.push({role: 'assistant', content: 'Error: ' + errMsg});
+                    saveChatHistory();
+                    addMessage('assistant', 'Error: ' + errMsg);
+                }
+            }).catch(function() {});
+        }, 2000);
+    }
+
     loadChatHistory();
+
+    if (pendingJobId) {
+        pollJobStatus(pendingJobId);
+    }
 
     // Auto-resize textarea
     chatInput.addEventListener('input', function() {
@@ -185,56 +225,41 @@
         sendBtn.disabled = true;
         stopBtn.classList.remove('hidden');
 
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/chat/send?stream=true', true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.responseType = 'text';
+        var jobId = generateJobId();
+        pendingJobId = jobId;
+        localStorage.setItem('chat_pending_job_id', jobId);
 
-        var fullResponse = '';
-        var responseDiv = null;
-        var processedOffset = 0;
-
-        xhr.onprogress = function() {
-            var newText = xhr.responseText.substring(processedOffset);
-            processedOffset = xhr.responseText.length;
-            var lines = newText.split('\n');
-            for (var i = 0; i < lines.length; i++) {
-                var line = lines[i].trim();
-                if (line.startsWith('data: ')) {
-                    var data = line.substring(6).replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"');
-                    if (data === '[DONE]') {
-                        chatHistory.push({role: 'assistant', content: fullResponse});
-                        saveChatHistory();
-                        removeLoader();
-                        sendBtn.disabled = false;
-                        stopBtn.classList.add('hidden');
-                        return;
-                    }
-                    removeLoader();
-                    if (!responseDiv) {
-                        responseDiv = addMessage('assistant', '');
-                    }
-                    fullResponse += data;
-                    var msgDiv = responseDiv.querySelector('.markdown-content');
-                    if (msgDiv) msgDiv.innerHTML = renderMarkdown(fullResponse);
-                }
+        fetch('/api/chat/send-async', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({job_id: jobId, message: text})
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (!data.success) {
+                removeLoader();
+                sendBtn.disabled = false;
+                stopBtn.classList.add('hidden');
+                addMessage('assistant', 'Error: Failed to start request');
+                localStorage.removeItem('chat_pending_job_id');
+                pendingJobId = null;
+                return;
             }
-        };
-
-        xhr.onerror = function() {
+            pollJobStatus(jobId);
+        }).catch(function() {
             removeLoader();
-            var errDiv = addMessage('assistant', 'Error: Connection failed');
-            errDiv.querySelector('.markdown-content').innerHTML = 'Error: Connection failed';
             sendBtn.disabled = false;
             stopBtn.classList.add('hidden');
-        };
-
-        xhr.send(JSON.stringify({message: text}));
-        abortController = { abort: function() { xhr.abort(); } };
+            addMessage('assistant', 'Error: Connection failed');
+            localStorage.removeItem('chat_pending_job_id');
+            pendingJobId = null;
+        });
     }
 
     stopBtn.addEventListener('click', function() {
-        if (abortController) { abortController.abort(); }
+        localStorage.removeItem('chat_pending_job_id');
+        pendingJobId = null;
+        removeLoader();
+        sendBtn.disabled = false;
+        stopBtn.classList.add('hidden');
     });
 
     sendBtn.addEventListener('click', sendMessage);

@@ -84,6 +84,7 @@ func (r *Router) registerRoutes() {
 	if r.deps.Clipboard != nil {
 		r.mux.HandleFunc("/tools/clipboard", auth(r.deps.Clipboard.HandleTool))
 		r.mux.HandleFunc("/api/clipboard", auth(r.deps.Clipboard.HandleAPI))
+		r.mux.HandleFunc("/api/clipboard/reorder", auth(r.deps.Clipboard.HandleReorderAPI))
 		r.mux.HandleFunc("/api/clipboard/", auth(r.deps.Clipboard.HandleItemAPI))
 	}
 
@@ -100,19 +101,20 @@ func (r *Router) registerRoutes() {
 	}
 
 	if r.deps.Workspace != nil {
-		r.mux.HandleFunc("/tools/chat", auth(r.deps.Workspace.HandleChatTool))
-		r.mux.HandleFunc("/api/chat/send", auth(r.deps.Workspace.HandleChatSend))
-		r.mux.HandleFunc("/api/chat/clear", auth(r.deps.Workspace.HandleChatClear))
 		r.mux.HandleFunc("/tools/resume", auth(r.deps.Workspace.HandleResumeTool))
 		r.mux.HandleFunc("/api/resume/analyze", auth(r.deps.Workspace.HandleResumeAnalyze))
+		r.mux.HandleFunc("/api/resume/analyze-async", auth(r.deps.Workspace.HandleResumeAnalyzeAsync))
 		r.mux.HandleFunc("/api/resume/generate", auth(r.deps.Workspace.HandleResumeGenerate))
+		r.mux.HandleFunc("/api/resume/generate-async", auth(r.deps.Workspace.HandleResumeGenerateAsync))
 		r.mux.HandleFunc("/api/resume/compile", auth(r.deps.Workspace.HandleResumeCompile))
 		r.mux.HandleFunc("/api/resume/reanalyze", auth(r.deps.Workspace.HandleResumeReanalyze))
 		r.mux.HandleFunc("/api/resume/chat", auth(r.deps.Workspace.HandleResumeChat))
 		r.mux.HandleFunc("/api/resume/job-match", auth(r.deps.Workspace.HandleJobMatch))
-		r.mux.HandleFunc("/api/workspace/draft-email", auth(r.deps.Workspace.HandleDraftEmail))
-		r.mux.HandleFunc("/api/workspace/draft-cover-letter", auth(r.deps.Workspace.HandleDraftCoverLetter))
-		r.mux.HandleFunc("/api/workspace/sql-assistant", auth(r.deps.Workspace.HandleSQLAssistant))
+		r.mux.HandleFunc("/api/job/status", auth(r.deps.Workspace.HandleJobStatus))
+		r.mux.HandleFunc("/tools/chat", auth(r.deps.Workspace.HandleChatTool))
+		r.mux.HandleFunc("/api/chat/send", auth(r.deps.Workspace.HandleChatSend))
+		r.mux.HandleFunc("/api/chat/send-async", auth(r.deps.Workspace.HandleChatSendAsync))
+		r.mux.HandleFunc("/api/chat/clear", auth(r.deps.Workspace.HandleChatClear))
 	}
 }
 

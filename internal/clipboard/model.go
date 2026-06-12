@@ -7,5 +7,6 @@ type Item struct {
 	Label     string    `json:"label"`
 	Content   string    `json:"content"`
 	Category  string    `json:"category"`
+	SortOrder int       `json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
 }

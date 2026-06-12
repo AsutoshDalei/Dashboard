@@ -38,6 +38,25 @@ func (h *Handler) HandleAPI(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) HandleReorderAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.IDs) == 0 {
+		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid request", "")
+		return
+	}
+	if err := h.svc.Reorder(r.Context(), req.IDs); err != nil {
+		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
+		return
+	}
+	middleware.RespondJSON(w, http.StatusOK, true, "", "Reordered")
+}
+
 func (h *Handler) HandleItemAPI(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/clipboard/")
 	parts := strings.Split(path, "/")

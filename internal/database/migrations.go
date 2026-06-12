@@ -52,6 +52,13 @@ var migrations = []Migration{
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 	},
+	{
+		Name: "004_clipboard_sort_order",
+		SQL: `DO $$ BEGIN
+			ALTER TABLE clipboard_items ADD COLUMN sort_order INTEGER DEFAULT 0;
+		EXCEPTION WHEN duplicate_column THEN null;
+		END $$`,
+	},
 }
 
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {

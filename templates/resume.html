@@ -117,22 +117,137 @@
     </main>
 </div>
 <script>/* keep existing JS from original - unchanged */
-var currentState={score:0,keywords:[],analysis:'',recommendations:'',archetype:'',modifiedLatex:'',pdfBlob:null,chatHistory:[],companyName:'',jobDescription:'',provider:'ollama',model:document.getElementById('ollamaModel').value,ollamaHost:document.getElementById('ollamaHost').value,isGenerating:false,isAnalyzing:false,isChatting:false};
+var currentState={score:0,keywords:[],analysis:'',recommendations:'',archetype:'',modifiedLatex:'',pdfBlob:null,chatHistory:[],companyName:'',jobDescription:'',provider:'ollama',model:document.getElementById('ollamaModel').value,ollamaHost:document.getElementById('ollamaHost').value,isGenerating:false,isAnalyzing:false,isChatting:false,pendingJobId:null,pendingJobType:null};
 const $=(id)=>document.getElementById(id);
+
+function generateJobId(){return 'job_'+Date.now()+'_'+Math.random().toString(36).substr(2,9)}
+
+function saveResumeState(){
+    var toSave={
+        score:currentState.score,
+        keywords:currentState.keywords,
+        analysis:currentState.analysis,
+        recommendations:currentState.recommendations,
+        archetype:currentState.archetype,
+        modifiedLatex:currentState.modifiedLatex,
+        chatHistory:currentState.chatHistory,
+        companyName:currentState.companyName,
+        jobDescription:currentState.jobDescription,
+        provider:currentState.provider,
+        model:currentState.model,
+        ollamaHost:currentState.ollamaHost,
+        pendingJobId:currentState.pendingJobId,
+        pendingJobType:currentState.pendingJobType
+    };
+    localStorage.setItem('resume_state',JSON.stringify(toSave));
+}
+
+function loadResumeState(){
+    try{
+        var saved=JSON.parse(localStorage.getItem('resume_state')||'null');
+        if(!saved)return;
+        currentState.score=saved.score||0;
+        currentState.keywords=saved.keywords||[];
+        currentState.analysis=saved.analysis||'';
+        currentState.recommendations=saved.recommendations||'';
+        currentState.archetype=saved.archetype||'';
+        currentState.modifiedLatex=saved.modifiedLatex||'';
+        currentState.chatHistory=saved.chatHistory||[];
+        currentState.companyName=saved.companyName||'';
+        currentState.jobDescription=saved.jobDescription||'';
+        currentState.provider=saved.provider||'ollama';
+        currentState.model=saved.model||'';
+        currentState.ollamaHost=saved.ollamaHost||'';
+        currentState.pendingJobId=saved.pendingJobId||null;
+        currentState.pendingJobType=saved.pendingJobType||null;
+        $('companyName').value=currentState.companyName;
+        $('jobDescription').value=currentState.jobDescription;
+        $('ollamaHost').value=currentState.ollamaHost;
+        $('ollamaModel').value=currentState.model;
+        document.querySelectorAll('input[name="provider"]').forEach(function(r){
+            r.checked=r.value===currentState.provider;
+            r.closest('.provider-radio').classList.toggle('active',r.value===currentState.provider);
+        });
+        $('ollamaConfig').style.display=currentState.provider==='ollama'?'flex':'none';
+        $('openrouterConfig').style.display=currentState.provider==='openrouter'?'block':'none';
+        if(currentState.modifiedLatex||currentState.keywords.length>0){
+            showResults({score:currentState.score,keywords:currentState.keywords,analysis:currentState.analysis,recommendations:currentState.recommendations,archetype:currentState.archetype});
+            if(currentState.chatHistory.length>0){
+                currentState.chatHistory.forEach(function(msg){addChatMessage(msg.role,msg.content)});
+            }
+            if(currentState.modifiedLatex){
+                compilePdfPreview(currentState.modifiedLatex);
+            }
+        }
+        if(currentState.pendingJobId){
+            pollJobStatus(currentState.pendingJobId,currentState.pendingJobType);
+        }
+    }catch(e){console.error('Failed to load resume state',e)}
+}
+
+function pollJobStatus(jobId,jobType){
+    showStatus('Process running in background...','success');
+    if(jobType==='analyze'){setLoading('analyzeBtn',true);currentState.isAnalyzing=true}
+    else if(jobType==='generate'){setLoading('generateBtn',true);currentState.isGenerating=true}
+    var pollInterval=setInterval(function(){
+        fetch('/api/job/status?job_id='+jobId).then(function(r){return r.json()}).then(function(data){
+            if(!data.success||!data.data)return;
+            var job=data.data;
+            if(job.status==='completed'){
+                clearInterval(pollInterval);
+                currentState.pendingJobId=null;
+                currentState.pendingJobType=null;
+                saveResumeState();
+                if(jobType==='analyze'){
+                    showResults(job.result);
+                    setLoading('analyzeBtn',false);
+                    currentState.isAnalyzing=false;
+                    showStatus('Analysis complete! Score: '+(job.result.score||0).toFixed(1)+'/5','success');
+                }else if(jobType==='generate'){
+                    currentState.modifiedLatex=job.result.modified_latex;
+                    showStatus('Skills updated! Compiling preview...','success');
+                    addChatMessage('assistant','Skills section has been tailored to match the job description.');
+                    currentState.chatHistory.push({role:'assistant',content:'Skills section has been tailored to match the job description.'});
+                    setLoading('generateBtn',false);
+                    currentState.isGenerating=false;
+                    saveResumeState();
+                    compilePdfPreview(currentState.modifiedLatex);
+                }
+            }else if(job.status==='failed'){
+                clearInterval(pollInterval);
+                currentState.pendingJobId=null;
+                currentState.pendingJobType=null;
+                saveResumeState();
+                setLoading('analyzeBtn',false);
+                setLoading('generateBtn',false);
+                currentState.isAnalyzing=false;
+                currentState.isGenerating=false;
+                showStatus('Error: '+(job.error||'Process failed'),'error');
+            }
+        }).catch(function(){});
+    },2000);
+}
+
+function compilePdfPreview(latex){
+    fetch('/api/resume/compile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({latex_source:latex})}).then(function(resp){if(resp.ok)return resp.blob();throw new Error('Compile failed')}).then(function(blob){showPdfPreview(blob)}).catch(function(){});
+}
+
 function showStatus(msg,type){const el=$('statusMessage');el.textContent=msg;el.classList.remove('hidden','bg-success-soft','text-success','bg-error-soft','text-error');el.classList.add('show');if(type==='success'){el.classList.add('bg-success-soft','text-success')}else if(type==='error'){el.classList.add('bg-error-soft','text-error')}}
 function hideStatus(){const el=$('statusMessage');el.classList.add('hidden');el.classList.remove('show','bg-success-soft','text-success','bg-error-soft','text-error')}
 function setLoading(btnId,loading){const btn=$(btnId);const loader=btn.querySelector('.btn-loader');if(loading){loader.classList.remove('hidden');btn.disabled=true}else{loader.classList.add('hidden');btn.disabled=false}}
 function renderStars(score){let s='';for(let i=0;i<5;i++)s+=i<Math.floor(score)?'\u2605':'\u2606';return s}
-function showResults(data){data=data||{};currentState.score=typeof data.score==='number'?data.score:0;currentState.keywords=data.keywords||[];currentState.analysis=data.analysis||'';currentState.recommendations=data.recommendations||'';currentState.archetype=data.archetype||'';$('resultsArea').style.display='block';$('scoreValue').textContent=currentState.score.toFixed(1)+'/5';$('scoreStars').textContent=renderStars(currentState.score);$('scoreArchetype').textContent=currentState.archetype||'';const kw=$('keywordsContainer');kw.innerHTML='';(data.keywords||[]).forEach(k=>{const t=document.createElement('span');t.className='keyword-tag';t.textContent=k;kw.appendChild(t)});$('analysisText').textContent=data.analysis||'';$('recommendationsText').textContent=data.recommendations||'';$('generateBtn').disabled=false;$('chatSendBtn').disabled=false}
+function showResults(data){data=data||{};currentState.score=typeof data.score==='number'?data.score:0;currentState.keywords=data.keywords||[];currentState.analysis=data.analysis||'';currentState.recommendations=data.recommendations||'';currentState.archetype=data.archetype||'';$('resultsArea').style.display='block';$('scoreValue').textContent=currentState.score.toFixed(1)+'/5';$('scoreStars').textContent=renderStars(currentState.score);$('scoreArchetype').textContent=currentState.archetype||'';const kw=$('keywordsContainer');kw.innerHTML='';(data.keywords||[]).forEach(k=>{const t=document.createElement('span');t.className='keyword-tag';t.textContent=k;kw.appendChild(t)});$('analysisText').textContent=data.analysis||'';$('recommendationsText').textContent=data.recommendations||'';$('generateBtn').disabled=false;$('chatSendBtn').disabled=false;saveResumeState()}
 function showPdfPreview(pdfBlob){if(currentState.pdfBlob)URL.revokeObjectURL(currentState.pdfBlob);currentState.pdfBlob=pdfBlob;const url=URL.createObjectURL(pdfBlob);const iframe=$('pdfPreview');iframe.src=url;iframe.style.display='flex';$('emptyPdfState').style.display='none';$('downloadBtn').disabled=false}
 function addChatMessage(role,content){const c=$('chatMessages');const m=document.createElement('div');m.className='chat-msg '+role;m.textContent=content;c.appendChild(m);c.scrollTop=c.scrollHeight}
-async function handleAnalyze(){const jd=$('jobDescription').value.trim();if(!jd){showStatus('Please paste a job description.','error');return}currentState.jobDescription=jd;currentState.companyName=$('companyName').value.trim();hideStatus();setLoading('analyzeBtn',true);currentState.isAnalyzing=true;try{const resp=await fetch('/api/resume/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_description:jd,provider:currentState.provider,model:currentState.model,ollama_host:currentState.ollamaHost})});const result=await resp.json();if(!resp.ok||!result.success){showStatus('Error: '+(result.error||'Analysis failed'),'error');return}showResults(result.data);const score=typeof result.data.score==='number'?result.data.score:0;showStatus('Analysis complete! Score: '+score.toFixed(1)+'/5','success')}catch(err){showStatus('Failed: '+err.message,'error')}finally{setLoading('analyzeBtn',false);currentState.isAnalyzing=false}}
-async function handleGenerate(){if(!currentState.jobDescription){showStatus('Please analyze first.','error');return}hideStatus();setLoading('generateBtn',true);currentState.isGenerating=true;try{const resp=await fetch('/api/resume/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_description:currentState.jobDescription,provider:currentState.provider,model:currentState.model,ollama_host:currentState.ollamaHost})});const result=await resp.json();if(!resp.ok||!result.success){showStatus('Error: '+(result.error||'Generation failed'),'error');return}currentState.modifiedLatex=result.data.modified_latex;showStatus('Skills updated! Compiling preview...','success');addChatMessage('assistant','Skills section has been tailored to match the job description.');const pdfResp=await fetch('/api/resume/compile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({latex_source:currentState.modifiedLatex})});if(pdfResp.ok){const pdfBlob=await pdfResp.blob();showPdfPreview(pdfBlob);showStatus('Skills updated! Preview ready.','success')}else{showStatus('Skills updated but PDF compilation failed.','error')}}catch(err){showStatus('Failed: '+err.message,'error')}finally{setLoading('generateBtn',false);currentState.isGenerating=false}}
+async function handleAnalyze(){const jd=$('jobDescription').value.trim();if(!jd){showStatus('Please paste a job description.','error');return}currentState.jobDescription=jd;currentState.companyName=$('companyName').value.trim();hideStatus();const jobId=generateJobId();currentState.pendingJobId=jobId;currentState.pendingJobType='analyze';saveResumeState();try{const resp=await fetch('/api/resume/analyze-async',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:jobId,job_description:jd,provider:currentState.provider,model:currentState.model,ollama_host:currentState.ollamaHost})});const result=await resp.json();if(!resp.ok||!result.success){showStatus('Error: '+(result.error||'Failed to start'),'error');currentState.pendingJobId=null;currentState.pendingJobType=null;saveResumeState();return}pollJobStatus(jobId,'analyze')}catch(err){showStatus('Failed: '+err.message,'error');currentState.pendingJobId=null;currentState.pendingJobType=null;saveResumeState()}}
+async function handleGenerate(){if(!currentState.jobDescription){showStatus('Please analyze first.','error');return}hideStatus();const jobId=generateJobId();currentState.pendingJobId=jobId;currentState.pendingJobType='generate';saveResumeState();try{const resp=await fetch('/api/resume/generate-async',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:jobId,job_description:currentState.jobDescription,provider:currentState.provider,model:currentState.model,ollama_host:currentState.ollamaHost})});const result=await resp.json();if(!resp.ok||!result.success){showStatus('Error: '+(result.error||'Failed to start'),'error');currentState.pendingJobId=null;currentState.pendingJobType=null;saveResumeState();return}pollJobStatus(jobId,'generate')}catch(err){showStatus('Failed: '+err.message,'error');currentState.pendingJobId=null;currentState.pendingJobType=null;saveResumeState()}}
 async function handleDownload(){if(!currentState.pdfBlob){showStatus('No PDF to download.','error');return}const company=currentState.companyName||'TAILORED';const safe=company.replace(/ /g,'_').replace(/[\/\\]/g,'_');const url=URL.createObjectURL(currentState.pdfBlob);const a=document.createElement('a');a.href=url;a.download='ASUTOSH_DALEI_RESUME_'+safe+'.pdf';document.body.appendChild(a);a.click();URL.revokeObjectURL(url);a.remove();showStatus('Downloaded!','success')}
-async function handleChatSend(){const input=$('chatInput');const msg=input.value.trim();if(!msg)return;if(!currentState.modifiedLatex){showStatus('Generate first.','error');return}input.value='';hideStatus();setLoading('chatSendBtn',true);currentState.isChatting=true;currentState.chatHistory.push({role:'user',content:msg});addChatMessage('user',msg);try{const resp=await fetch('/api/resume/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,chat_history:currentState.chatHistory,current_latex:currentState.modifiedLatex,job_description:currentState.jobDescription,provider:currentState.provider,model:currentState.model,ollama_host:currentState.ollamaHost})});const result=await resp.json();if(!resp.ok||!result.success){showStatus('Error','error');currentState.chatHistory.push({role:'assistant',content:'Error'});addChatMessage('assistant','Error');return}currentState.modifiedLatex=result.data.modified_latex;currentState.chatHistory.push({role:'assistant',content:result.data.response_text});addChatMessage('assistant',result.data.response_text);const pdfResp=await fetch('/api/resume/compile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({latex_source:result.data.modified_latex})});if(pdfResp.ok){const pdfBlob=await pdfResp.blob();showPdfPreview(pdfBlob)}}catch(err){showStatus('Failed: '+err.message,'error')}finally{setLoading('chatSendBtn',false);currentState.isChatting=false}}
-document.querySelectorAll('input[name="provider"]').forEach(r=>{r.addEventListener('change',function(){currentState.provider=this.value;document.querySelectorAll('.provider-radio').forEach(e=>e.classList.remove('active'));this.closest('.provider-radio').classList.add('active');$('ollamaConfig').style.display=this.value==='ollama'?'flex':'none';$('openrouterConfig').style.display=this.value==='openrouter'?'block':'none'})});
-$('ollamaHost').addEventListener('change',function(){currentState.ollamaHost=this.value.trim()});
-$('ollamaModel').addEventListener('change',function(){currentState.model=this.value.trim()});
+async function handleChatSend(){const input=$('chatInput');const msg=input.value.trim();if(!msg)return;if(!currentState.modifiedLatex){showStatus('Generate first.','error');return}input.value='';hideStatus();setLoading('chatSendBtn',true);currentState.isChatting=true;currentState.chatHistory.push({role:'user',content:msg});addChatMessage('user',msg);saveResumeState();try{const resp=await fetch('/api/resume/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,chat_history:currentState.chatHistory,current_latex:currentState.modifiedLatex,job_description:currentState.jobDescription,provider:currentState.provider,model:currentState.model,ollama_host:currentState.ollamaHost})});const result=await resp.json();if(!resp.ok||!result.success){showStatus('Error','error');currentState.chatHistory.push({role:'assistant',content:'Error'});addChatMessage('assistant','Error');saveResumeState();return}currentState.modifiedLatex=result.data.modified_latex;currentState.chatHistory.push({role:'assistant',content:result.data.response_text});addChatMessage('assistant',result.data.response_text);saveResumeState();const pdfResp=await fetch('/api/resume/compile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({latex_source:result.data.modified_latex})});if(pdfResp.ok){const pdfBlob=await pdfResp.blob();showPdfPreview(pdfBlob)}}catch(err){showStatus('Failed: '+err.message,'error')}finally{setLoading('chatSendBtn',false);currentState.isChatting=false;saveResumeState()}}
+document.querySelectorAll('input[name="provider"]').forEach(r=>{r.addEventListener('change',function(){currentState.provider=this.value;document.querySelectorAll('.provider-radio').forEach(e=>e.classList.remove('active'));this.closest('.provider-radio').classList.add('active');$('ollamaConfig').style.display=this.value==='ollama'?'flex':'none';$('openrouterConfig').style.display=this.value==='openrouter'?'block':'none';saveResumeState()})});
+$('ollamaHost').addEventListener('change',function(){currentState.ollamaHost=this.value.trim();saveResumeState()});
+$('ollamaModel').addEventListener('change',function(){currentState.model=this.value.trim();saveResumeState()});
+$('companyName').addEventListener('input',function(){currentState.companyName=this.value.trim();saveResumeState()});
+$('jobDescription').addEventListener('input',function(){currentState.jobDescription=this.value.trim();saveResumeState()});
 $('analyzeBtn').addEventListener('click',handleAnalyze);$('generateBtn').addEventListener('click',handleGenerate);$('downloadBtn').addEventListener('click',handleDownload);$('chatSendBtn').addEventListener('click',handleChatSend);
 $('chatInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleChatSend()}});
 $('chatInput').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'});
@@ -140,6 +255,7 @@ const leftPane=$('leftPane');const resizeHandle=$('resizeHandle');let isResizing
 resizeHandle.addEventListener('mousedown',function(e){isResizing=true;this.classList.add('active');document.body.style.cursor='col-resize';document.body.style.userSelect='none'});
 document.addEventListener('mousemove',function(e){if(!isResizing)return;const layout=$('resumeLayout');const rect=layout.getBoundingClientRect();let pct=((e.clientX-rect.left)/rect.width)*100;pct=Math.max(25,Math.min(65,pct));leftPane.style.flex='0 0 '+pct+'%'});
 document.addEventListener('mouseup',function(){if(isResizing){isResizing=false;resizeHandle.classList.remove('active');document.body.style.cursor='';document.body.style.userSelect=''}});
+loadResumeState();
 </script>
 <script src="/static/sidebar.js" defer></script>
 </body>
