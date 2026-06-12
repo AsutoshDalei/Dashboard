@@ -73,9 +73,6 @@ jobs:
       - name: Inject production .env
         run: echo "${{ secrets.PROD_ENV_FILE }}" > staging/.env
 
-      - name: Inject Google OAuth credentials
-        run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" > staging/credentials.json
-
       - name: Inject Gmail API token
         run: echo "${{ secrets.GMAIL_TOKEN_JSON }}" > staging/token.json
 
