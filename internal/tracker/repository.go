@@ -231,7 +231,7 @@ func (r *Repository) Stats(ctx context.Context, timezone *time.Location) (*Stats
 
 	err = r.pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(delta_count), 0), COUNT(DISTINCT organization)
-		FROM application_activity_logs WHERE activity_date >= $1 AND activity_date < $2`,
+		FROM application_activity_logs WHERE activity_date >= $1 AND activity_date <= $2`,
 		weekStart, now.Format("2006-01-02"),
 	).Scan(&s.WeekApplications, &s.WeekCompanies)
 	if err != nil {
