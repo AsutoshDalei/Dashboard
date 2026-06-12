@@ -42,8 +42,18 @@ func (p *GmailProvider) Send(fromEmail, toEmail, name, company string) (string, 
 		return "", err
 	}
 
+	conf := &oauth2.Config{
+		ClientID:     p.clientID,
+		ClientSecret: p.clientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL: p.tokenURI,
+		},
+	}
+
 	ctx := context.Background()
-	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(creds))
+	tokenSource := conf.TokenSource(ctx, creds)
+	client := oauth2.NewClient(ctx, tokenSource)
+
 	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return "", fmt.Errorf("gmail client: %w", err)
