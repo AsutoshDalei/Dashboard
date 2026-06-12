@@ -2,6 +2,7 @@ package llm
 
 import (
 	"fmt"
+	"strings"
 
 	"pi_dashboard/pkg/llm"
 	"pi_dashboard/pkg/ollama"
@@ -20,7 +21,9 @@ func NewProvider(cfg Config) (llm.Provider, error) {
 	switch cfg.ProviderType {
 	case "ollama":
 		if cfg.OllamaHost == "" {
-			cfg.OllamaHost = "172.16.7.115"
+			cfg.OllamaHost = "172.16.7.112:11434"
+		} else if !strings.Contains(cfg.OllamaHost, ":") {
+			cfg.OllamaHost = cfg.OllamaHost + ":11434"
 		}
 		if cfg.OllamaModel == "" {
 			cfg.OllamaModel = "gemma4"

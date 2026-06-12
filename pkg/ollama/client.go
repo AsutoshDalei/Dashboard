@@ -41,6 +41,7 @@ type chatRequest struct {
 	Model    string        `json:"model"`
 	Messages []llm.Message `json:"messages"`
 	Stream   bool          `json:"stream"`
+	Format   any           `json:"format,omitempty"`
 }
 
 type chatResponse struct {
@@ -91,7 +92,56 @@ func (c *Client) Chat(ctx context.Context, messages []llm.Message) (llm.Response
 }
 
 func (c *Client) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
-	return llm.Response{}, fmt.Errorf("ollama does not support structured output schema")
+	var formatSchema any
+	if m, ok := schema.(map[string]any); ok {
+		if js, ok := m["json_schema"].(map[string]any); ok {
+			if s, ok := js["schema"]; ok {
+				formatSchema = s
+			}
+		}
+	}
+	if formatSchema == nil {
+		formatSchema = schema
+	}
+
+	reqBody := chatRequest{
+		Model:    c.model,
+		Messages: messages,
+		Stream:   false,
+		Format:   formatSchema,
+	}
+
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("ollama marshal: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.host+"/api/chat", bytes.NewReader(payload))
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("ollama request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("ollama do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("ollama read: %w", err)
+	}
+
+	var parsed chatResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return llm.Response{}, fmt.Errorf("ollama decode: %w", err)
+	}
+
+	return llm.Response{
+		Content: parsed.Message.Content,
+		Done:    parsed.Done,
+	}, nil
 }
 
 func (c *Client) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {

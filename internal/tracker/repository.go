@@ -257,13 +257,19 @@ func (r *Repository) Timeline(ctx context.Context, days int, freq string) ([]Tim
 		bucket = "date_trunc('month', activity_date)::date"
 	}
 
-	query := fmt.Sprintf(`SELECT %s::text, COALESCE(SUM(delta_count), 0), COUNT(DISTINCT organization)
-		FROM application_activity_logs
-		WHERE activity_date >= CURRENT_DATE - $1::integer
-		GROUP BY %s
-		ORDER BY %s`, bucket, bucket, bucket)
+	var dateFilter string
+	var args []any
+	if days > 0 {
+		dateFilter = " WHERE activity_date >= CURRENT_DATE - $1::integer"
+		args = append(args, days)
+	}
 
-	rows, err := r.pool.Query(ctx, query, days)
+	query := fmt.Sprintf(`SELECT %s::text, COALESCE(SUM(delta_count), 0), COUNT(DISTINCT organization)
+		FROM application_activity_logs%s
+		GROUP BY %s
+		ORDER BY %s`, bucket, dateFilter, bucket, bucket)
+
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -285,13 +291,21 @@ func (r *Repository) Timeline(ctx context.Context, days int, freq string) ([]Tim
 	}
 
 	fallbackDate := "COALESCE(applied_dates, created_at::date)"
-	query = fmt.Sprintf(`SELECT %s::text, COALESCE(SUM(count), 0), COUNT(DISTINCT organization)
-		FROM applications
-		WHERE %s >= CURRENT_DATE - $1::integer
-		GROUP BY %s
-		ORDER BY %s`, fallbackDate, fallbackDate, fallbackDate, fallbackDate)
 
-	rows, err = r.pool.Query(ctx, query, days)
+	args = nil
+	if days > 0 {
+		dateFilter = fmt.Sprintf(" WHERE %s >= CURRENT_DATE - $1::integer", fallbackDate)
+		args = append(args, days)
+	} else {
+		dateFilter = ""
+	}
+
+	query = fmt.Sprintf(`SELECT %s::text, COALESCE(SUM(count), 0), COUNT(DISTINCT organization)
+		FROM applications%s
+		GROUP BY %s
+		ORDER BY %s`, fallbackDate, dateFilter, fallbackDate, fallbackDate)
+
+	rows, err = r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

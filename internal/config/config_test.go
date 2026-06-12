@@ -18,8 +18,8 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.Port != "5001" {
 		t.Errorf("Port = %q, want %q", cfg.Port, "5001")
 	}
-	if cfg.LLMProvider != "openrouter" {
-		t.Errorf("LLMProvider = %q, want %q", cfg.LLMProvider, "openrouter")
+	if cfg.LLMProvider != "ollama" {
+		t.Errorf("LLMProvider = %q, want %q", cfg.LLMProvider, "ollama")
 	}
 }
 

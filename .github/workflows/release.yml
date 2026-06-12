@@ -66,7 +66,8 @@ jobs:
           cp templates/email_body.tmpl staging/templates/
           cp templates/coverletter.tex.tmpl staging/templates/
           cp templates/system_prompts.json staging/
-          cp static/output.css staging/
+          cp resume.tex staging/
+          cp resume.md staging/
           cp pi_bundle/ASUTOSH_DALEI_RESUME.pdf staging/
 
       - name: Inject production .env
@@ -77,9 +78,6 @@ jobs:
 
       - name: Inject Gmail API token
         run: echo "${{ secrets.GMAIL_TOKEN_JSON }}" > staging/token.json
-
-      - name: Copy resume PDF
-        run: cp pi_bundle/ASUTOSH_DALEI_RESUME.pdf staging/
 
       - name: Create tarball
         run: tar -czf myapp-linux-arm64.tar.gz -C staging .

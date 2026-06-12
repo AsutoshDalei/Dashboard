@@ -126,7 +126,7 @@ func (h *Handler) HandleStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
-	days := 30
+	days := 0
 	if d := r.URL.Query().Get("days"); d != "" {
 		if n, err := strconv.Atoi(d); err == nil && n > 0 {
 			days = n
@@ -134,16 +134,6 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	freq := r.URL.Query().Get("freq")
-	switch freq {
-	case "day":
-		days = 14
-	case "week":
-		days = 90
-	case "month":
-		days = 365
-	default:
-		days = 365
-	}
 
 	entries, err := h.svc.Timeline(r.Context(), days, freq)
 	if err != nil {

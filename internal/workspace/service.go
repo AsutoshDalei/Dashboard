@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -11,6 +12,8 @@ import (
 
 	llm "pi_dashboard/internal/llm"
 	pkgllm "pi_dashboard/pkg/llm"
+	"pi_dashboard/pkg/ollama"
+	"pi_dashboard/pkg/openrouter"
 )
 
 type Session struct {
@@ -87,6 +90,52 @@ func NewService(provider pkgllm.Provider, resumeText string, resumeMarkdown stri
 	}
 }
 
+type ProviderParams struct {
+	Provider string
+	Model    string
+	Host     string
+}
+
+func (s *Service) getProvider(params *ProviderParams) pkgllm.Provider {
+	if params == nil {
+		return s.provider
+	}
+	switch params.Provider {
+	case "ollama":
+		host := params.Host
+		if host == "" {
+			host = os.Getenv("OLLAMA_HOST")
+		}
+		if host == "" {
+			host = "172.16.7.112:11434"
+		} else if !strings.Contains(host, ":") {
+			host = host + ":11434"
+		}
+		model := params.Model
+		if model == "" {
+			model = os.Getenv("OLLAMA_MODEL")
+		}
+		if model == "" {
+			model = "gemma4"
+		}
+		return ollama.New(ollama.Config{Host: host, Model: model})
+	case "openrouter":
+		model := params.Model
+		if model == "" {
+			model = os.Getenv("OPENROUTER_MODEL")
+		}
+		if model == "" {
+			model = "nvidia/nemotron-3-super-120b-a12b:free"
+		}
+		return openrouter.New(openrouter.Config{
+			APIKey: os.Getenv("OPENROUTER_API_KEY"),
+			Model:  model,
+		})
+	default:
+		return s.provider
+	}
+}
+
 func (s *Service) Chat(ctx context.Context, sessionID string, message string, systemPrompt string) (string, error) {
 	session := s.chatStore.GetOrCreate(sessionID)
 
@@ -150,12 +199,51 @@ func (s *Service) ClearChat(sessionID string) {
 	s.chatStore.Clear(sessionID)
 }
 
-func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, systemPrompt string) (string, error) {
+var resumeAnalysisSchema = map[string]any{
+	"type": "json_schema",
+	"json_schema": map[string]any{
+		"name":   "resume_analysis",
+		"strict": true,
+		"schema": map[string]any{
+			"type":       "object",
+			"properties": map[string]any{
+				"score": map[string]any{
+					"type":        "number",
+					"description": "ATS match score from 0 to 5",
+				},
+				"keywords": map[string]any{
+					"type": "array",
+					"items": map[string]any{
+						"type": "string",
+					},
+					"description": "Missing or underrepresented hard skills and keywords from the JD",
+				},
+				"analysis": map[string]any{
+					"type":        "string",
+					"description": "Structured comparison of required/preferred skills, strengths, gaps, and red flags",
+				},
+				"recommendations": map[string]any{
+					"type":        "string",
+					"description": "Specific resume tailoring strategy and application priority",
+				},
+				"archetype": map[string]any{
+					"type":        "string",
+					"description": "Best-fit role type for this candidate given the JD",
+				},
+			},
+			"required":             []string{"score", "keywords", "analysis", "recommendations", "archetype"},
+			"additionalProperties": false,
+		},
+	},
+}
+
+func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, systemPrompt string, params *ProviderParams) (string, error) {
+	provider := s.getProvider(params)
 	messages := []pkgllm.Message{
 		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: fmt.Sprintf("Job Description:\n%s\n\nResume:\n%s", jobDescription, s.resumeText)},
+		{Role: "user", Content: jobDescription},
 	}
-	resp, err := s.provider.Chat(ctx, messages)
+	resp, err := provider.ChatWithSchema(ctx, messages, resumeAnalysisSchema)
 	if err != nil {
 		return "", fmt.Errorf("resume analyze: %w", err)
 	}
@@ -223,8 +311,9 @@ type SkillCategory struct {
 	Items    string `json:"items"`
 }
 
-func (s *Service) GenerateSkills(ctx context.Context, jobDescription string) (string, error) {
+func (s *Service) GenerateSkills(ctx context.Context, jobDescription string, params *ProviderParams) (string, error) {
 	currentSkills := extractSkills(s.resumeText)
+	provider := s.getProvider(params)
 
 	schema := map[string]any{
 		"type": "json_schema",
@@ -264,7 +353,7 @@ func (s *Service) GenerateSkills(ctx context.Context, jobDescription string) (st
 		{Role: "user", Content: fmt.Sprintf("Job Description:\n%s\n\nCurrent Skills Section:\n%s\n\nUpdate the skills to better match the job description. Add relevant keywords that are genuinely applicable. Remove irrelevant skills. Return the complete updated skills list.", jobDescription, currentSkills)},
 	}
 
-	resp, err := s.provider.ChatWithSchema(ctx, messages, schema)
+	resp, err := provider.ChatWithSchema(ctx, messages, schema)
 	if err != nil {
 		return "", fmt.Errorf("generate skills: %w", err)
 	}
@@ -281,16 +370,61 @@ func extractSkills(resume string) string {
 	return strings.TrimSpace(matches[1])
 }
 
+func escapeLatex(s string) string {
+	replacer := strings.NewReplacer(
+		`&`, `\&`,
+		`%`, `\%`,
+		`$`, `\$`,
+		`#`, `\#`,
+		`_`, `\_`,
+		`{`, `\{`,
+		`}`, `\}`,
+		`~`, `\textasciitilde{}`,
+		`^`, `\textasciicircum{}`,
+	)
+	return replacer.Replace(s)
+}
+
+func sanitizeJSON(s string) string {
+	var result strings.Builder
+	inString := false
+	escaped := false
+	for _, r := range s {
+		if escaped {
+			result.WriteRune(r)
+			escaped = false
+			continue
+		}
+		if r == '\\' && inString {
+			result.WriteRune(r)
+			escaped = true
+			continue
+		}
+		if r == '"' {
+			inString = !inString
+			result.WriteRune(r)
+			continue
+		}
+		if inString && (r == '\n' || r == '\r') {
+			result.WriteString("\\n")
+			continue
+		}
+		result.WriteRune(r)
+	}
+	return result.String()
+}
+
 func rebuildResume(resume string, skillsJSON string) (string, error) {
+	cleaned := sanitizeJSON(skillsJSON)
 	var result SkillsResponse
-	if err := json.Unmarshal([]byte(skillsJSON), &result); err != nil {
+	if err := json.Unmarshal([]byte(cleaned), &result); err != nil {
 		return "", fmt.Errorf("parse skills JSON: %w", err)
 	}
 
 	var sb strings.Builder
 	sb.WriteString("\\begin{itemize}\n")
 	for _, cat := range result.Skills {
-		sb.WriteString(fmt.Sprintf("    \\item \\textbf{%s:} %s.\n", cat.Category, cat.Items))
+		sb.WriteString(fmt.Sprintf("    \\item \\textbf{%s:} %s.\n", escapeLatex(cat.Category), escapeLatex(cat.Items)))
 	}
 	sb.WriteString("\\end{itemize}")
 

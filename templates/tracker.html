@@ -1503,7 +1503,9 @@
                     });
                 }
 
-                var labelEvery = buckets.length > 12 ? Math.ceil(buckets.length / 8) : 1;
+                var labelEvery = 1;
+                if (buckets.length > 20) labelEvery = Math.ceil(buckets.length / 12);
+                else if (buckets.length > 12) labelEvery = Math.ceil(buckets.length / 8);
                 buckets.forEach(function (b, i) {
                     if (i % labelEvery === 0 || i === buckets.length - 1) {
                         var x = pad.l + groupW * i + groupW / 2;
@@ -1519,6 +1521,7 @@
                 });
                 html += "</svg></div>";
                 wrap.innerHTML = '<div id="chartTooltip" class="chart-tooltip"></div>' + html;
+                wrap.scrollLeft = wrap.scrollWidth;
 
                 var tipFactory = function (p) {
                     return chartTooltipHTML(p.label, p.apps, p.companies);

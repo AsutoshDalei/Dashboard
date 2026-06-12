@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -33,28 +34,23 @@ type resumeAnalysisResponse struct {
 }
 
 func parseResumeAnalysis(raw string) resumeAnalysisResponse {
-	out := resumeAnalysisResponse{Analysis: strings.TrimSpace(raw)}
+	var out resumeAnalysisResponse
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
 		return out
 	}
-
-	start := strings.Index(trimmed, "{")
-	end := strings.LastIndex(trimmed, "}")
-	if start >= 0 && end > start {
-		trimmed = strings.TrimSpace(trimmed[start : end+1])
-	}
-	if err := json.Unmarshal([]byte(trimmed), &out); err == nil {
-		if out.Score > 5 && out.Score <= 100 {
-			out.Score = out.Score / 20
-		}
-		if out.Score < 0 {
-			out.Score = 0
-		}
-		if out.Score > 5 {
-			out.Score = 5
-		}
+	if err := json.Unmarshal([]byte(trimmed), &out); err != nil {
+		out.Analysis = trimmed
 		return out
+	}
+	if out.Score > 5 && out.Score <= 100 {
+		out.Score = out.Score / 20
+	}
+	if out.Score < 0 {
+		out.Score = 0
+	}
+	if out.Score > 5 {
+		out.Score = 5
 	}
 	return out
 }
@@ -194,6 +190,9 @@ func (h *Handler) HandleResumeAnalyze(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		JobDescription string `json:"job_description"`
+		Provider       string `json:"provider"`
+		Model          string `json:"model"`
+		OllamaHost     string `json:"ollama_host"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
@@ -207,7 +206,8 @@ func (h *Handler) HandleResumeAnalyze(w http.ResponseWriter, r *http.Request) {
 
 	systemPrompt := h.prompts.Get("resume_analyze")
 
-	result, err := h.svc.AnalyzeResume(r.Context(), req.JobDescription, systemPrompt)
+	params := &ProviderParams{Provider: req.Provider, Model: req.Model, Host: req.OllamaHost}
+	result, err := h.svc.AnalyzeResume(r.Context(), req.JobDescription, systemPrompt, params)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
@@ -225,6 +225,9 @@ func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		JobDescription string `json:"job_description"`
+		Provider       string `json:"provider"`
+		Model          string `json:"model"`
+		OllamaHost     string `json:"ollama_host"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid JSON", "")
@@ -236,7 +239,8 @@ func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.svc.GenerateSkills(r.Context(), req.JobDescription)
+	params := &ProviderParams{Provider: req.Provider, Model: req.Model, Host: req.OllamaHost}
+	result, err := h.svc.GenerateSkills(r.Context(), req.JobDescription, params)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
@@ -244,6 +248,8 @@ func (h *Handler) HandleResumeGenerate(w http.ResponseWriter, r *http.Request) {
 
 	middleware.RespondJSONWithData(w, http.StatusOK, true, "", "", map[string]string{"modified_latex": result})
 }
+
+var tectonicCompileSem = make(chan struct{}, 1)
 
 func (h *Handler) HandleResumeCompile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -263,7 +269,7 @@ func (h *Handler) HandleResumeCompile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pdfData, err := h.resumePDFBytes()
+	pdfData, err := compileLatexWithTectonic(req.LatexSource)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
@@ -273,6 +279,37 @@ func (h *Handler) HandleResumeCompile(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(pdfData); err != nil {
 		slog.Error("write resume pdf", "err", err)
 	}
+}
+
+func compileLatexWithTectonic(latexSource string) ([]byte, error) {
+	tectonicCompileSem <- struct{}{}
+	defer func() { <-tectonicCompileSem }()
+
+	tempDir, err := os.MkdirTemp("", "resume-compile-*")
+	if err != nil {
+		return nil, fmt.Errorf("temp dir: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	texPath := filepath.Join(tempDir, "resume.tex")
+	if err := os.WriteFile(texPath, []byte(latexSource), 0o644); err != nil {
+		return nil, fmt.Errorf("write tex: %w", err)
+	}
+
+	cmd := exec.Command("tectonic", texPath)
+	cmd.Dir = tempDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("tectonic failed: %w\nOutput: %s", err, string(output))
+	}
+
+	pdfPath := filepath.Join(tempDir, "resume.pdf")
+	pdfData, err := os.ReadFile(pdfPath)
+	if err != nil {
+		return nil, fmt.Errorf("read pdf: %w", err)
+	}
+
+	return pdfData, nil
 }
 
 func (h *Handler) HandleResumeReanalyze(w http.ResponseWriter, r *http.Request) {
