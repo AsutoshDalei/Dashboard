@@ -127,7 +127,15 @@ func main() {
 	authHandler := auth.NewHandler(sessionStore, cfg.AccessPasskey, templates)
 
 	emailSvc := email.NewService(cfg.UniversityEmail, cfg.PersonalEmail, cfg.DefaultSenderKey)
-	emailHandler := email.NewHandler(emailSvc, templates)
+	gmailConfig := &email.GmailConfig{
+		AccessToken:  cfg.GmailAccessToken,
+		RefreshToken: cfg.GmailRefreshToken,
+		ClientID:     cfg.GmailClientID,
+		ClientSecret: cfg.GmailClientSecret,
+		TokenURI:     cfg.GmailTokenURI,
+		Expiry:       cfg.GmailExpiry,
+	}
+	emailHandler := email.NewHandler(emailSvc, templates, gmailConfig)
 
 	coverLetterSvc := coverletter.NewService()
 	coverLetterHandler := coverletter.NewHandler(coverLetterSvc, templates)

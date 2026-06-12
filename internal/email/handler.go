@@ -12,12 +12,22 @@ import (
 )
 
 type Handler struct {
-	svc  *Service
-	tmpl *template.Template
+	svc    *Service
+	tmpl   *template.Template
+	config *GmailConfig
 }
 
-func NewHandler(svc *Service, tmpl *template.Template) *Handler {
-	return &Handler{svc: svc, tmpl: tmpl}
+type GmailConfig struct {
+	AccessToken  string
+	RefreshToken string
+	ClientID     string
+	ClientSecret string
+	TokenURI     string
+	Expiry       string
+}
+
+func NewHandler(svc *Service, tmpl *template.Template, gmailConfig *GmailConfig) *Handler {
+	return &Handler{svc: svc, tmpl: tmpl, config: gmailConfig}
 }
 
 func (h *Handler) HandleTool(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +63,14 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) {
 		req.SenderKey = "university"
 	}
 
-	provider := NewGmailProvider("")
+	provider := NewGmailProvider(
+		h.config.AccessToken,
+		h.config.RefreshToken,
+		h.config.ClientID,
+		h.config.ClientSecret,
+		h.config.TokenURI,
+		h.config.Expiry,
+	)
 	senderLabel, err := h.svc.Send(req.Email, req.Name, req.Company, strings.ToLower(strings.TrimSpace(req.SenderKey)), provider)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)

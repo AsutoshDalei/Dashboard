@@ -63,9 +63,6 @@ jobs:
       - name: Inject production .env
         run: echo "${{ secrets.PROD_ENV_FILE }}" > staging/.env
 
-      - name: Inject Gmail API token
-        run: echo "${{ secrets.GMAIL_TOKEN_JSON }}" > staging/token.json
-
       - name: Create tarball
         run: tar -czf myapp-linux-arm64.tar.gz -C staging .
 

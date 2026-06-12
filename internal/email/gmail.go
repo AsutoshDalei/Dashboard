@@ -3,9 +3,7 @@ package email
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -14,11 +12,23 @@ import (
 )
 
 type GmailProvider struct {
-	tokenPath string
+	accessToken  string
+	refreshToken string
+	clientID     string
+	clientSecret string
+	tokenURI     string
+	expiry       string
 }
 
-func NewGmailProvider(tokenPath string) *GmailProvider {
-	return &GmailProvider{tokenPath: tokenPath}
+func NewGmailProvider(accessToken, refreshToken, clientID, clientSecret, tokenURI, expiry string) *GmailProvider {
+	return &GmailProvider{
+		accessToken:  accessToken,
+		refreshToken: refreshToken,
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		tokenURI:     tokenURI,
+		expiry:       expiry,
+	}
 }
 
 func (p *GmailProvider) Send(fromEmail, toEmail, name, company string) (string, error) {
@@ -27,7 +37,7 @@ func (p *GmailProvider) Send(fromEmail, toEmail, name, company string) (string, 
 		return "", fmt.Errorf("build message: %w", err)
 	}
 
-	creds, err := getGmailCredentials(p.tokenPath)
+	creds, err := p.getToken()
 	if err != nil {
 		return "", err
 	}
@@ -50,73 +60,25 @@ func (p *GmailProvider) Send(fromEmail, toEmail, name, company string) (string, 
 	return "Gmail API", nil
 }
 
-func getGmailCredentials(tokenPath string) (*oauth2.Token, error) {
-	targetPath := tokenPath
-	if targetPath == "" {
-		targetPath = "token.json"
+func (p *GmailProvider) getToken() (*oauth2.Token, error) {
+	if p.accessToken == "" || p.refreshToken == "" {
+		return nil, fmt.Errorf("Gmail OAuth2 credentials not configured. Set GMAIL_ACCESS_TOKEN and GMAIL_REFRESH_TOKEN in .env")
 	}
 
-	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Gmail token file not found at %s. Copy your token.json to the working directory or set GMAIL_TOKEN_PATH in .env", targetPath)
-	}
-
-	credsData, err := os.ReadFile(targetPath)
+	expiry, err := time.Parse(time.RFC3339Nano, p.expiry)
 	if err != nil {
-		return nil, fmt.Errorf("read token: %w", err)
-	}
-	_ = os.Chmod(targetPath, 0o600)
-
-	var pt struct {
-		Token        string   `json:"token"`
-		RefreshToken string   `json:"refresh_token"`
-		TokenURI     string   `json:"token_uri"`
-		ClientID     string   `json:"client_id"`
-		ClientSecret string   `json:"client_secret"`
-		Scopes       []string `json:"scopes"`
-		Expiry       string   `json:"expiry"`
-	}
-
-	if err := json.Unmarshal(credsData, &pt); err != nil {
-		return nil, fmt.Errorf("parse token: %w", err)
-	}
-
-	expiry, err := time.Parse(time.RFC3339Nano, pt.Expiry)
-	if err != nil {
-		expiry, err = time.Parse(time.RFC3339, pt.Expiry)
+		expiry, err = time.Parse(time.RFC3339, p.expiry)
 		if err != nil {
 			return nil, fmt.Errorf("parse expiry: %w", err)
 		}
 	}
 
 	token := &oauth2.Token{
-		AccessToken:  pt.Token,
+		AccessToken:  p.accessToken,
 		TokenType:    "Bearer",
-		RefreshToken: pt.RefreshToken,
+		RefreshToken: p.refreshToken,
 		Expiry:       expiry,
 	}
 
-	conf := &oauth2.Config{
-		ClientID:     pt.ClientID,
-		ClientSecret: pt.ClientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: pt.TokenURI,
-		},
-		Scopes: pt.Scopes,
-	}
-
-	tokenSource := conf.TokenSource(context.Background(), token)
-	newToken, err := tokenSource.Token()
-	if err != nil {
-		return nil, fmt.Errorf("refresh token: %w", err)
-	}
-
-	if newToken.AccessToken != pt.Token {
-		pt.Token = newToken.AccessToken
-		pt.RefreshToken = newToken.RefreshToken
-		pt.Expiry = newToken.Expiry.Format(time.RFC3339Nano)
-		updated, _ := json.Marshal(pt)
-		_ = os.WriteFile(targetPath, updated, 0o600)
-	}
-
-	return newToken, nil
+	return token, nil
 }

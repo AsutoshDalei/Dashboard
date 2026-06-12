@@ -41,7 +41,12 @@ type Config struct {
 	Password         string
 	UniversityEmail  string
 	PersonalEmail    string
-	GmailTokenPath   string
+	GmailAccessToken  string
+	GmailRefreshToken string
+	GmailClientID     string
+	GmailClientSecret string
+	GmailTokenURI     string
+	GmailExpiry       string
 	DefaultSenderKey string
 
 	// Resume
@@ -99,7 +104,12 @@ func Load() (*Config, error) {
 		Password:                getEnv("PASSWORD", ""),
 		UniversityEmail:         getEnv("UNIVERSITY_EMAIL", ""),
 		PersonalEmail:           getEnv("PERSONAL_EMAIL", ""),
-		GmailTokenPath:          getEnv("GMAIL_TOKEN_PATH", "../token.json"),
+		GmailAccessToken:        getEnv("GMAIL_ACCESS_TOKEN", ""),
+		GmailRefreshToken:       getEnv("GMAIL_REFRESH_TOKEN", ""),
+		GmailClientID:           getEnv("GMAIL_CLIENT_ID", ""),
+		GmailClientSecret:       getEnv("GMAIL_CLIENT_SECRET", ""),
+		GmailTokenURI:           getEnv("GMAIL_TOKEN_URI", "https://oauth2.googleapis.com/token"),
+		GmailExpiry:             getEnv("GMAIL_EXPIRY", ""),
 		DefaultSenderKey:        getEnv("DEFAULT_SENDER_KEY", "university"),
 		ResumePath:              getEnv("RESUME_PATH", ""),
 		ResumeFilename:          getEnv("RESUME_FILENAME", "ASUTOSH_DALEI_RESUME.pdf"),

@@ -11,16 +11,18 @@ A self-hosted web dashboard for sending job application emails, generating cover
 - **Job Tracker** — CRUD + stats + timeline + natural-language SQL query against Supabase
 - **Clipboard** — save and copy text snippets
 - **LLM Chat** — persistent chat sessions with OpenRouter models
-- **Passkey auth** session-based login
+- **Resume Tailor** — ATS scoring, keyword optimization, live PDF preview
+- **Passkey auth** — session-based login
 
 ## CI/CD
 
 Every push to `main` triggers a GitHub Actions workflow that:
 
-1. Cross-compiles the Go binary for `linux/arm64`
-2. Injects `.env`, `credentials.json`, `token.json` from repository secrets
-3. Bundles everything into `myapp-linux-arm64.tar.gz`
-4. Creates a GitHub Release with the tarball attached
+1. Runs tests
+2. Cross-compiles the Go binary for `linux/arm64`
+3. Injects `.env` from repository secrets
+4. Bundles everything into `myapp-linux-arm64.tar.gz`
+5. Creates a GitHub Release with the tarball attached
 
 ## Deploy on Raspberry Pi
 
@@ -38,32 +40,37 @@ echo 'ghp_xxx' > ~/.github_token && chmod 600 ~/.github_token
 ## Local Build
 
 ```bash
-GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build \
-  -ldflags="-s -w -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.commitHash=$(git rev-parse --short HEAD)" \
-  -o pi_bundle/pi_portfolio_arm64
+./build.sh
 ```
 
 ## Project Structure
 
 ```
-├── main.go                 # HTTP server, routes, auth
-├── email.go                # Email sending (SMTP + Gmail API)
-├── coverletter.go          # Cover letter PDF generation
-├── tracker.go              # Job tracker handlers
-├── tracker_query.go        # NL-to-SQL query endpoint
-├── clipboard.go            # Clipboard tool
-├── llm_chat.go             # OpenRouter chat with sessions
-├── oauth.go                # Gmail OAuth token management
-├── auth_limit.go           # Login rate limiter
-├── db_backup.go            # Automated database backups
-├── http_meta.go            # Security headers + request IDs
-├── runtime_templates.go    # Embed + disk fallback templates
-├── templates/              # HTML templates + email/LaTeX templates
-├── static/                 # Embedded CSS/JS
-├── sql/                    # Optional DB scripts
-├── deploy.sh               # Pull-based updater for the Pi
-├── .github/workflows/      # GitHub Actions CI/CD
-└── pi_bundle/              # Local deployment folder
+├── main.go                    # HTTP server, routes, auth
+├── internal/
+│   ├── auth/                  # Passkey authentication
+│   ├── clipboard/             # Clipboard tool
+│   ├── config/                # Environment config
+│   ├── coverletter/           # Cover letter PDF generation
+│   ├── database/              # DB connection + migrations
+│   ├── email/                 # Email sending (SMTP + Gmail API)
+│   ├── llm/                   # LLM service (OpenRouter/Ollama)
+│   ├── middleware/             # Auth, rate-limiting, logging
+│   ├── router/                # HTTP router
+│   ├── tracker/               # Job tracker
+│   └── workspace/             # Workspace/chat features
+├── pkg/
+│   ├── mail/                  # Email templates
+│   ├── ollama/                # Ollama client
+│   ├── openrouter/            # OpenRouter client
+│   └── observability/         # Logging
+├── templates/                 # HTML templates
+├── web/static/                # Tailwind CSS source
+├── static/                    # Compiled CSS/JS
+├── sql/                       # DB scripts
+├── deploy.sh                  # Pull-based updater for Pi
+├── build.sh                   # Local build script
+└── .github/workflows/         # GitHub Actions CI/CD
 ```
 
 ## Configuration
@@ -72,18 +79,28 @@ Create a `.env` file with your secrets. Required variables:
 
 | Variable | Description |
 |----------|-------------|
-| `EMAIL` / `PASSWORD` | Gmail credentials |
-| `ACCESS_PASSKEY` | Web login passkey |
 | `DATABASE_URL` | Postgres connection URI |
-| `OPENROUTER_API_KEY` | For NL-to-SQL & chat features |
+| `ACCESS_PASSKEY` | Web login passkey |
+| `EMAIL` / `PASSWORD` | Gmail SMTP credentials |
+| `UNIVERSITY_EMAIL` / `PERSONAL_EMAIL` | Sender addresses |
+| `OPENROUTER_API_KEY` | For LLM features |
 
-For the CI/CD pipeline, store these in **GitHub Secrets** (`Settings → Secrets and variables → Actions`):
+Gmail API (OAuth) credentials:
+
+| Variable | Description |
+|----------|-------------|
+| `GMAIL_ACCESS_TOKEN` | OAuth2 access token |
+| `GMAIL_REFRESH_TOKEN` | OAuth2 refresh token |
+| `GMAIL_CLIENT_ID` | OAuth2 client ID |
+| `GMAIL_CLIENT_SECRET` | OAuth2 client secret |
+| `GMAIL_TOKEN_URI` | Token endpoint URL |
+| `GMAIL_EXPIRY` | Token expiry timestamp |
+
+For the CI/CD pipeline, store the full `.env` in **GitHub Secrets** (`Settings → Secrets and variables → Actions`):
 
 | Secret | Content |
 |--------|---------|
 | `PROD_ENV_FILE` | Full `.env` file contents |
-| `GOOGLE_CREDENTIALS` | `credentials.json` (one line) |
-| `GMAIL_TOKEN_JSON` | `token.json` (one line) |
 
 ## Tech Stack
 
@@ -93,3 +110,48 @@ For the CI/CD pipeline, store these in **GitHub Secrets** (`Settings → Secrets
 - **OpenRouter** — LLM API gateway
 - **ngrok** — public tunnel (optional)
 - **GitHub Actions** — cross-compile & release pipeline
+
+## Email API
+
+The emailer exposes a JSON API endpoint. It requires session authentication (login via the web UI first to get a `session_token` cookie).
+
+**Endpoint:** `POST /send-email`
+
+**Request body:**
+```json
+{
+  "name": "John Smith",
+  "company": "Google",
+  "email": "john@google.com",
+  "sender_key": "university"
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Recipient's name |
+| `company` | Yes | Target company |
+| `email` | Yes | Recipient's email address |
+| `sender_key` | No | `university` (default) or `personal` |
+
+**Example with curl:**
+```bash
+# First login to get session cookie
+curl -c cookies.txt -X POST https://your-domain:5001/login \
+  -d "passkey=your_passkey"
+
+# Send email
+curl -b cookies.txt -X POST https://your-domain:5001/send-email \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Smith","company":"Google","email":"john@google.com"}'
+```
+
+**Response (success):**
+```json
+{"success": true, "message": "Email sent via Gmail API"}
+```
+
+**Response (error):**
+```json
+{"success": false, "error": "Missing required fields"}
+```
