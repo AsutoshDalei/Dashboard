@@ -200,6 +200,7 @@
     }
 
     function showLoader() {
+        removeLoader();
         var div = document.createElement('div');
         div.className = 'flex gap-3 justify-start';
         div.id = 'chatLoader';

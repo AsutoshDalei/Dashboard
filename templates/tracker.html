@@ -1172,6 +1172,18 @@
                 runOrgCheck(e.target.value.trim()),
             );
 
+            countInput.addEventListener("input", () => {
+                if (!lastOrgCheck.exists) return;
+                const add = parseInt(countInput.value, 10) || 0;
+                upsertHint.textContent =
+                    lastOrgCheck.name +
+                    " exists with " +
+                    lastOrgCheck.count +
+                    " app(s). Will set total to " +
+                    (lastOrgCheck.count + add) +
+                    ".";
+            });
+
             $("upsertForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
                 const btn = $("upsertBtn");
