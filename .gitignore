@@ -1,4 +1,5 @@
 .DS_Store
+.env
 pi_bundle/.DS_Store
 pi_bundle/.env
 pi_bundle/credentials.json
