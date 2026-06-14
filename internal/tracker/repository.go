@@ -98,7 +98,8 @@ func (r *Repository) Upsert(ctx context.Context, app Application) (*UpsertResult
 	}
 
 	var prevCount int
-	err = r.pool.QueryRow(ctx, `SELECT COALESCE(count, 0) FROM applications WHERE organization = $1`, orgName).Scan(&prevCount)
+	var currentStatus string
+	err = r.pool.QueryRow(ctx, `SELECT COALESCE(count, 0), COALESCE(status, '') FROM applications WHERE organization = $1`, orgName).Scan(&prevCount, &currentStatus)
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, fmt.Errorf("upsert: %w", err)
 	}
@@ -107,6 +108,10 @@ func (r *Repository) Upsert(ctx context.Context, app Application) (*UpsertResult
 	newCount := app.Count
 	if exists {
 		newCount = prevCount + app.Count
+		if currentStatus == "Rejected" && app.Count > 0 {
+			rejected := "Rejected"
+			app.Status = &rejected
+		}
 	}
 
 	var resultID int
