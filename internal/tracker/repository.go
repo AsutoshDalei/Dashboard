@@ -132,7 +132,7 @@ func (r *Repository) Upsert(ctx context.Context, app Application) (*UpsertResult
 		).Scan(&resultID, &resultOrg, &resultCount)
 	} else {
 		err = r.pool.QueryRow(ctx, `INSERT INTO applications (organization, job_role, location, contacts, applied_dates, remarks, status, category, count, username_password)
-			VALUES ($1, $2, $3, $4, NULLIF($5::text, '')::date, $6, $7, $8, $9, $10)
+			VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), COALESCE(NULLIF($5::text, '')::date, CURRENT_DATE), NULLIF($6, ''), $7, $8, $9, NULLIF($10, ''))
 			RETURNING id, organization, count`,
 			orgName, app.JobRole, app.Location, app.Contacts,
 			app.AppliedDates, app.Remarks, app.Status, app.Category,
