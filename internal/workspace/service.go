@@ -241,7 +241,7 @@ func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, syst
 	provider := s.getProvider(params)
 	messages := []pkgllm.Message{
 		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: jobDescription},
+		{Role: "user", Content: fmt.Sprintf("Resume:\n%s\n\nJob Description:\n%s", s.resumeMarkdown, jobDescription)},
 	}
 	resp, err := provider.ChatWithSchema(ctx, messages, resumeAnalysisSchema)
 	if err != nil {
