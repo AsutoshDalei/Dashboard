@@ -28,13 +28,11 @@ type Config struct {
 	NgrokPublicURL   string
 
 	// LLM
-	LLMProvider         string
-	OllamaHost          string
-	OllamaModel         string
-	OpenRouterAPIKey    string
-	OpenRouterModel     string
-	OpenRouterModels    string
-	OpenRouterChatModel string
+	LLMProvider      string
+	OllamaHost       string
+	OllamaModel      string
+	OpenRouterAPIKey string
+	OpenRouterModel  string
 
 	// Email
 	Email            string
@@ -97,10 +95,9 @@ func Load() (*Config, error) {
 		OllamaHost:              getEnv("OLLAMA_HOST", "172.16.7.115"),
 		OllamaModel:             getEnv("OLLAMA_MODEL", "gemma4"),
 		OpenRouterAPIKey:        getEnv("OPENROUTER_API_KEY", ""),
-		OpenRouterModel:         getEnv("OPENROUTER_MODEL", ""),
-		OpenRouterModels:        getEnv("OPENROUTER_MODELS", ""),
-		OpenRouterChatModel:     getEnv("OPENROUTER_CHAT_MODEL", ""),
-		Email:                   getEnv("EMAIL", ""),
+		OpenRouterModel:  getEnv("OPENROUTER_MODEL", ""),
+
+		Email:            getEnv("EMAIL", ""),
 		Password:                getEnv("PASSWORD", ""),
 		UniversityEmail:         getEnv("UNIVERSITY_EMAIL", ""),
 		PersonalEmail:           getEnv("PERSONAL_EMAIL", ""),
