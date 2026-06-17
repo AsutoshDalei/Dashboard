@@ -33,6 +33,10 @@
             <span class="nav-icon w-5 text-center" aria-hidden="true">📊</span>
             <span class="nav-text">Job Tracker</span>
         </a>
+        <a href="/tools/jobposted" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-high transition-colors no-underline text-sm {{if eq . "jobposted"}}active{{end}}">
+            <span class="nav-icon w-5 text-center" aria-hidden="true">🕐</span>
+            <span class="nav-text">Job Posted</span>
+        </a>
         <a href="/tools/chat" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-high transition-colors no-underline text-sm {{if eq . "chat"}}active{{end}}">
             <span class="nav-icon w-5 text-center" aria-hidden="true">💬</span>
             <span class="nav-text">Chat</span>

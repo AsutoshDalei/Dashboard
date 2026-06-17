@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Job Posted - Asutosh's Dashboard</title>
+        <link rel="stylesheet" href="/static/output.css" />
+        <script>if(localStorage.getItem('sidebar_collapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed')}</script>
+        <style>.preload,.preload *{transition:none!important}html[data-sidebar="collapsed"] .sidebar{width:3.5rem!important;transform:translateX(0)!important}html[data-sidebar="collapsed"] .sidebar .nav-text,html[data-sidebar="collapsed"] .sidebar .sidebar-brand,html[data-sidebar="collapsed"] .sidebar .sidebar-footer .nav-text{display:none!important}html[data-sidebar="collapsed"] .sidebar .sidebar-header{justify-content:center}html[data-sidebar="collapsed"] .sidebar .sidebar-header,html[data-sidebar="collapsed"] .sidebar .sidebar-nav{padding-left:.75rem!important;padding-right:.75rem!important}html[data-sidebar="collapsed"] .sidebar .nav-link{justify-content:center;padding-left:.5rem!important;padding-right:.5rem!important}html[data-sidebar="collapsed"] .main-content{margin-left:3.5rem!important}</style>
+        <style>
+            :root {
+                --surface-lowest: #09090b;
+                --surface-low: #0c0c0e;
+                --surface: #09090b;
+                --surface-container: #18181b;
+                --surface-high: #27272a;
+                --surface-highest: #3f3f46;
+                --on-surface: #fafafa;
+                --on-surface-variant: #a1a1aa;
+                --on-surface-muted: #71717a;
+                --primary: #bec2ff;
+                --primary-container: #8a94ff;
+                --on-primary-container: #18181b;
+                --outline: #52525b;
+                --outline-variant: #27272a;
+                --border: #27272a;
+                --success: #22c55e;
+                --success-soft: rgba(34, 197, 94, 0.12);
+                --error: #ef4444;
+                --error-soft: rgba(239, 68, 68, 0.12);
+                --warning: #f59e0b;
+                --warning-soft: rgba(245, 158, 11, 0.12);
+            }
+            .tool-card {
+                background: rgba(24, 24, 27, 0.5);
+                border: 1px solid #27272a;
+                border-radius: 8px;
+                padding: 32px;
+                margin-bottom: 32px;
+                min-width: 0;
+            }
+            .result-card {
+                margin-top: 24px;
+                padding: 24px;
+                border-radius: 8px;
+                border: 1px solid #27272a;
+                background: #09090b;
+                display: none;
+            }
+            .result-card.show { display: block; }
+            .result-card.error { border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.06); }
+            .result-card.success { border-color: rgba(34, 197, 94, 0.4); }
+            .result-header { margin-bottom: 20px; }
+            .result-job-title { font-size: 20px; font-weight: 700; color: var(--on-surface); margin-bottom: 4px; }
+            .result-company { font-size: 15px; color: var(--on-surface-variant); margin-bottom: 12px; }
+            .result-date { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+            .result-date.fresh { color: var(--success); }
+            .result-date.recent { color: var(--warning); }
+            .result-date.stale { color: var(--error); }
+            .result-date.no-date { color: var(--on-surface-variant); font-size: 20px; font-weight: 500; }
+            .result-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+            .pill { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+            .pill.high { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+            .pill.medium { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+            .pill.low { background: rgba(239, 68, 68, 0.15); color: var(--error); }
+            .pill.ats { background: rgba(138, 148, 255, 0.15); color: var(--primary); }
+            .pill.cached { background: rgba(39, 39, 42, 0.8); color: var(--on-surface-variant); }
+            .result-explanation { font-size: 13px; color: var(--on-surface-variant); margin-bottom: 16px; line-height: 1.5; }
+            .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--on-surface-muted); margin-bottom: 8px; margin-top: 20px; }
+            .sources-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+            .source-item { font-size: 12px; color: var(--on-surface-variant); padding: 6px 10px; border-radius: 6px; background: rgba(39, 39, 42, 0.4); border: 1px solid #27272a; }
+            .source-item .label { color: var(--on-surface-muted); }
+            .source-item.active { border-color: rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.05); }
+            .source-item.empty { opacity: 0.5; }
+            .insights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+            .insight-item { padding: 8px 12px; border-radius: 6px; background: rgba(39, 39, 42, 0.5); border: 1px solid #27272a; }
+            .insight-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--on-surface-muted); margin-bottom: 2px; }
+            .insight-value { font-size: 14px; font-weight: 500; color: var(--on-surface); }
+            .error-message { font-size: 14px; color: var(--error); }
+        </style>
+    </head>
+    <body class="bg-surface text-on-surface antialiased min-h-screen overflow-x-hidden">
+        <div class="dashboard-layout flex min-h-screen">
+            {{template "sidebar" "jobposted"}}
+            <main class="main-content flex-1 ml-56 min-h-screen transition-all duration-200 min-w-0">
+                <div class="content-wrapper max-w-6xl mx-auto px-6 py-8">
+                    <header class="page-header mb-8">
+                        <h1 class="page-title text-2xl font-bold text-on-surface">Job Posted</h1>
+                        <p class="page-subtitle text-on-surface-muted mt-1">Find out when a job posting was published.</p>
+                    </header>
+
+                    <section class="tool-card">
+                        <h2 class="text-lg font-semibold text-on-surface mb-1">Check Posting Date</h2>
+                        <p class="text-sm text-on-surface-muted mb-6">Paste a job posting URL to discover when it was originally posted.</p>
+                        <form id="checkForm">
+                            <div class="flex gap-3">
+                                <input type="url" id="jobUrl"
+                                    class="flex-1 px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm"
+                                    placeholder="https://job-boards.greenhouse.io/acme/jobs/12345"
+                                    required />
+                                <button type="submit" id="checkBtn"
+                                    class="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
+                                    <span>Check</span>
+                                    <span class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></span>
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="resultCard" class="result-card">
+                            <div id="resultContent"></div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+
+        <script>
+            const $ = (id) => document.getElementById(id);
+            function escapeHtml(s) {
+                var d = document.createElement("div");
+                d.textContent = s;
+                return d.innerHTML;
+            }
+
+            async function fetchJson(url, options) {
+                const res = await fetch(url, options);
+                const ct = (res.headers.get("content-type") || "").toLowerCase();
+                const text = await res.text();
+                if (!ct.includes("application/json")) {
+                    if (res.status === 401) throw new Error("Session expired.");
+                    throw new Error("Unexpected response.");
+                }
+                let data;
+                try { data = JSON.parse(text); } catch { throw new Error("Invalid server response."); }
+                if (!res.ok || data.success === false) {
+                    throw new Error(data.error || "Request failed (" + res.status + ")");
+                }
+                return data;
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return null;
+                try {
+                    var d = new Date(dateStr + "T00:00:00");
+                    if (isNaN(d.getTime())) return null;
+                    return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+                } catch (e) { return null; }
+            }
+
+            function daysSince(dateStr) {
+                if (!dateStr) return null;
+                try {
+                    var posted = new Date(dateStr + "T00:00:00");
+                    if (isNaN(posted.getTime())) return null;
+                    return Math.floor((new Date() - posted) / (1000 * 60 * 60 * 24));
+                } catch (e) { return null; }
+            }
+
+            function confidencePill(c) {
+                var cls = (c || "unknown").toLowerCase();
+                return '<span class="pill ' + escapeHtml(cls) + '">' + escapeHtml(c || "unknown") + '</span>';
+            }
+
+            $("checkForm").addEventListener("submit", async function (e) {
+                e.preventDefault();
+                var btn = $("checkBtn");
+                var card = $("resultCard");
+                var content = $("resultContent");
+
+                btn.querySelector(".btn-loader").classList.remove("hidden");
+                btn.disabled = true;
+                card.className = "result-card show";
+
+                try {
+                    var data = await fetchJson("/api/job-posted/check", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ url: $("jobUrl").value.trim() }),
+                    });
+
+                    var d = data.data;
+                    var formattedDate = formatDate(d.most_probable_date);
+                    var days = daysSince(d.most_probable_date);
+                    var ageText = days !== null ? (days === 0 ? "Posted today" : days + " day" + (days === 1 ? "" : "s") + " ago") : "";
+
+                    var html = '';
+
+                    if (d.job_title || d.company) {
+                        html += '<div class="result-header">';
+                        if (d.job_title) html += '<div class="result-job-title">' + escapeHtml(d.job_title) + '</div>';
+                        if (d.company) html += '<div class="result-company">' + escapeHtml(d.company) + '</div>';
+                        html += '</div>';
+                    }
+
+                    var dateCls = formattedDate ? (days < 3 ? 'fresh' : days <= 7 ? 'recent' : 'stale') : 'no-date';
+                    if (formattedDate) {
+                        html += '<div class="result-date ' + dateCls + '">' + escapeHtml(formattedDate) + '</div>';
+                    } else {
+                        html += '<div class="result-date no-date">No date found</div>';
+                    }
+
+                    html += '<div class="result-meta">';
+                    html += confidencePill(d.confidence);
+                    if (ageText) html += '<span class="pill" style="background:rgba(138,148,255,0.15);color:var(--primary)">' + escapeHtml(ageText) + '</span>';
+                    if (d.ats_detected) html += '<span class="pill ats">ATS: ' + escapeHtml(d.ats_detected) + '</span>';
+                    if (d.most_probable_date) html += '<span class="pill cached">' + escapeHtml(d.most_probable_date) + '</span>';
+                    html += '</div>';
+
+                    if (d.explanation) {
+                        html += '<div class="result-explanation">' + escapeHtml(d.explanation) + '</div>';
+                    } else if (d.reason) {
+                        html += '<div class="result-explanation">' + escapeHtml(d.reason) + '</div>';
+                    }
+
+                    if (d.hidden_insights && d.hidden_insights.length > 0) {
+                        html += '<div class="section-label">Hidden Insights</div>';
+                        html += '<div class="insights-grid">';
+                        d.hidden_insights.forEach(function (insight) {
+                            html += '<div class="insight-item">';
+                            html += '<div class="insight-label">' + escapeHtml(insight.label) + '</div>';
+                            html += '<div class="insight-value">' + escapeHtml(insight.value) + '</div>';
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                    }
+
+                    if (d.sources) {
+                        html += '<div class="section-label">Date Sources</div>';
+                        html += '<div class="sources-grid">';
+                        var sources = [
+                            { key: "ats_api", label: "ATS API", val: d.sources.ats_api ? d.sources.ats_api.date : null, sub: d.sources.ats_api ? d.sources.ats_api.name : null },
+                            { key: "json_ld", label: "JSON-LD", val: d.sources.json_ld },
+                            { key: "regex", label: "Regex", val: d.sources.regex },
+                            { key: "open_graph", label: "Open Graph", val: d.sources.open_graph },
+                            { key: "updated", label: "Updated", val: d.sources.updated },
+                            { key: "sitemap", label: "Sitemap", val: d.sources.sitemap },
+                            { key: "wayback", label: "Wayback", val: d.sources.wayback }
+                        ];
+                        sources.forEach(function (s) {
+                            var hasVal = s.val && s.val !== "null";
+                            var cls = hasVal ? "active" : "empty";
+                            var display = hasVal ? escapeHtml(s.val) : "—";
+                            if (hasVal && s.sub) display += ' <span style="opacity:0.6">(' + escapeHtml(s.sub) + ')</span>';
+                            html += '<div class="source-item ' + cls + '"><span class="label">' + escapeHtml(s.label) + ':</span> ' + display + '</div>';
+                        });
+                        html += '</div>';
+                    }
+
+                    if (d.suggestion) {
+                        html += '<div class="section-label">Suggestion</div>';
+                        html += '<div class="result-explanation">' + escapeHtml(d.suggestion) + '</div>';
+                    }
+
+                    if (d.tier2_ats_name) {
+                        html += '<div class="section-label">Tier 2 ATS</div>';
+                        html += '<div class="result-explanation">' + escapeHtml(d.tier2_ats_name);
+                        if (d.tier2_ats_job_url) html += ' — <a href="' + escapeHtml(d.tier2_ats_job_url) + '" target="_blank" style="color:var(--primary)">' + escapeHtml(d.tier2_ats_job_url) + '</a>';
+                        html += '</div>';
+                    }
+
+                    if (d.linkedin_comparison_date || d.linkedin_comparison_text) {
+                        html += '<div class="section-label">LinkedIn Comparison</div>';
+                        html += '<div class="result-explanation">';
+                        if (d.linkedin_comparison_text) html += escapeHtml(d.linkedin_comparison_text);
+                        if (d.linkedin_comparison_date) html += ' (' + escapeHtml(d.linkedin_comparison_date) + ')';
+                        html += '</div>';
+                    }
+
+                    content.innerHTML = html;
+                    card.className = "result-card show success";
+                } catch (err) {
+                    content.innerHTML = '<div class="error-message">Error: ' + escapeHtml(err.message) + '</div>';
+                    card.className = "result-card show error";
+                } finally {
+                    btn.querySelector(".btn-loader").classList.add("hidden");
+                    btn.disabled = false;
+                }
+            });
+        </script>
+        <script src="/static/sidebar.js" defer></script>
+    </body>
+</html>

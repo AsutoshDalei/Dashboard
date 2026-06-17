@@ -20,6 +20,7 @@ import (
 	"pi_dashboard/internal/coverletter"
 	"pi_dashboard/internal/database"
 	"pi_dashboard/internal/email"
+	"pi_dashboard/internal/jobposted"
 	"pi_dashboard/internal/llm"
 	"pi_dashboard/internal/middleware"
 	"pi_dashboard/internal/router"
@@ -157,6 +158,9 @@ func main() {
 	trackerSvc := tracker.NewService(trackerRepo, llmProvider, prompts)
 	trackerHandler := tracker.NewHandler(trackerSvc, templates)
 
+	jobpostedSvc := jobposted.NewService()
+	jobpostedHandler := jobposted.NewHandler(jobpostedSvc, templates)
+
 	resumeText, _ := os.ReadFile("resume.tex")
 	resumeMarkdown, _ := os.ReadFile("resume.md")
 
@@ -173,6 +177,7 @@ func main() {
 		CoverLetter: coverLetterHandler,
 		Clipboard:   clipboardHandler,
 		Tracker:     trackerHandler,
+		JobPosted:   jobpostedHandler,
 		Workspace:   workspaceHandler,
 	}
 
