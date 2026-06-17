@@ -53,9 +53,10 @@ func (h *Handler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
 	var templates []EmailTemplate
 	for key, meta := range manifest.Templates {
 		templates = append(templates, EmailTemplate{
-			Key:     key,
-			Name:    meta.Name,
-			Subject: meta.Subject,
+			Key:      key,
+			Name:     meta.Name,
+			Subject:  meta.Subject,
+			UsesRole: meta.UsesRole,
 		})
 	}
 
@@ -88,7 +89,7 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) {
 		req.SenderKey = "university"
 	}
 	if req.TemplateKey == "" {
-		req.TemplateKey = "default"
+		req.TemplateKey = "referral"
 	}
 
 	provider := NewGmailProvider(
@@ -99,7 +100,7 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) {
 		h.config.TokenURI,
 		h.config.Expiry,
 	)
-	senderLabel, err := h.svc.Send(req.Email, req.Name, req.Company, strings.ToLower(strings.TrimSpace(req.SenderKey)), req.TemplateKey, provider)
+	senderLabel, err := h.svc.Send(req.Email, req.Name, req.Company, strings.ToLower(strings.TrimSpace(req.SenderKey)), req.TemplateKey, req.Role, provider)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return

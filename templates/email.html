@@ -34,8 +34,12 @@
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-on-surface-variant mb-1" for="templateKey">Email Template</label>
                             <select id="templateKey" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm" required>
-                                <option value="default" selected>Loading templates...</option>
+                                <option value="referral" selected>Loading templates...</option>
                             </select>
+                        </div>
+                        <div id="roleField" class="mb-4 hidden">
+                            <label class="block text-sm font-medium text-on-surface-variant mb-1" for="rolePosition">Role / Position</label>
+                            <input type="text" id="rolePosition" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="e.g. ML Engineer" autocomplete="off">
                         </div>
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-on-surface-variant mb-1" for="personName">Recipient's Name</label>
@@ -62,23 +66,62 @@
     <script>
     (function() {
         var templateSelect = document.getElementById('templateKey');
+        var roleField = document.getElementById('roleField');
+        var roleInput = document.getElementById('rolePosition');
+        var submitBtn = document.getElementById('submitBtn');
+        var templateMeta = {};
+
+        function toggleRoleField() {
+            var selected = templateSelect.value;
+            var meta = templateMeta[selected];
+            if (meta && meta.uses_role) {
+                roleField.classList.remove('hidden');
+                roleInput.setAttribute('required', '');
+            } else {
+                roleField.classList.add('hidden');
+                roleInput.removeAttribute('required');
+                roleInput.value = '';
+            }
+            validateForm();
+        }
+
+        function validateForm() {
+            var name = document.getElementById('personName').value.trim();
+            var company = document.getElementById('companyName').value.trim();
+            var email = document.getElementById('emailAddress').value.trim();
+            var valid = name !== '' && company !== '' && email !== '' && templateSelect.value !== '';
+            if (!roleField.classList.contains('hidden')) {
+                valid = valid && roleInput.value.trim() !== '';
+            }
+            submitBtn.disabled = !valid;
+        }
 
         fetch('/email-templates').then(function(r) { return r.json(); }).then(function(d) {
             templateSelect.innerHTML = '';
             if (d.templates && d.templates.length > 0) {
                 d.templates.forEach(function(t) {
+                    templateMeta[t.key] = t;
                     var opt = document.createElement('option');
                     opt.value = t.key;
                     opt.textContent = t.name;
                     templateSelect.appendChild(opt);
                 });
+                templateSelect.value = 'referral';
+                toggleRoleField();
             }
         }).catch(function() {
-            templateSelect.innerHTML = '<option value="default">Standard Application</option>';
+            templateSelect.innerHTML = '<option value="referral">Referral Request</option>';
         });
+
+        templateSelect.addEventListener('change', toggleRoleField);
+        document.getElementById('personName').addEventListener('input', validateForm);
+        document.getElementById('companyName').addEventListener('input', validateForm);
+        document.getElementById('emailAddress').addEventListener('input', validateForm);
+        roleInput.addEventListener('input', validateForm);
 
         document.getElementById('emailForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            if (submitBtn.disabled) return;
             var btn = document.getElementById('submitBtn');
             var status = document.getElementById('statusMessage');
             var loader = btn.querySelector('.btn-loader');
@@ -86,16 +129,20 @@
             loader.classList.remove('hidden');
             btn.disabled = true;
             status.className = 'mt-4 px-4 py-3 rounded-lg text-sm hidden';
+            var payload = {
+                name: document.getElementById('personName').value.trim(),
+                company: document.getElementById('companyName').value.trim(),
+                email: document.getElementById('emailAddress').value.trim(),
+                sender_key: document.getElementById('senderKey').value,
+                template_key: document.getElementById('templateKey').value
+            };
+            if (!roleField.classList.contains('hidden')) {
+                payload.role = roleInput.value.trim();
+            }
             fetch('/send-email', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    name: document.getElementById('personName').value,
-                    company: document.getElementById('companyName').value,
-                    email: document.getElementById('emailAddress').value,
-                    sender_key: document.getElementById('senderKey').value,
-                    template_key: document.getElementById('templateKey').value
-                })
+                body: JSON.stringify(payload)
             }).then(function(r) { return r.json(); }).then(function(d) {
                 status.className = 'mt-4 px-4 py-3 rounded-lg text-sm ' + (d.success ? 'bg-success-soft text-success' : 'bg-error-soft text-error');
                 status.textContent = d.message || d.error || 'Something went wrong.';
@@ -107,9 +154,11 @@
             }).finally(function() {
                 btn.querySelector('.btn-text').textContent = 'Send Application';
                 loader.classList.add('hidden');
-                btn.disabled = false;
+                validateForm();
             });
         });
+
+        validateForm();
     })();
     </script>
     <script src="/static/sidebar.js" defer></script>

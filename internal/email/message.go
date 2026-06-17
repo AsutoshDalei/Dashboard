@@ -12,13 +12,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"pi_dashboard/pkg/mail"
 )
 
 type EmailTemplateData struct {
 	Name    string
 	Company string
+	Role    string
 }
 
 func loadTemplateManifest() (*EmailTemplateManifest, error) {
@@ -49,6 +48,32 @@ func renderSubject(subjectTmpl string, data EmailTemplateData) (string, error) {
 	return buf.String(), nil
 }
 
+func renderHTMLTemplate(filePath string, data EmailTemplateData) (string, error) {
+	candidates := []string{filePath, filepath.Join("..", filePath)}
+	var b []byte
+	var err error
+	for _, c := range candidates {
+		b, err = os.ReadFile(c)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return "", fmt.Errorf("read template %s: %w", filePath, err)
+	}
+
+	name := filepath.Base(filePath)
+	tmpl, err := template.New(name).Parse(string(b))
+	if err != nil {
+		return "", fmt.Errorf("parse html template %s: %w", filePath, err)
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("render html template %s: %w", filePath, err)
+	}
+	return buf.String(), nil
+}
+
 func resolveTemplatePath(templateKey string) (string, string, error) {
 	manifest, err := loadTemplateManifest()
 	if err != nil {
@@ -67,12 +92,12 @@ func resolveTemplatePath(templateKey string) (string, string, error) {
 	return meta.Subject, meta.File, nil
 }
 
-func buildMessage(fromEmail, toEmail, name, company, templateKey string) ([]byte, error) {
+func buildMessage(fromEmail, toEmail, name, company, templateKey, role string) ([]byte, error) {
 	if templateKey == "" {
-		templateKey = "default"
+		templateKey = "referral"
 	}
 
-	data := EmailTemplateData{Name: name, Company: company}
+	data := EmailTemplateData{Name: name, Company: company, Role: role}
 
 	subjectTmpl, templateFile, err := resolveTemplatePath(templateKey)
 	if err != nil {
@@ -84,7 +109,7 @@ func buildMessage(fromEmail, toEmail, name, company, templateKey string) ([]byte
 		return nil, fmt.Errorf("render subject: %w", err)
 	}
 
-	body, err := mail.RenderHTML("EMAIL_TEMPLATE_PATH", templateFile, data)
+	body, err := renderHTMLTemplate(templateFile, data)
 	if err != nil {
 		return nil, fmt.Errorf("build body: %w", err)
 	}

@@ -35,13 +35,13 @@ func (s *Service) GetConfig(senderKey string) (SenderConfig, error) {
 	return config, nil
 }
 
-func (s *Service) Send(toEmail, name, company, senderKey, templateKey string, provider Provider) (string, error) {
+func (s *Service) Send(toEmail, name, company, senderKey, templateKey, role string, provider Provider) (string, error) {
 	config, err := s.GetConfig(senderKey)
 	if err != nil {
 		return "", err
 	}
 
-	senderLabel, err := provider.Send(config.FromEmail, toEmail, name, company, templateKey)
+	senderLabel, err := provider.Send(config.FromEmail, toEmail, name, company, templateKey, role)
 	if err != nil {
 		return config.Label, fmt.Errorf("send failed: %w", err)
 	}
