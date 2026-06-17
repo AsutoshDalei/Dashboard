@@ -44,8 +44,9 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w -X main.buildTime
 echo "Building for local machine..."
 go build -ldflags="-s -w -X main.buildTime=$BUILD_TIME -X main.commitHash=$COMMIT_HASH" -o pi_bundle/pi_portfolio_normal
 
-mkdir -p pi_bundle/templates
-	cp templates/email_body.tmpl pi_bundle/templates/
+mkdir -p pi_bundle/templates/email_body
+	cp templates/email_body/*.tmpl pi_bundle/templates/email_body/
+	cp templates/email_templates.json pi_bundle/templates/
 	cp templates/coverletter.tex.tmpl pi_bundle/templates/
 	cp templates/system_prompts.json pi_bundle/
 	cp resume.tex pi_bundle/

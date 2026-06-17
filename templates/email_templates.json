@@ -1,0 +1,22 @@
+{
+  "templates": {
+    "followup": {
+      "name": "Follow-up",
+      "subject": "Following up on my application at {{.Company}}",
+      "file": "templates/email_body/followup.tmpl",
+      "uses_role": true
+    },
+    "referral": {
+      "name": "Referral Request",
+      "subject": "Referral request for {{.Role}} roles at {{.Company}}",
+      "file": "templates/email_body/referral.tmpl",
+      "uses_role": true
+    },
+    "networking": {
+      "name": "Networking",
+      "subject": "Connecting about ML opportunities at {{.Company}}",
+      "file": "templates/email_body/networking.tmpl",
+      "uses_role": false
+    }
+  }
+}

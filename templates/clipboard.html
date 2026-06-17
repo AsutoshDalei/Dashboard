@@ -76,13 +76,13 @@
             var isFirst = index === 0;
             var isLast = index === items.length - 1;
             return '<div class="flex items-center gap-2 px-4 py-3 bg-surface-container rounded-lg border border-outline-variant group">' +
+                '<button onclick="copyItem(\'' + item.id + '\')" class="px-2 py-1 text-xs rounded bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" title="Copy to clipboard">📋</button>' +
+                '<div class="flex-1 min-w-0"><div class="text-sm font-medium text-on-surface truncate">' + escapeHtml(item.label || 'Untitled') + '</div>' +
+                '<div class="text-xs text-on-surface-muted truncate mt-0.5">' + escapeHtml(item.content) + '</div></div>' +
                 '<div class="flex flex-col gap-0.5">' +
                 '<button onclick="moveItem(\'' + item.id + '\', \'up\')" class="px-1 py-0.5 text-[10px] rounded bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" title="Move up"' + (isFirst ? ' disabled' : '') + '>▲</button>' +
                 '<button onclick="moveItem(\'' + item.id + '\', \'down\')" class="px-1 py-0.5 text-[10px] rounded bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" title="Move down"' + (isLast ? ' disabled' : '') + '>▼</button>' +
                 '</div>' +
-                '<div class="flex-1 min-w-0"><div class="text-sm font-medium text-on-surface truncate">' + escapeHtml(item.label || 'Untitled') + '</div>' +
-                '<div class="text-xs text-on-surface-muted truncate mt-0.5">' + escapeHtml(item.content) + '</div></div>' +
-                '<button onclick="copyItem(\'' + item.id + '\')" class="px-2 py-1 text-xs rounded bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" title="Copy to clipboard">📋</button>' +
                 '<button onclick="deleteItem(\'' + item.id + '\')" class="px-2 py-1 text-xs rounded bg-surface-high text-error hover:bg-error-soft transition-colors border-none cursor-pointer" title="Delete">✕</button></div>';
         }).join('');
     }

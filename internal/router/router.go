@@ -11,6 +11,7 @@ import (
 	"pi_dashboard/internal/coverletter"
 	"pi_dashboard/internal/database"
 	"pi_dashboard/internal/email"
+	"pi_dashboard/internal/jobposted"
 	"pi_dashboard/internal/middleware"
 	"pi_dashboard/internal/tracker"
 	"pi_dashboard/internal/workspace"
@@ -27,6 +28,7 @@ type Dependencies struct {
 	CoverLetter *coverletter.Handler
 	Clipboard   *clipboard.Handler
 	Tracker     *tracker.Handler
+	JobPosted   *jobposted.Handler
 	Workspace   *workspace.Handler
 }
 
@@ -74,6 +76,7 @@ func (r *Router) registerRoutes() {
 	if r.deps.Email != nil {
 		r.mux.HandleFunc("/tools/email", auth(r.deps.Email.HandleTool))
 		r.mux.HandleFunc("/send-email", auth(r.deps.Email.HandleSend))
+		r.mux.HandleFunc("/email-templates", auth(r.deps.Email.HandleTemplates))
 	}
 
 	if r.deps.CoverLetter != nil {
@@ -98,6 +101,11 @@ func (r *Router) registerRoutes() {
 		r.mux.HandleFunc("/api/applications/contribution", auth(r.deps.Tracker.HandleContribution))
 		r.mux.HandleFunc("/api/applications/contribution-range", auth(r.deps.Tracker.HandleContributionRange))
 		r.mux.HandleFunc("/api/applications/query", auth(r.deps.Tracker.HandleQuery))
+	}
+
+	if r.deps.JobPosted != nil {
+		r.mux.HandleFunc("/tools/jobposted", auth(r.deps.JobPosted.HandleTool))
+		r.mux.HandleFunc("/api/job-posted/check", auth(r.deps.JobPosted.HandleCheck))
 	}
 
 	if r.deps.Workspace != nil {
