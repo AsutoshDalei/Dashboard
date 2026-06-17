@@ -66,8 +66,7 @@ type Config struct {
 	DisableDBBackup      bool
 
 	// Tracker
-	EnableSuggestTrgm     bool
-	ActivityStatsTimezone string
+	EnableSuggestTrgm bool
 
 	// Observability
 	LogLevel string
@@ -121,7 +120,6 @@ func Load() (*Config, error) {
 		DBBackupSchemas:         getEnv("DB_BACKUP_SCHEMAS", "public"),
 		DisableDBBackup:         getEnvBool("DISABLE_DB_BACKUP"),
 		EnableSuggestTrgm:       getEnvBool("ENABLE_SUGGEST_TRGM"),
-		ActivityStatsTimezone:   getEnv("ACTIVITY_STATS_TIMEZONE", ""),
 		LogLevel:                getEnv("LOG_LEVEL", "info"),
 	}
 

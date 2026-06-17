@@ -154,7 +154,7 @@ func main() {
 	}
 
 	trackerRepo := tracker.NewRepository(dbPool.Pool)
-	trackerSvc := tracker.NewService(trackerRepo, llmProvider, cfg.ActivityStatsTimezone, prompts)
+	trackerSvc := tracker.NewService(trackerRepo, llmProvider, prompts)
 	trackerHandler := tracker.NewHandler(trackerSvc, templates)
 
 	resumeText, _ := os.ReadFile("resume.tex")

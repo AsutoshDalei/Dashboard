@@ -13,23 +13,15 @@ import (
 )
 
 type Service struct {
-	repo     *Repository
-	llm      pkgllm.Provider
-	timezone *time.Location
-	prompts  *llm.Prompts
+	repo    *Repository
+	llm     pkgllm.Provider
+	prompts *llm.Prompts
 }
 
-func NewService(repo *Repository, llmProvider pkgllm.Provider, tz string, prompts *llm.Prompts) *Service {
-	loc := time.Local
-	if tz != "" {
-		if l, err := time.LoadLocation(tz); err == nil {
-			loc = l
-		}
-	}
+func NewService(repo *Repository, llmProvider pkgllm.Provider, prompts *llm.Prompts) *Service {
 	return &Service{
 		repo:    repo,
 		llm:     llmProvider,
-		timezone: loc,
 		prompts: prompts,
 	}
 }
@@ -45,7 +37,7 @@ func (s *Service) Upsert(ctx context.Context, app Application) (*UpsertResult, e
 		if app.AppliedDates != nil && strings.TrimSpace(*app.AppliedDates) != "" {
 			activityDate = strings.TrimSpace(*app.AppliedDates)
 		} else {
-			activityDate = time.Now().In(s.timezone).Format("2006-01-02")
+			activityDate = time.Now().In(time.Local).Format("2006-01-02")
 		}
 		action := "upsert"
 		if app.Status != nil && strings.TrimSpace(*app.Status) != "" {
@@ -68,11 +60,15 @@ func (s *Service) Suggest(ctx context.Context, query string, limit int) ([]map[s
 }
 
 func (s *Service) Stats(ctx context.Context) (*Stats, error) {
-	return s.repo.Stats(ctx, s.timezone)
+	now := time.Now().In(time.Local)
+	today := now.Format("2006-01-02")
+	weekStart := now.AddDate(0, 0, -int(now.Weekday())).Format("2006-01-02")
+	return s.repo.Stats(ctx, today, weekStart)
 }
 
 func (s *Service) Timeline(ctx context.Context, days int, freq string) ([]TimelineEntry, error) {
-	return s.repo.Timeline(ctx, days, freq)
+	today := time.Now().In(time.Local).Format("2006-01-02")
+	return s.repo.Timeline(ctx, days, freq, today)
 }
 
 func (s *Service) ContributionHeatmap(ctx context.Context, year int, month int) ([]ContributionDay, error) {

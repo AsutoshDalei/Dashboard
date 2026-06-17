@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +20,28 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 
 func normalizeOrgName(name string) string {
 	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(name))), " ")
+}
+
+func (r *Repository) exactMatchOrganization(ctx context.Context, name string) (string, bool, error) {
+	normalized := normalizeOrgName(name)
+	if normalized == "" {
+		return "", false, nil
+	}
+
+	query := `SELECT organization
+		FROM applications
+		WHERE lower(regexp_replace(trim(organization), '\s+', ' ', 'g')) = $1
+		ORDER BY organization
+		LIMIT 1`
+	var org string
+	err := r.pool.QueryRow(ctx, query, normalized).Scan(&org)
+	if err == nil {
+		return org, true, nil
+	}
+	if err != pgx.ErrNoRows {
+		return "", false, err
+	}
+	return "", false, nil
 }
 
 func (r *Repository) findMatchingOrganization(ctx context.Context, name string) (string, bool, error) {
@@ -89,7 +110,7 @@ func (r *Repository) Upsert(ctx context.Context, app Application) (*UpsertResult
 		return nil, fmt.Errorf("organization required")
 	}
 
-	matchedOrg, exists, err := r.findMatchingOrganization(ctx, orgName)
+	matchedOrg, exists, err := r.exactMatchOrganization(ctx, orgName)
 	if err != nil {
 		return nil, fmt.Errorf("upsert: %w", err)
 	}
@@ -198,10 +219,7 @@ func (r *Repository) Suggest(ctx context.Context, query string, limit int) ([]ma
 	return results, nil
 }
 
-func (r *Repository) Stats(ctx context.Context, timezone *time.Location) (*Stats, error) {
-	now := time.Now().In(timezone)
-	today := now.Format("2006-01-02")
-	weekStart := now.AddDate(0, 0, -int(now.Weekday())).Format("2006-01-02")
+func (r *Repository) Stats(ctx context.Context, today string, weekStart string) (*Stats, error) {
 
 	var s Stats
 
@@ -237,7 +255,7 @@ func (r *Repository) Stats(ctx context.Context, timezone *time.Location) (*Stats
 	err = r.pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(delta_count), 0), COUNT(DISTINCT organization)
 		FROM application_activity_logs WHERE activity_date >= $1 AND activity_date <= $2`,
-		weekStart, now.Format("2006-01-02"),
+		weekStart, today,
 	).Scan(&s.WeekApplications, &s.WeekCompanies)
 	if err != nil {
 		return nil, err
@@ -254,7 +272,7 @@ func (r *Repository) Stats(ctx context.Context, timezone *time.Location) (*Stats
 	return &s, nil
 }
 
-func (r *Repository) Timeline(ctx context.Context, days int, freq string) ([]TimelineEntry, error) {
+func (r *Repository) Timeline(ctx context.Context, days int, freq string, today string) ([]TimelineEntry, error) {
 	bucket := "activity_date"
 	if freq == "week" {
 		bucket = "date_trunc('week', activity_date)::date"
@@ -265,8 +283,8 @@ func (r *Repository) Timeline(ctx context.Context, days int, freq string) ([]Tim
 	var dateFilter string
 	var args []any
 	if days > 0 {
-		dateFilter = " WHERE activity_date >= CURRENT_DATE - $1::integer"
-		args = append(args, days)
+		dateFilter = " WHERE activity_date >= $1::date - $2::integer"
+		args = append(args, today, days)
 	}
 
 	query := fmt.Sprintf(`SELECT %s::text, COALESCE(SUM(delta_count), 0), COUNT(DISTINCT organization)
@@ -299,8 +317,8 @@ func (r *Repository) Timeline(ctx context.Context, days int, freq string) ([]Tim
 
 	args = nil
 	if days > 0 {
-		dateFilter = fmt.Sprintf(" WHERE %s >= CURRENT_DATE - $1::integer", fallbackDate)
-		args = append(args, days)
+		dateFilter = fmt.Sprintf(" WHERE %s >= $1::date - $2::integer", fallbackDate)
+		args = append(args, today, days)
 	} else {
 		dateFilter = ""
 	}
@@ -439,7 +457,7 @@ func (r *Repository) Query(ctx context.Context, sql string) (pgx.Rows, error) {
 }
 
 func (r *Repository) CheckExists(ctx context.Context, name string) (string, bool, int, string, *string, error) {
-	matchedOrg, exists, err := r.findMatchingOrganization(ctx, name)
+	matchedOrg, exists, err := r.exactMatchOrganization(ctx, name)
 	if err != nil {
 		return "", false, 0, "", nil, err
 	}
