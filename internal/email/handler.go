@@ -38,6 +38,31 @@ func (h *Handler) HandleTool(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
+		return
+	}
+
+	manifest, err := loadTemplateManifest()
+	if err != nil {
+		middleware.RespondJSON(w, http.StatusInternalServerError, false, "Failed to load templates", "")
+		return
+	}
+
+	var templates []EmailTemplate
+	for key, meta := range manifest.Templates {
+		templates = append(templates, EmailTemplate{
+			Key:     key,
+			Name:    meta.Name,
+			Subject: meta.Subject,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"templates": templates})
+}
+
 func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
@@ -62,6 +87,9 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) {
 	if req.SenderKey == "" {
 		req.SenderKey = "university"
 	}
+	if req.TemplateKey == "" {
+		req.TemplateKey = "default"
+	}
 
 	provider := NewGmailProvider(
 		h.config.AccessToken,
@@ -71,7 +99,7 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) {
 		h.config.TokenURI,
 		h.config.Expiry,
 	)
-	senderLabel, err := h.svc.Send(req.Email, req.Name, req.Company, strings.ToLower(strings.TrimSpace(req.SenderKey)), provider)
+	senderLabel, err := h.svc.Send(req.Email, req.Name, req.Company, strings.ToLower(strings.TrimSpace(req.SenderKey)), req.TemplateKey, provider)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return

@@ -3,12 +3,15 @@ package email
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"mime/multipart"
 	"net/textproto"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"pi_dashboard/pkg/mail"
 )
@@ -18,9 +21,70 @@ type EmailTemplateData struct {
 	Company string
 }
 
-func buildMessage(fromEmail, toEmail, name, company string) ([]byte, error) {
-	subject := fmt.Sprintf("Interest in ML Engineer and Applied Scientist roles at %s", company)
-	body, err := mail.RenderHTML("EMAIL_TEMPLATE_PATH", "templates/email_body.tmpl", EmailTemplateData{Name: name, Company: company})
+func loadTemplateManifest() (*EmailTemplateManifest, error) {
+	candidates := []string{"templates/email_templates.json", filepath.Join("..", "templates", "email_templates.json")}
+	for _, c := range candidates {
+		b, err := os.ReadFile(c)
+		if err != nil {
+			continue
+		}
+		var manifest EmailTemplateManifest
+		if err := json.Unmarshal(b, &manifest); err != nil {
+			return nil, fmt.Errorf("parse email_templates.json: %w", err)
+		}
+		return &manifest, nil
+	}
+	return nil, fmt.Errorf("email_templates.json not found")
+}
+
+func renderSubject(subjectTmpl string, data EmailTemplateData) (string, error) {
+	t, err := template.New("subject").Parse(subjectTmpl)
+	if err != nil {
+		return "", fmt.Errorf("parse subject template: %w", err)
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("render subject template: %w", err)
+	}
+	return buf.String(), nil
+}
+
+func resolveTemplatePath(templateKey string) (string, string, error) {
+	manifest, err := loadTemplateManifest()
+	if err != nil {
+		return "", "", err
+	}
+
+	meta, ok := manifest.Templates[templateKey]
+	if !ok {
+		var keys []string
+		for k := range manifest.Templates {
+			keys = append(keys, k)
+		}
+		return "", "", fmt.Errorf("unknown template '%s'. Available: %s", templateKey, strings.Join(keys, ", "))
+	}
+
+	return meta.Subject, meta.File, nil
+}
+
+func buildMessage(fromEmail, toEmail, name, company, templateKey string) ([]byte, error) {
+	if templateKey == "" {
+		templateKey = "default"
+	}
+
+	data := EmailTemplateData{Name: name, Company: company}
+
+	subjectTmpl, templateFile, err := resolveTemplatePath(templateKey)
+	if err != nil {
+		return nil, fmt.Errorf("resolve template: %w", err)
+	}
+
+	subject, err := renderSubject(subjectTmpl, data)
+	if err != nil {
+		return nil, fmt.Errorf("render subject: %w", err)
+	}
+
+	body, err := mail.RenderHTML("EMAIL_TEMPLATE_PATH", templateFile, data)
 	if err != nil {
 		return nil, fmt.Errorf("build body: %w", err)
 	}

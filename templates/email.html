@@ -32,6 +32,12 @@
                             </select>
                         </div>
                         <div class="mb-4">
+                            <label class="block text-sm font-medium text-on-surface-variant mb-1" for="templateKey">Email Template</label>
+                            <select id="templateKey" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm" required>
+                                <option value="default" selected>Loading templates...</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
                             <label class="block text-sm font-medium text-on-surface-variant mb-1" for="personName">Recipient's Name</label>
                             <input type="text" id="personName" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="e.g. John Smith" autocomplete="off" required>
                         </div>
@@ -54,38 +60,57 @@
         </main>
     </div>
     <script>
-    document.getElementById('emailForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        var btn = document.getElementById('submitBtn');
-        var status = document.getElementById('statusMessage');
-        var loader = btn.querySelector('.btn-loader');
-        btn.querySelector('.btn-text').textContent = 'Sending...';
-        loader.classList.remove('hidden');
-        btn.disabled = true;
-        status.className = 'mt-4 px-4 py-3 rounded-lg text-sm hidden';
-        fetch('/send-email', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                name: document.getElementById('personName').value,
-                company: document.getElementById('companyName').value,
-                email: document.getElementById('emailAddress').value,
-                sender_key: document.getElementById('senderKey').value
-            })
-        }).then(function(r) { return r.json(); }).then(function(d) {
-            status.className = 'mt-4 px-4 py-3 rounded-lg text-sm ' + (d.success ? 'bg-success-soft text-success' : 'bg-error-soft text-error');
-            status.textContent = d.message || d.error || 'Something went wrong.';
-            status.classList.remove('hidden');
+    (function() {
+        var templateSelect = document.getElementById('templateKey');
+
+        fetch('/email-templates').then(function(r) { return r.json(); }).then(function(d) {
+            templateSelect.innerHTML = '';
+            if (d.templates && d.templates.length > 0) {
+                d.templates.forEach(function(t) {
+                    var opt = document.createElement('option');
+                    opt.value = t.key;
+                    opt.textContent = t.name;
+                    templateSelect.appendChild(opt);
+                });
+            }
         }).catch(function() {
-            status.className = 'mt-4 px-4 py-3 rounded-lg text-sm bg-error-soft text-error';
-            status.textContent = 'Network error.';
-            status.classList.remove('hidden');
-        }).finally(function() {
-            btn.querySelector('.btn-text').textContent = 'Send Application';
-            loader.classList.add('hidden');
-            btn.disabled = false;
+            templateSelect.innerHTML = '<option value="default">Standard Application</option>';
         });
-    });
+
+        document.getElementById('emailForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('submitBtn');
+            var status = document.getElementById('statusMessage');
+            var loader = btn.querySelector('.btn-loader');
+            btn.querySelector('.btn-text').textContent = 'Sending...';
+            loader.classList.remove('hidden');
+            btn.disabled = true;
+            status.className = 'mt-4 px-4 py-3 rounded-lg text-sm hidden';
+            fetch('/send-email', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    name: document.getElementById('personName').value,
+                    company: document.getElementById('companyName').value,
+                    email: document.getElementById('emailAddress').value,
+                    sender_key: document.getElementById('senderKey').value,
+                    template_key: document.getElementById('templateKey').value
+                })
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                status.className = 'mt-4 px-4 py-3 rounded-lg text-sm ' + (d.success ? 'bg-success-soft text-success' : 'bg-error-soft text-error');
+                status.textContent = d.message || d.error || 'Something went wrong.';
+                status.classList.remove('hidden');
+            }).catch(function() {
+                status.className = 'mt-4 px-4 py-3 rounded-lg text-sm bg-error-soft text-error';
+                status.textContent = 'Network error.';
+                status.classList.remove('hidden');
+            }).finally(function() {
+                btn.querySelector('.btn-text').textContent = 'Send Application';
+                loader.classList.add('hidden');
+                btn.disabled = false;
+            });
+        });
+    })();
     </script>
     <script src="/static/sidebar.js" defer></script>
 </body>

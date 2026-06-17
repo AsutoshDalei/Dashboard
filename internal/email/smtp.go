@@ -14,7 +14,7 @@ func NewSMTPProvider(fromEmail, password string) *SMTPProvider {
 	return &SMTPProvider{fromEmail: fromEmail, password: password}
 }
 
-func (p *SMTPProvider) Send(fromEmail, toEmail, name, company string) (string, error) {
+func (p *SMTPProvider) Send(fromEmail, toEmail, name, company, templateKey string) (string, error) {
 	if fromEmail == "" {
 		fromEmail = p.fromEmail
 	}
@@ -22,7 +22,7 @@ func (p *SMTPProvider) Send(fromEmail, toEmail, name, company string) (string, e
 		return "", fmt.Errorf("SMTP not configured: check EMAIL and PASSWORD")
 	}
 
-	msg, err := buildMessage(fromEmail, toEmail, name, company)
+	msg, err := buildMessage(fromEmail, toEmail, name, company, templateKey)
 	if err != nil {
 		return "", fmt.Errorf("build message: %w", err)
 	}

@@ -74,6 +74,7 @@ func (r *Router) registerRoutes() {
 	if r.deps.Email != nil {
 		r.mux.HandleFunc("/tools/email", auth(r.deps.Email.HandleTool))
 		r.mux.HandleFunc("/send-email", auth(r.deps.Email.HandleSend))
+		r.mux.HandleFunc("/email-templates", auth(r.deps.Email.HandleTemplates))
 	}
 
 	if r.deps.CoverLetter != nil {

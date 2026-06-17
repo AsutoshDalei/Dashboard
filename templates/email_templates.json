@@ -1,0 +1,24 @@
+{
+  "templates": {
+    "default": {
+      "name": "Standard Application",
+      "subject": "Interest in ML Engineer and Applied Scientist roles at {{.Company}}",
+      "file": "templates/email_body/default.tmpl"
+    },
+    "followup": {
+      "name": "Follow-up",
+      "subject": "Following up on my application at {{.Company}}",
+      "file": "templates/email_body/followup.tmpl"
+    },
+    "referral": {
+      "name": "Referral Request",
+      "subject": "Referral request for ML Engineer roles at {{.Company}}",
+      "file": "templates/email_body/referral.tmpl"
+    },
+    "networking": {
+      "name": "Networking",
+      "subject": "Connecting about ML opportunities at {{.Company}}",
+      "file": "templates/email_body/networking.tmpl"
+    }
+  }
+}
