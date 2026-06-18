@@ -6,7 +6,7 @@ A self-hosted web dashboard for sending job application emails, generating cover
 
 ## Features
 
-- **Email Sender** — dual Gmail support (University via OAuth API, Personal via SMTP)
+- **Email Sender** — dual Gmail support (University via OAuth API, Personal via SMTP), email history tracking with duplicate detection
 - **Cover Letter Generator** — LaTeX-generated PDFs via Tectonic
 - **Job Tracker** — CRUD + stats + timeline + natural-language SQL query against Supabase
 - **Clipboard** — save and copy text snippets
@@ -154,4 +154,61 @@ curl -b cookies.txt -X POST https://your-domain:5001/send-email \
 **Response (error):**
 ```json
 {"success": false, "error": "Missing required fields"}
+```
+
+## Email History
+
+Every sent email is recorded in the database. When entering a recipient's email address, a status dot appears on blur:
+
+- **Green dot** — New recipient, ready to send
+- **Yellow dot** — Already contacted; hover to see when and via which template
+
+### Programmatic API with Safety
+
+Send emails via REST API with duplicate safety:
+
+**Endpoint:** `POST /api/email/send`
+
+```bash
+curl -b cookies.txt -X POST https://your-domain:5001/api/email/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Smith",
+    "company": "Google",
+    "email": "john@google.com",
+    "sender_key": "university",
+    "template_key": "referral",
+    "role": "ML Engineer",
+    "safety": "safe"
+  }'
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Recipient's name |
+| `company` | Yes | Target company |
+| `email` | Yes | Recipient's email address |
+| `sender_key` | No | `university` (default) or `personal` |
+| `template_key` | No | `referral` (default), `followup`, or `networking` |
+| `role` | No | Role/position (used by some templates) |
+| `safety` | No | `safe` (default) or `unsafe` |
+
+**Safety flags:**
+- `safe` — Returns 409 if email already exists in database
+- `unsafe` — Sends regardless of prior history
+
+### Check Email Status
+
+```bash
+curl -b cookies.txt "https://your-domain:5001/api/email/check?email=john@google.com"
+```
+
+**Response (new email):**
+```json
+{"exists": false}
+```
+
+**Response (previously contacted):**
+```json
+{"exists": true, "name": "John Smith", "template": "referral", "sent_at": "Jan 15, 2026 3:04 PM"}
 ```

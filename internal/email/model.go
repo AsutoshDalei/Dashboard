@@ -36,3 +36,20 @@ type EmailTemplateMeta struct {
 type Provider interface {
 	Send(fromEmail, toEmail, name, company, templateKey, role string) (string, error)
 }
+
+type EmailCheckResponse struct {
+	Exists   bool   `json:"exists"`
+	Name     string `json:"name,omitempty"`
+	Template string `json:"template,omitempty"`
+	SentAt   string `json:"sent_at,omitempty"`
+}
+
+type EmailAPIRequest struct {
+	Name        string `json:"name"`
+	Company     string `json:"company"`
+	Email       string `json:"email"`
+	SenderKey   string `json:"sender_key"`
+	TemplateKey string `json:"template_key"`
+	Role        string `json:"role"`
+	Safety      string `json:"safety"`
+}
