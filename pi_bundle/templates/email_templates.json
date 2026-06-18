@@ -8,7 +8,7 @@
     },
     "referral": {
       "name": "Referral Request",
-      "subject": "Request for Referral — {{.Role}} at {{.Company}}",
+      "subject": "Request for Referral - {{.Role}} at {{.Company}}",
       "file": "templates/email_body/referral.tmpl",
       "uses_role": true
     },
