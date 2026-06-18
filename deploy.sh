@@ -65,4 +65,12 @@ chmod +x "$DEST/pi_portfolio_arm64"
 
 echo ""
 echo "Done: $tag extracted to $DEST/"
+echo ""
+
+# Ensure fontconfig is installed (required by tectonic for PDF generation)
+if ! dpkg -s fontconfig >/dev/null 2>&1; then
+  echo "Installing fontconfig (required by tectonic)..."
+  sudo apt-get update -qq && sudo apt-get install -y fontconfig
+fi
+
 echo "Run: cd $DEST && ./pi_portfolio_arm64"
