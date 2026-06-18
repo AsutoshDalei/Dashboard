@@ -136,7 +136,8 @@ func main() {
 		TokenURI:     cfg.GmailTokenURI,
 		Expiry:       cfg.GmailExpiry,
 	}
-	emailHandler := email.NewHandler(emailSvc, templates, gmailConfig)
+	emailRepo := email.NewRepository(dbPool.Pool)
+	emailHandler := email.NewHandler(emailSvc, templates, gmailConfig, emailRepo)
 
 	coverLetterSvc := coverletter.NewService()
 	coverLetterHandler := coverletter.NewHandler(coverLetterSvc, templates)

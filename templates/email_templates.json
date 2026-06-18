@@ -8,13 +8,13 @@
     },
     "referral": {
       "name": "Referral Request",
-      "subject": "Referral request for {{.Role}} roles at {{.Company}}",
+      "subject": "Request for Referral - {{.Role}} at {{.Company}}",
       "file": "templates/email_body/referral.tmpl",
       "uses_role": true
     },
     "networking": {
       "name": "Networking",
-      "subject": "Connecting about ML opportunities at {{.Company}}",
+      "subject": "Interest in Opportunities at {{.Company}}",
       "file": "templates/email_body/networking.tmpl",
       "uses_role": false
     }

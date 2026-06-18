@@ -52,6 +52,10 @@
                         <div class="mb-6">
                             <label class="block text-sm font-medium text-on-surface-variant mb-1" for="emailAddress">Recipient's Email</label>
                             <input type="email" id="emailAddress" class="w-full px-3 py-2 rounded-lg bg-surface-high text-on-surface border border-outline focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-muted text-sm" placeholder="e.g. john@company.com" autocomplete="off" required>
+                            <div id="emailStatus" class="flex items-center gap-1.5 mt-1 hidden">
+                                <span id="emailDot" class="w-2 h-2 rounded-full"></span>
+                                <span id="emailTooltip" class="text-xs text-on-surface-muted"></span>
+                            </div>
                         </div>
                         <button type="submit" id="submitBtn" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
                             <span class="btn-text">Send Application</span>
@@ -118,6 +122,38 @@
         document.getElementById('companyName').addEventListener('input', validateForm);
         document.getElementById('emailAddress').addEventListener('input', validateForm);
         roleInput.addEventListener('input', validateForm);
+
+        var emailInput = document.getElementById('emailAddress');
+        var emailStatus = document.getElementById('emailStatus');
+        var emailDot = document.getElementById('emailDot');
+        var emailTooltip = document.getElementById('emailTooltip');
+
+        emailInput.addEventListener('blur', function() {
+            var val = emailInput.value.trim();
+            if (!val) {
+                emailStatus.classList.add('hidden');
+                return;
+            }
+            fetch('/api/email/check?email=' + encodeURIComponent(val))
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    emailStatus.classList.remove('hidden');
+                    if (d.exists) {
+                        emailDot.className = 'w-2 h-2 rounded-full bg-yellow-400';
+                        emailTooltip.textContent = 'Last sent on ' + d.sent_at + ' via ' + d.template;
+                    } else {
+                        emailDot.className = 'w-2 h-2 rounded-full bg-green-500';
+                        emailTooltip.textContent = 'Ready to send';
+                    }
+                })
+                .catch(function() {
+                    emailStatus.classList.add('hidden');
+                });
+        });
+
+        emailInput.addEventListener('input', function() {
+            emailStatus.classList.add('hidden');
+        });
 
         document.getElementById('emailForm').addEventListener('submit', function(e) {
             e.preventDefault();

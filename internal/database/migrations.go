@@ -59,6 +59,18 @@ var migrations = []Migration{
 		EXCEPTION WHEN duplicate_column THEN null;
 		END $$`,
 	},
+	{
+		Name: "005_emails",
+		SQL: `CREATE TABLE IF NOT EXISTS emails (
+			id SERIAL PRIMARY KEY,
+			recipient_name TEXT NOT NULL,
+			recipient_email TEXT NOT NULL UNIQUE,
+			template_key TEXT NOT NULL,
+			sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+		CREATE INDEX IF NOT EXISTS idx_emails_recipient_email ON emails(recipient_email);`,
+	},
 }
 
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
