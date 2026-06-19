@@ -56,7 +56,7 @@ jobs:
           cp templates/email_body/*.tmpl staging/templates/email_body/
           cp templates/email_templates.json staging/templates/
           cp templates/coverletter.tex.tmpl staging/templates/
-          cp templates/system_prompts.json staging/
+          cp templates/system_prompts.json staging/templates/
           cp resume.tex staging/
           cp resume.md staging/
           cp pi_bundle/ASUTOSH_DALEI_RESUME.pdf staging/

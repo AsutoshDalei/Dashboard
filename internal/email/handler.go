@@ -86,6 +86,7 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid email address", "")
 		return
 	}
+	req.Email = strings.ToLower(req.Email)
 
 	if req.SenderKey == "" {
 		req.SenderKey = "university"
@@ -118,7 +119,7 @@ func (h *Handler) HandleCheckEmail(w http.ResponseWriter, r *http.Request) {
 		middleware.RespondJSON(w, http.StatusMethodNotAllowed, false, "Method not allowed", "")
 		return
 	}
-	emailAddr := r.URL.Query().Get("email")
+	emailAddr := strings.ToLower(r.URL.Query().Get("email"))
 	if emailAddr == "" {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Missing email parameter", "")
 		return
@@ -158,6 +159,7 @@ func (h *Handler) HandleSendAPI(w http.ResponseWriter, r *http.Request) {
 		middleware.RespondJSON(w, http.StatusBadRequest, false, "Invalid email address", "")
 		return
 	}
+	req.Email = strings.ToLower(req.Email)
 
 	if req.SenderKey == "" {
 		req.SenderKey = "university"

@@ -128,6 +128,11 @@
         var emailDot = document.getElementById('emailDot');
         var emailTooltip = document.getElementById('emailTooltip');
 
+        emailInput.addEventListener('input', function() {
+            emailInput.value = emailInput.value.toLowerCase();
+            emailStatus.classList.add('hidden');
+        });
+
         emailInput.addEventListener('blur', function() {
             var val = emailInput.value.trim();
             if (!val) {
@@ -168,7 +173,7 @@
             var payload = {
                 name: document.getElementById('personName').value.trim(),
                 company: document.getElementById('companyName').value.trim(),
-                email: document.getElementById('emailAddress').value.trim(),
+                email: document.getElementById('emailAddress').value.trim().toLowerCase(),
                 sender_key: document.getElementById('senderKey').value,
                 template_key: document.getElementById('templateKey').value
             };

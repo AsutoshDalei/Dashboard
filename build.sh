@@ -48,7 +48,7 @@ mkdir -p pi_bundle/templates/email_body
 	cp templates/email_body/*.tmpl pi_bundle/templates/email_body/
 	cp templates/email_templates.json pi_bundle/templates/
 	cp templates/coverletter.tex.tmpl pi_bundle/templates/
-	cp templates/system_prompts.json pi_bundle/
+	cp templates/system_prompts.json pi_bundle/templates/
 	cp resume.tex pi_bundle/
 	cp resume.md pi_bundle/
 
