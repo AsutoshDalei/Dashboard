@@ -13,6 +13,7 @@ type EmailRequest struct {
 	SenderKey   string `json:"sender_key"`
 	TemplateKey string `json:"template_key"`
 	Role        string `json:"role"`
+	AttachResume bool  `json:"attach_resume"`
 }
 
 type EmailTemplate struct {
@@ -34,7 +35,7 @@ type EmailTemplateMeta struct {
 }
 
 type Provider interface {
-	Send(fromEmail, toEmail, name, company, templateKey, role string) (string, error)
+	Send(fromEmail, toEmail, name, company, templateKey, role string, attachResume bool) (string, error)
 }
 
 type EmailCheckResponse struct {
@@ -45,11 +46,12 @@ type EmailCheckResponse struct {
 }
 
 type EmailAPIRequest struct {
-	Name        string `json:"name"`
-	Company     string `json:"company"`
-	Email       string `json:"email"`
-	SenderKey   string `json:"sender_key"`
-	TemplateKey string `json:"template_key"`
-	Role        string `json:"role"`
-	Safety      string `json:"safety"`
+	Name         string `json:"name"`
+	Company      string `json:"company"`
+	Email        string `json:"email"`
+	SenderKey    string `json:"sender_key"`
+	TemplateKey  string `json:"template_key"`
+	Role         string `json:"role"`
+	Safety       string `json:"safety"`
+	AttachResume bool   `json:"attach_resume"`
 }

@@ -103,7 +103,7 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) {
 		h.config.TokenURI,
 		h.config.Expiry,
 	)
-	senderLabel, err := h.svc.Send(req.Email, req.Name, req.Company, strings.ToLower(strings.TrimSpace(req.SenderKey)), req.TemplateKey, req.Role, provider)
+	senderLabel, err := h.svc.Send(req.Email, req.Name, req.Company, strings.ToLower(strings.TrimSpace(req.SenderKey)), req.TemplateKey, req.Role, req.AttachResume, provider)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return
@@ -185,7 +185,7 @@ func (h *Handler) HandleSendAPI(w http.ResponseWriter, r *http.Request) {
 		h.config.TokenURI, h.config.Expiry,
 	)
 	senderLabel, err := h.svc.Send(req.Email, req.Name, req.Company,
-		strings.ToLower(strings.TrimSpace(req.SenderKey)), req.TemplateKey, req.Role, provider)
+		strings.ToLower(strings.TrimSpace(req.SenderKey)), req.TemplateKey, req.Role, req.AttachResume, provider)
 	if err != nil {
 		middleware.RespondJSONAPI(w, r, http.StatusInternalServerError, false, "", "", err)
 		return

@@ -31,8 +31,8 @@ func NewGmailProvider(accessToken, refreshToken, clientID, clientSecret, tokenUR
 	}
 }
 
-func (p *GmailProvider) Send(fromEmail, toEmail, name, company, templateKey, role string) (string, error) {
-	msg, err := buildMessage(fromEmail, toEmail, name, company, templateKey, role)
+func (p *GmailProvider) Send(fromEmail, toEmail, name, company, templateKey, role string, attachResume bool) (string, error) {
+	msg, err := buildMessage(fromEmail, toEmail, name, company, templateKey, role, attachResume)
 	if err != nil {
 		return "", fmt.Errorf("build message: %w", err)
 	}

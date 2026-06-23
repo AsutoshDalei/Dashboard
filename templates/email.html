@@ -57,6 +57,13 @@
                                 <span id="emailTooltip" class="text-xs text-on-surface-muted"></span>
                             </div>
                         </div>
+                        <div class="mb-6 flex items-center gap-3">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="attachResume" class="sr-only peer">
+                                <div class="w-9 h-5 bg-surface-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                            <label class="text-sm text-on-surface-variant cursor-pointer" for="attachResume">Attach resume</label>
+                        </div>
                         <button type="submit" id="submitBtn" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-primary text-on-primary-container hover:brightness-110 transition-all duration-150 cursor-pointer border-none">
                             <span class="btn-text">Send Application</span>
                             <div class="btn-loader hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin"></div>
@@ -175,7 +182,8 @@
                 company: document.getElementById('companyName').value.trim(),
                 email: document.getElementById('emailAddress').value.trim().toLowerCase(),
                 sender_key: document.getElementById('senderKey').value,
-                template_key: document.getElementById('templateKey').value
+                template_key: document.getElementById('templateKey').value,
+                attach_resume: document.getElementById('attachResume').checked
             };
             if (!roleField.classList.contains('hidden')) {
                 payload.role = roleInput.value.trim();

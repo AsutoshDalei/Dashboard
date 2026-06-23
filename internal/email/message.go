@@ -92,7 +92,7 @@ func resolveTemplatePath(templateKey string) (string, string, error) {
 	return meta.Subject, meta.File, nil
 }
 
-func buildMessage(fromEmail, toEmail, name, company, templateKey, role string) ([]byte, error) {
+func buildMessage(fromEmail, toEmail, name, company, templateKey, role string, attachResume bool) ([]byte, error) {
 	if templateKey == "" {
 		templateKey = "referral"
 	}
@@ -144,36 +144,50 @@ func buildMessage(fromEmail, toEmail, name, company, templateKey, role string) (
 	}
 	htmlPart.Write([]byte(body))
 
-	if _, err := os.Stat(resumePath); err == nil {
-		fileData, err := os.ReadFile(resumePath)
-		if err != nil {
-			return nil, fmt.Errorf("read resume: %w", err)
-		}
-
-		encodedFile := make([]byte, base64.StdEncoding.EncodedLen(len(fileData)))
-		base64.StdEncoding.Encode(encodedFile, fileData)
-
-		var chunkedFile bytes.Buffer
-		for i := 0; i < len(encodedFile); i += 76 {
-			end := i + 76
-			if end > len(encodedFile) {
-				end = len(encodedFile)
+	if attachResume {
+		resumePath := os.Getenv("RESUME_PATH")
+		if resumePath == "" {
+			resumeFilename := os.Getenv("RESUME_FILENAME")
+			if resumeFilename == "" {
+				resumeFilename = "ASUTOSH_DALEI_RESUME.pdf"
 			}
-			chunkedFile.Write(encodedFile[i:end])
-			chunkedFile.WriteString("\r\n")
+			resumePath = filepath.Join("..", resumeFilename)
+			if _, err := os.Stat(resumePath); os.IsNotExist(err) {
+				resumePath = resumeFilename
+			}
 		}
 
-		attachmentPart, err := writer.CreatePart(textproto.MIMEHeader{
-			"Content-Type":              []string{"application/pdf"},
-			"Content-Transfer-Encoding": []string{"base64"},
-			"Content-Disposition":       []string{fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(resumePath))},
-		})
-		if err != nil {
-			return nil, err
+		if _, err := os.Stat(resumePath); err == nil {
+			fileData, err := os.ReadFile(resumePath)
+			if err != nil {
+				return nil, fmt.Errorf("read resume: %w", err)
+			}
+
+			encodedFile := make([]byte, base64.StdEncoding.EncodedLen(len(fileData)))
+			base64.StdEncoding.Encode(encodedFile, fileData)
+
+			var chunkedFile bytes.Buffer
+			for i := 0; i < len(encodedFile); i += 76 {
+				end := i + 76
+				if end > len(encodedFile) {
+					end = len(encodedFile)
+				}
+				chunkedFile.Write(encodedFile[i:end])
+				chunkedFile.WriteString("\r\n")
+			}
+
+			attachmentPart, err := writer.CreatePart(textproto.MIMEHeader{
+				"Content-Type":              []string{"application/pdf"},
+				"Content-Transfer-Encoding": []string{"base64"},
+				"Content-Disposition":       []string{fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(resumePath))},
+			})
+			if err != nil {
+				return nil, err
+			}
+			attachmentPart.Write(chunkedFile.Bytes())
+		} else {
+			slog.Warn("Resume not found", "path", resumePath)
 		}
-		attachmentPart.Write(chunkedFile.Bytes())
-	} else {
-		slog.Warn("Resume not found", "path", resumePath)
 	}
 
 	writer.Close()

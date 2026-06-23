@@ -2,19 +2,19 @@
   "templates": {
     "followup": {
       "name": "Follow-up",
-      "subject": "Following up on my application at {{.Company}}",
+      "subject": "Following up on my application at {{.Company}} - Asutosh Dalei",
       "file": "templates/email_body/followup.tmpl",
       "uses_role": true
     },
     "referral": {
       "name": "Referral Request",
-      "subject": "Request for Referral - {{.Role}} at {{.Company}}",
+      "subject": "{{.Role}} at {{.Company}} - Asutosh Dalei",
       "file": "templates/email_body/referral.tmpl",
       "uses_role": true
     },
     "networking": {
       "name": "Networking",
-      "subject": "Interest in Opportunities at {{.Company}}",
+      "subject": "Opportunities at {{.Company}} - Asutosh Dalei",
       "file": "templates/email_body/networking.tmpl",
       "uses_role": false
     }
