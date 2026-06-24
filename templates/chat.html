@@ -17,6 +17,7 @@
                     <span class="px-2 py-1 rounded text-xs font-medium bg-surface-high text-on-surface-variant">📋 Application Assistant</span>
                     <span id="skillDesc" class="text-xs text-on-surface-muted flex-1">Drafts short, human-sounding job application responses.</span>
                     <button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" id="promptsToggle">Prompts</button>
+                    <button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-high text-on-surface-variant hover:text-on-surface hover:bg-surface-highest transition-colors border-none cursor-pointer" id="clearChatBtn">Clear</button>
                 </div>
 
                 <div id="promptsRow" class="hidden px-6 py-3 bg-surface-high border-b border-outline-variant">
@@ -262,6 +263,17 @@
         removeLoader();
         sendBtn.disabled = false;
         stopBtn.classList.add('hidden');
+    });
+
+    document.getElementById('clearChatBtn').addEventListener('click', function() {
+        fetch('/api/chat/clear', { method: 'POST' });
+        localStorage.removeItem('chat_history');
+        localStorage.removeItem('chat_pending_job_id');
+        chatHistory = [];
+        pendingJobId = null;
+        chatMessages.innerHTML = '';
+        chatMessages.appendChild(emptyState);
+        emptyState.style.display = '';
     });
 
     sendBtn.addEventListener('click', sendMessage);

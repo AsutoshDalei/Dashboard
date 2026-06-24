@@ -40,6 +40,7 @@ type chatRequest struct {
 	Messages       []llm.Message `json:"messages"`
 	Stream         bool          `json:"stream"`
 	ResponseFormat any           `json:"response_format,omitempty"`
+	ReasoningEffort any          `json:"reasoning_effort,omitempty"`
 }
 
 type chatResponse struct {
@@ -58,9 +59,10 @@ type chatResponse struct {
 
 func (c *Client) Chat(ctx context.Context, messages []llm.Message) (llm.Response, error) {
 	reqBody := chatRequest{
-		Model:    c.model,
-		Messages: messages,
-		Stream:   false,
+		Model:           c.model,
+		Messages:        messages,
+		Stream:          false,
+		ReasoningEffort: "high",
 	}
 
 	payload, err := json.Marshal(reqBody)
@@ -120,10 +122,11 @@ func (c *Client) Generate(ctx context.Context, prompt string) (string, error) {
 
 func (c *Client) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
 	reqBody := chatRequest{
-		Model:          c.model,
-		Messages:       messages,
-		Stream:         false,
-		ResponseFormat: schema,
+		Model:           c.model,
+		Messages:        messages,
+		Stream:          false,
+		ResponseFormat:  schema,
+		ReasoningEffort: "high",
 	}
 
 	payload, err := json.Marshal(reqBody)
@@ -173,9 +176,10 @@ func (c *Client) ChatWithSchema(ctx context.Context, messages []llm.Message, sch
 
 func (c *Client) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
 	reqBody := chatRequest{
-		Model:    c.model,
-		Messages: messages,
-		Stream:   true,
+		Model:           c.model,
+		Messages:        messages,
+		Stream:          true,
+		ReasoningEffort: "high",
 	}
 
 	payload, err := json.Marshal(reqBody)

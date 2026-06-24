@@ -53,7 +53,6 @@ type Config struct {
 	ResumeTailorPath string
 
 	// Templates
-	EmailTemplatePath       string
 	CoverLetterTemplatePath string
 	SystemPromptsPath       string
 
@@ -64,9 +63,6 @@ type Config struct {
 	DBBackupRowTolerance int
 	DBBackupSchemas      string
 	DisableDBBackup      bool
-
-	// Tracker
-	EnableSuggestTrgm bool
 
 	// Observability
 	LogLevel string
@@ -110,7 +106,6 @@ func Load() (*Config, error) {
 		ResumePath:              getEnv("RESUME_PATH", ""),
 		ResumeFilename:          getEnv("RESUME_FILENAME", "ASUTOSH_DALEI_RESUME.pdf"),
 		ResumeTailorPath:        getEnv("RESUME_TAILOR_PATH", "pi_bundle/resume_tailor"),
-		EmailTemplatePath:       getEnv("EMAIL_TEMPLATE_PATH", "templates/email_body.tmpl"),
 		CoverLetterTemplatePath: getEnv("COVERLETTER_TEMPLATE_PATH", "templates/coverletter.tex.tmpl"),
 		SystemPromptsPath:       getEnv("SYSTEM_PROMPTS_PATH", "templates/system_prompts.json"),
 		DBDumpDir:               getEnv("DB_DUMP_DIR", "db_dumps"),
@@ -119,7 +114,6 @@ func Load() (*Config, error) {
 		DBBackupRowTolerance:    getEnvInt("DB_BACKUP_ROW_TOLERANCE", 0),
 		DBBackupSchemas:         getEnv("DB_BACKUP_SCHEMAS", "public"),
 		DisableDBBackup:         getEnvBool("DISABLE_DB_BACKUP"),
-		EnableSuggestTrgm:       getEnvBool("ENABLE_SUGGEST_TRGM"),
 		LogLevel:                getEnv("LOG_LEVEL", "info"),
 	}
 
