@@ -2,6 +2,7 @@
 set -e
 
 echo "Building pi_dashboard..."
+BUILD_START=$(date +%s)
 
 BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -51,6 +52,7 @@ mkdir -p pi_bundle/templates/email_body
 	cp templates/system_prompts.json pi_bundle/templates/
 	cp resume.tex pi_bundle/
 	cp resume.md pi_bundle/
+	cp ASUTOSH_DALEI_RESUME.pdf pi_bundle/ 2>/dev/null || true
 
 find pi_bundle -name '.DS_Store' -delete
 rm -f pi_bundle/pi_bundle.tar.gz
@@ -63,8 +65,11 @@ COPYFILE_DISABLE=1 tar -czf pi_bundle.tar.gz \
     .
 mv pi_bundle.tar.gz pi_bundle/
 
+BUILD_END=$(date +%s)
+BUILD_DURATION=$((BUILD_END - BUILD_START))
+
 echo ""
-echo "Build successful!"
+echo "Build successful! (${BUILD_DURATION}s)"
 echo "  - pi_portfolio_arm64 (linux/arm64)"
 echo "  - pi_portfolio_normal (local)"
 echo "  - Tailwind CSS embedded in binary"
