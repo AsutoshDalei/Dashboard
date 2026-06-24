@@ -13,8 +13,9 @@
 \usepackage{textcomp}
 \usepackage{lmodern}
 \renewcommand{\familydefault}{\sfdefault}
-% \input{glyphtounicode}
-% \pdfgentounicode=1
+\input{glyphtounicode}
+\pdfgentounicode=1
+\usepackage{microtype}
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{1pt}
@@ -47,23 +48,23 @@
 % SECTION 1: WORK EXPERIENCE
 \section*{WORK EXPERIENCE}
 
-\textbf{Machine Learning Engineering Intern} \hfill \textit{June 2025 -- June 2026}\\
+\textbf{Machine Learning Engineering Intern} \hfill \textit{06/2025 -- 06/2026}\\
 Nokia -- Sunnyvale, California
 \begin{itemize}
     \item \textbf{Knowledge Layer \& RAG Architecture:}
     \begin{itemize}
         \item Designed and built the \textbf{``Knowledge Layer'',} a retrieval engine for querying complex technical documentation by unifying Vector Search (OpenSearch), relational metadata (PostgreSQL), and graph traversal (Neo4j).
-        \item Benchmarked 4+ SOTA embedding models against a \textbf{validation corpus of 700+ technical manuals}; selected \textbf{Embedding Gemma} for best semantic recall and built a custom sentence-aware chunking pipeline to optimize ingestion.
+        \item Benchmarked 4+~SOTA embedding models against a \textbf{validation corpus of 700+~technical documents}. Selected \textbf{EmbeddingGemma} for the best MRR and semantic recall. Built a custom sentence-aware chunking pipeline to optimize ingestion.
         \item Built a \textbf{Multimodal RAG pipeline} to index unstructured tables and figures using a joint vector space with \textbf{Jina Embeddings V4} and \textbf{OpenAI CLIP}, enabling text-to-visual retrieval.
-        \item Added a re-ranking stage with \textbf{Qwen3 Reranker-8B} (cross-encoder), which measurably improved context precision in retrieved chunks.
-        \item Building an agentic retrieval framework with the \textbf{Google Agent Development Kit} to automate multi-step information gathering across the knowledge base.
+        \item Added a re-ranking stage with \textbf{Qwen3 Reranker-8B} (cross-encoder), measurably improving context precision in retrieved chunks.
+        \item Built an agentic workflow with the \textbf{AG2 framework} to automate multi-step information gathering across the knowledge base.
     \end{itemize}
 \end{itemize}
 \textit{Stack: Docker, Kafka, PostgreSQL, OpenSearch, Neo4j, MinIO, FastAPI, Python, GCP, AG2, vLLM.}
 
 \vspace{2pt}
 
-\textbf{Data Scientist} \hfill \textit{January 2022 -- August 2024}\\
+\textbf{Data Scientist} \hfill \textit{01/2022 -- 08/2024}\\
 Maruti Suzuki (R\&D Division) -- Bengaluru, India
 \begin{itemize}
     \item \textbf{Battery Health Prediction (Predictive Maintenance):}
@@ -79,19 +80,19 @@ Maruti Suzuki (R\&D Division) -- Bengaluru, India
     \end{itemize}
 \end{itemize}
 
-\vspace{3pt}
+\vspace{1pt}
 % SECTION 2: EDUCATION
 \section*{EDUCATION}
 
 \textbf{Master of Science, Data Science} \hfill \textbf{\textit{GPA: 3.97 / 4.0}}\\
-University of Maryland, College Park \hfill \textit{August 2024 -- May 2026}
+University of Maryland, College Park \hfill \textit{08/2024 -- 05/2026}
 \begin{itemize}
     \item Relevant Coursework: Advanced Machine Learning, Natural Language Processing, Probability \& Statistics, Data Representation \& Modelling, Big Data Systems, Cloud Computing.
 \end{itemize}
 \vspace{3pt}
 
-\textbf{Bachelor of Technology, Electrical and Electronics Engineering} \hfill \textit{GPA: 9.1 / 10}\\
-Vellore Institute of Technology, Vellore \hfill \textit{2018 -- 2022}
+\textbf{Bachelor of Technology, Electrical and Electronics Engineering} \hfill \textbf{\textit{GPA: 9.1 / 10}}\\
+Vellore Institute of Technology, Vellore \hfill \textit{06/2018 -- 06/2022}
 
 \vspace{2pt}
 
@@ -100,24 +101,24 @@ Vellore Institute of Technology, Vellore \hfill \textit{2018 -- 2022}
 
 \textbf{Patent -- Automobile Battery Health Prediction System (No.~202411040338)}
 \begin{itemize}
-    \item \textbf{Primary ML contributor} on a patented system for predicting remaining useful life of lead-acid batteries using telematics sensor data and LSTM-based deep learning, now deployed in production across Maruti Suzuki's connected vehicle fleet.
+    \item \textbf{Primary ML contributor} on a patented system for predicting remaining useful life of lead-acid batteries using telematics sensor data and LSTM-based deep learning. Now deployed in production across \textbf{100K+} Maruti Suzuki's connected vehicle fleet.
 \end{itemize}
 
 % \vspace{3pt}
 
 \textbf{\href{https://www.nature.com/articles/s41598-025-30120-3}{Molecular Signatures and ML-driven Stress Biomarkers for Rainbow Trout Aquaculture}}~--~\textit{Nature Scientific Reports}, 2025
 \begin{itemize}
-    \item Built \textbf{predictive models on genomic data} to identify stress biomarkers in rainbow trout; contributed model design, feature selection across high-dimensional gene expression datasets, and analysis of markers tied to environmental stress response.
+    \item Built \textbf{predictive models on genomic data} to identify stress biomarkers in rainbow trout. Contributed model design, feature selection across high-dimensional gene expression datasets, and analysis of markers linked to environmental stress response.
 \end{itemize}
 
 % SECTION 4: SKILLS
 \section*{TECHNICAL SKILLS}
 \begin{itemize}
-    \item \textbf{ML \& AI:} PyTorch, TensorFlow, HuggingFace, Transformers, LLM Fine-Tuning (SFT, RLHF, LoRA, PEFT), RAG, Agentic AI, LangChain, LLM Evaluation, Structured Output Enforcement, Inference Optimization, Model Serving (vLLM, SGLang).
-    \item \textbf{Experiment Tracking \& MLOps:} MLflow, Optuna, Weights \& Biases, Jenkins CI/CD, GitHub Actions.
+    \item \textbf{ML \& AI:} PyTorch, TensorFlow, HuggingFace, Transformers, LLM Fine-Tuning (SFT, RLHF, PEFT), RAG, Agentic AI, LangChain, LLM Evaluation, Structured Output Enforcement, Inference Optimization, Model Serving (vLLM, SGLang).
+    \item \textbf{Experiment Tracking \& MLOps:} MLflow, Optuna, Weights \& Biases, GitHub Actions.
     \item \textbf{Languages:} Python, GoLang, R, SQL, MATLAB, C, C++.
     \item \textbf{Distributed \& Data Systems:} Kafka, FastAPI,  Docker, Kubernetes.
-    \item \textbf{Cloud \& Infrastructure:} GCP, Azure, Linux, Git.
+    \item \textbf{Cloud \& Infrastructure:} GCP, Azure, AWS, Linux, Git.
     \item \textbf{Databases:} PostgreSQL, MongoDB, MySQL, OpenSearch, Neo4j.
 \end{itemize}
 
@@ -131,7 +132,7 @@ Vellore Institute of Technology, Vellore \hfill \textit{2018 -- 2022}
 \end{itemize}
 \textbf{Spatiotemporal Modeling of Telematics Data Gaps}
 \begin{itemize}
-    \item Traced recurring multi-hour data dropouts (5\% of telematics records) to regional network dead zones. Built an ML pipeline using Random Forests for anomaly classification and \textbf{GRU over Spatiotemporal Sequences} to map affected geographic clusters.
+    \item Solved recurring multi-hour data dropouts (5\% of telematics records) to regional network dead zones. Built an ML pipeline using Random Forests for anomaly classification and \textbf{GRU over Spatiotemporal Sequences} to map affected geographic clusters.
     \item Improved data collection completeness by \textbf{15\%} across connected vehicle fleet.
 \end{itemize}
 \end{document}

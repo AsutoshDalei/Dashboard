@@ -38,10 +38,11 @@ func New(cfg Config) *Client {
 }
 
 type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []llm.Message `json:"messages"`
-	Stream   bool          `json:"stream"`
-	Format   any           `json:"format,omitempty"`
+	Model    string         `json:"model"`
+	Messages []llm.Message  `json:"messages"`
+	Stream   bool           `json:"stream"`
+	Format   any            `json:"format,omitempty"`
+	Options  map[string]any `json:"options,omitempty"`
 }
 
 type chatResponse struct {
@@ -56,6 +57,10 @@ func (c *Client) Chat(ctx context.Context, messages []llm.Message) (llm.Response
 		Model:    c.model,
 		Messages: messages,
 		Stream:   false,
+		Options: map[string]any{
+			"temperature": 0.7,
+			"num_predict": 4096,
+		},
 	}
 
 	payload, err := json.Marshal(reqBody)
@@ -109,6 +114,10 @@ func (c *Client) ChatWithSchema(ctx context.Context, messages []llm.Message, sch
 		Messages: messages,
 		Stream:   false,
 		Format:   formatSchema,
+		Options: map[string]any{
+			"temperature": 0.7,
+			"num_predict": 4096,
+		},
 	}
 
 	payload, err := json.Marshal(reqBody)
@@ -149,6 +158,10 @@ func (c *Client) ChatStream(ctx context.Context, messages []llm.Message) (<-chan
 		Model:    c.model,
 		Messages: messages,
 		Stream:   true,
+		Options: map[string]any{
+			"temperature": 0.7,
+			"num_predict": 4096,
+		},
 	}
 
 	payload, err := json.Marshal(reqBody)
