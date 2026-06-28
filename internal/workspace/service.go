@@ -127,6 +127,10 @@ func (s *Service) getProvider(params *ProviderParams) pkgllm.Provider {
 		if model == "" {
 			model = "nvidia/nemotron-3-super-120b-a12b:free"
 		}
+		models := openrouter.ResolveModels(model, "")
+		if len(models) > 0 {
+			model = models[0]
+		}
 		return openrouter.New(openrouter.Config{
 			APIKey: os.Getenv("OPENROUTER_API_KEY"),
 			Model:  model,

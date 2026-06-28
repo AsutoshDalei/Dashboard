@@ -40,9 +40,13 @@ func NewProvider(cfg Config) (llm.Provider, error) {
 		if cfg.OpenRouterModel == "" {
 			return nil, fmt.Errorf("OPENROUTER_MODEL required")
 		}
+		models := openrouter.ResolveModels(cfg.OpenRouterModel, "")
+		if len(models) == 0 {
+			return nil, fmt.Errorf("OPENROUTER_MODEL invalid")
+		}
 		return openrouter.New(openrouter.Config{
 			APIKey: cfg.OpenRouterAPIKey,
-			Model:  cfg.OpenRouterModel,
+			Model:  models[0],
 		}), nil
 
 	default:
