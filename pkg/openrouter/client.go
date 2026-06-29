@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -40,7 +41,6 @@ type chatRequest struct {
 	Messages       []llm.Message `json:"messages"`
 	Stream         bool          `json:"stream"`
 	ResponseFormat any           `json:"response_format,omitempty"`
-	ReasoningEffort any          `json:"reasoning_effort,omitempty"`
 }
 
 type chatResponse struct {
@@ -59,16 +59,17 @@ type chatResponse struct {
 
 func (c *Client) Chat(ctx context.Context, messages []llm.Message) (llm.Response, error) {
 	reqBody := chatRequest{
-		Model:           c.model,
-		Messages:        messages,
-		Stream:          false,
-		ReasoningEffort: "high",
+		Model:    c.model,
+		Messages: messages,
+		Stream:   false,
 	}
 
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return llm.Response{}, fmt.Errorf("openrouter marshal: %w", err)
 	}
+
+	slog.Debug("openrouter request", "model", c.model, "payload_size", len(payload))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
@@ -87,6 +88,8 @@ func (c *Client) Chat(ctx context.Context, messages []llm.Message) (llm.Response
 	if err != nil {
 		return llm.Response{}, fmt.Errorf("openrouter read: %w", err)
 	}
+
+	slog.Debug("openrouter response", "status", resp.StatusCode, "body", string(body))
 
 	var parsed chatResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
@@ -122,11 +125,10 @@ func (c *Client) Generate(ctx context.Context, prompt string) (string, error) {
 
 func (c *Client) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
 	reqBody := chatRequest{
-		Model:           c.model,
-		Messages:        messages,
-		Stream:          false,
-		ResponseFormat:  schema,
-		ReasoningEffort: "high",
+		Model:          c.model,
+		Messages:       messages,
+		Stream:         false,
+		ResponseFormat: schema,
 	}
 
 	payload, err := json.Marshal(reqBody)
@@ -176,10 +178,9 @@ func (c *Client) ChatWithSchema(ctx context.Context, messages []llm.Message, sch
 
 func (c *Client) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
 	reqBody := chatRequest{
-		Model:           c.model,
-		Messages:        messages,
-		Stream:          true,
-		ReasoningEffort: "high",
+		Model:    c.model,
+		Messages: messages,
+		Stream:   true,
 	}
 
 	payload, err := json.Marshal(reqBody)
