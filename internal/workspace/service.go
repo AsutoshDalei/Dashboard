@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strings"
@@ -90,6 +91,63 @@ func NewService(provider pkgllm.Provider, resumeText string, resumeMarkdown stri
 	}
 }
 
+// fallbackProvider tries each client in order until one succeeds.
+type fallbackProvider struct {
+	clients []pkgllm.Provider
+}
+
+func (f *fallbackProvider) Chat(ctx context.Context, messages []pkgllm.Message) (pkgllm.Response, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		resp, err := c.Chat(ctx, messages)
+		if err == nil {
+			return resp, nil
+		}
+		slog.Warn("openrouter model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return pkgllm.Response{}, lastErr
+}
+
+func (f *fallbackProvider) ChatStream(ctx context.Context, messages []pkgllm.Message) (<-chan string, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		ch, err := c.ChatStream(ctx, messages)
+		if err == nil {
+			return ch, nil
+		}
+		slog.Warn("openrouter stream model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func (f *fallbackProvider) ChatWithSchema(ctx context.Context, messages []pkgllm.Message, schema any) (pkgllm.Response, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		resp, err := c.ChatWithSchema(ctx, messages, schema)
+		if err == nil {
+			return resp, nil
+		}
+		slog.Warn("openrouter schema model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return pkgllm.Response{}, lastErr
+}
+
+func (f *fallbackProvider) Generate(ctx context.Context, prompt string) (string, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		resp, err := c.Generate(ctx, prompt)
+		if err == nil {
+			return resp, nil
+		}
+		slog.Warn("openrouter generate model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return "", lastErr
+}
+
 type ProviderParams struct {
 	Provider string
 	Model    string
@@ -97,9 +155,6 @@ type ProviderParams struct {
 }
 
 func (s *Service) getProvider(params *ProviderParams) pkgllm.Provider {
-	if params == nil {
-		return s.provider
-	}
 	switch params.Provider {
 	case "ollama":
 		host := params.Host
@@ -125,16 +180,18 @@ func (s *Service) getProvider(params *ProviderParams) pkgllm.Provider {
 			model = os.Getenv("OPENROUTER_MODEL")
 		}
 		if model == "" {
-			model = "nvidia/nemotron-3-super-120b-a12b:free"
+			model = "deepseek/deepseek-v4-flash"
 		}
 		models := openrouter.ResolveModels(model, "")
-		if len(models) > 0 {
-			model = models[0]
+		if len(models) == 0 {
+			models = []string{"deepseek/deepseek-v4-flash"}
 		}
-		return openrouter.New(openrouter.Config{
-			APIKey: os.Getenv("OPENROUTER_API_KEY"),
-			Model:  model,
-		})
+		apiKey := os.Getenv("OPENROUTER_API_KEY")
+		clients := make([]pkgllm.Provider, 0, len(models))
+		for _, m := range models {
+			clients = append(clients, openrouter.New(openrouter.Config{APIKey: apiKey, Model: m}))
+		}
+		return &fallbackProvider{clients: clients}
 	default:
 		return s.provider
 	}
@@ -154,8 +211,11 @@ func (s *Service) Chat(ctx context.Context, sessionID string, message string, sy
 	messages = append(messages, session.Messages...)
 	messages = append(messages, pkgllm.Message{Role: "user", Content: message})
 
+	slog.Debug("chat request", "session_id", sessionID, "message_count", len(messages), "user_message_len", len(message))
+
 	resp, err := s.provider.Chat(ctx, messages)
 	if err != nil {
+		slog.Error("chat error", "session_id", sessionID, "err", err)
 		return "", fmt.Errorf("chat: %w", err)
 	}
 

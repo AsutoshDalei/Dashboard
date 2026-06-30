@@ -89,21 +89,21 @@ func (c *Client) Chat(ctx context.Context, messages []llm.Message) (llm.Response
 		return llm.Response{}, fmt.Errorf("openrouter read: %w", err)
 	}
 
-	slog.Debug("openrouter response", "status", resp.StatusCode, "body", string(body))
-
 	var parsed chatResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		return llm.Response{}, fmt.Errorf("openrouter decode: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		slog.Error("openrouter error response", "status", resp.StatusCode, "body", string(body))
 		if parsed.Error != nil && parsed.Error.Message != "" {
-			return llm.Response{}, fmt.Errorf("openrouter error: %s", parsed.Error.Message)
+			return llm.Response{}, fmt.Errorf("openrouter error (status %d): %s", resp.StatusCode, parsed.Error.Message)
 		}
-		return llm.Response{}, fmt.Errorf("openrouter status %d", resp.StatusCode)
+		return llm.Response{}, fmt.Errorf("openrouter status %d: %s", resp.StatusCode, string(body))
 	}
 
 	if len(parsed.Choices) == 0 {
+		slog.Error("openrouter no choices", "body", string(body))
 		return llm.Response{}, fmt.Errorf("openrouter no choices")
 	}
 

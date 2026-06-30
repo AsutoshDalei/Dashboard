@@ -1,7 +1,9 @@
 package llm
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"pi_dashboard/pkg/llm"
@@ -15,6 +17,63 @@ type Config struct {
 	OllamaModel      string
 	OpenRouterAPIKey string
 	OpenRouterModel  string
+}
+
+// fallbackProvider tries each client in order until one succeeds.
+type fallbackProvider struct {
+	clients []llm.Provider
+}
+
+func (f *fallbackProvider) Chat(ctx context.Context, messages []llm.Message) (llm.Response, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		resp, err := c.Chat(ctx, messages)
+		if err == nil {
+			return resp, nil
+		}
+		slog.Warn("openrouter model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return llm.Response{}, lastErr
+}
+
+func (f *fallbackProvider) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		ch, err := c.ChatStream(ctx, messages)
+		if err == nil {
+			return ch, nil
+		}
+		slog.Warn("openrouter stream model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func (f *fallbackProvider) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		resp, err := c.ChatWithSchema(ctx, messages, schema)
+		if err == nil {
+			return resp, nil
+		}
+		slog.Warn("openrouter schema model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return llm.Response{}, lastErr
+}
+
+func (f *fallbackProvider) Generate(ctx context.Context, prompt string) (string, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		resp, err := c.Generate(ctx, prompt)
+		if err == nil {
+			return resp, nil
+		}
+		slog.Warn("openrouter generate model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return "", lastErr
 }
 
 func NewProvider(cfg Config) (llm.Provider, error) {
@@ -44,10 +103,14 @@ func NewProvider(cfg Config) (llm.Provider, error) {
 		if len(models) == 0 {
 			return nil, fmt.Errorf("OPENROUTER_MODEL invalid")
 		}
-		return openrouter.New(openrouter.Config{
-			APIKey: cfg.OpenRouterAPIKey,
-			Model:  models[0],
-		}), nil
+		clients := make([]llm.Provider, 0, len(models))
+		for _, m := range models {
+			clients = append(clients, openrouter.New(openrouter.Config{
+				APIKey: cfg.OpenRouterAPIKey,
+				Model:  m,
+			}))
+		}
+		return &fallbackProvider{clients: clients}, nil
 
 	default:
 		return nil, fmt.Errorf("unknown LLM provider: %s", cfg.ProviderType)
