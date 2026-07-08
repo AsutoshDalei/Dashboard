@@ -949,8 +949,8 @@
                             inProgressTooltip.style.display = "block";
                         });
                         inProgressBlock.addEventListener("mousemove", (e) => {
-                            inProgressTooltip.style.left = (e.clientX - inProgressBlock.getBoundingClientRect().left + 12) + "px";
-                            inProgressTooltip.style.top = (e.clientY - inProgressBlock.getBoundingClientRect().top - 30) + "px";
+                            inProgressTooltip.style.left = (e.clientX + 15) + "px";
+                            inProgressTooltip.style.top = (e.clientY - 10) + "px";
                         });
                         inProgressBlock.addEventListener("mouseleave", () => {
                             inProgressTooltip.style.display = "none";
