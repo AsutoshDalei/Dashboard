@@ -164,7 +164,7 @@ func (s *Service) Chat(ctx context.Context, sessionID string, message string, sy
 
 	slog.Debug("chat request", "session_id", sessionID, "message_count", len(messages), "user_message_len", len(message))
 
-	resp, err := s.llm.GenerateContent(ctx, messages)
+	resp, err := s.llm.GenerateContent(ctx, messages, llms.WithThinkingMode(llms.ThinkingModeAuto))
 	if err != nil {
 		slog.Error("chat error", "session_id", sessionID, "err", err)
 		return "", fmt.Errorf("chat: %w", err)
@@ -172,6 +172,10 @@ func (s *Service) Chat(ctx context.Context, sessionID string, message string, sy
 
 	if len(resp.Choices) == 0 {
 		return "", fmt.Errorf("chat: no response")
+	}
+
+	if resp.Choices[0].ReasoningContent != "" {
+		slog.Debug("chat reasoning", "thinking_len", len(resp.Choices[0].ReasoningContent))
 	}
 
 	content := resp.Choices[0].Content
@@ -217,7 +221,8 @@ func (s *Service) ChatStream(ctx context.Context, sessionID string, message stri
 	go func() {
 		defer close(ch)
 		var full string
-		_, err := s.llm.GenerateContent(ctx, messages,
+		resp, err := s.llm.GenerateContent(ctx, messages,
+			llms.WithThinkingMode(llms.ThinkingModeAuto),
 			llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
 				full += string(chunk)
 				ch <- string(chunk)
@@ -227,6 +232,10 @@ func (s *Service) ChatStream(ctx context.Context, sessionID string, message stri
 		if err != nil {
 			slog.Error("chat stream error", "session_id", sessionID, "err", err)
 			return
+		}
+
+		if len(resp.Choices) > 0 && resp.Choices[0].ReasoningContent != "" {
+			slog.Debug("chat stream reasoning", "thinking_len", len(resp.Choices[0].ReasoningContent))
 		}
 
 		// Save to memory after streaming completes
@@ -297,6 +306,7 @@ func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, syst
 		// OpenRouter supports response_format via OpenAI API
 		options = append(options, llms.WithJSONMode())
 	}
+	options = append(options, llms.WithThinkingMode(llms.ThinkingModeAuto))
 
 	resp, err := provider.GenerateContent(ctx, messages, options...)
 	if err != nil {
@@ -304,6 +314,9 @@ func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, syst
 	}
 	if len(resp.Choices) == 0 {
 		return "", fmt.Errorf("resume analyze: no response")
+	}
+	if resp.Choices[0].ReasoningContent != "" {
+		slog.Debug("resume analyze reasoning", "thinking_len", len(resp.Choices[0].ReasoningContent))
 	}
 	return resp.Choices[0].Content, nil
 }
@@ -379,6 +392,7 @@ func (s *Service) GenerateSkills(ctx context.Context, jobDescription string, par
 	if params.Provider == "openrouter" {
 		options = append(options, llms.WithJSONMode())
 	}
+	options = append(options, llms.WithThinkingMode(llms.ThinkingModeAuto))
 
 	resp, err := provider.GenerateContent(ctx, messages, options...)
 	if err != nil {
@@ -387,6 +401,10 @@ func (s *Service) GenerateSkills(ctx context.Context, jobDescription string, par
 
 	if len(resp.Choices) == 0 {
 		return "", fmt.Errorf("generate skills: no response")
+	}
+
+	if resp.Choices[0].ReasoningContent != "" {
+		slog.Debug("generate skills reasoning", "thinking_len", len(resp.Choices[0].ReasoningContent))
 	}
 
 	return rebuildResume(s.resumeText, resp.Choices[0].Content)
