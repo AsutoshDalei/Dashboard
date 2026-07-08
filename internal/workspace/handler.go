@@ -123,24 +123,29 @@ func (h *Handler) HandleChatSend(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("X-Accel-Buffering", "no")
 		flusher, ok := w.(http.Flusher)
 		if !ok {
 			http.Error(w, "streaming not supported", http.StatusInternalServerError)
 			return
 		}
 
+		// Send thinking event immediately
+		fmt.Fprintf(w, "event: thinking\ndata: {}\n\n")
+		flusher.Flush()
+
 		ch, err := h.svc.ChatStream(r.Context(), sessionID, req.Message, systemPrompt)
 		if err != nil {
-			fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
+			fmt.Fprintf(w, "event: error\ndata: %s\n\n", jsonEscape(err.Error()))
 			flusher.Flush()
 			return
 		}
 
 		for chunk := range ch {
-			fmt.Fprintf(w, "data: %s\n\n", jsonEscape(chunk))
+			fmt.Fprintf(w, "event: message\ndata: %s\n\n", jsonEscape(chunk))
 			flusher.Flush()
 		}
-		fmt.Fprintf(w, "data: [DONE]\n\n")
+		fmt.Fprintf(w, "event: done\ndata: {}\n\n")
 		flusher.Flush()
 		return
 	}

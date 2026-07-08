@@ -70,7 +70,7 @@ func (h *Handler) HandleCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	organization, exists, count, status, appliedDates, err := h.svc.Check(r.Context(), name)
+	organization, exists, count, status, appliedDates, remarks, err := h.svc.Check(r.Context(), name)
 	if err != nil || !exists {
 		writeJSON(w, http.StatusOK, map[string]any{"success": true, "exists": false})
 		return
@@ -83,6 +83,7 @@ func (h *Handler) HandleCheck(w http.ResponseWriter, r *http.Request) {
 		"count":         count,
 		"status":        status,
 		"applied_dates": appliedDates,
+		"remarks":       remarks,
 	})
 }
 

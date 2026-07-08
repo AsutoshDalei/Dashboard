@@ -9,16 +9,16 @@ import (
 	"time"
 
 	"pi_dashboard/internal/llm"
-	pkgllm "pi_dashboard/pkg/llm"
+	"github.com/tmc/langchaingo/llms"
 )
 
 type Service struct {
 	repo    *Repository
-	llm     pkgllm.Provider
+	llm     llms.Model
 	prompts *llm.Prompts
 }
 
-func NewService(repo *Repository, llmProvider pkgllm.Provider, prompts *llm.Prompts) *Service {
+func NewService(repo *Repository, llmProvider llms.Model, prompts *llm.Prompts) *Service {
 	return &Service{
 		repo:    repo,
 		llm:     llmProvider,
@@ -51,7 +51,7 @@ func (s *Service) Upsert(ctx context.Context, app Application) (*UpsertResult, e
 	return result, nil
 }
 
-func (s *Service) Check(ctx context.Context, name string) (string, bool, int, string, *string, error) {
+func (s *Service) Check(ctx context.Context, name string) (string, bool, int, string, *string, *string, error) {
 	return s.repo.CheckExists(ctx, name)
 }
 
@@ -88,15 +88,18 @@ var writeKeywordRe = regexp.MustCompile(`(?i)\b(insert|update|delete|merge|drop|
 
 func (s *Service) NaturalLanguageQuery(ctx context.Context, nl string) (string, error) {
 	schemaDoc := s.prompts.Get("sql_assistant")
-	messages := []pkgllm.Message{
-		{Role: "system", Content: schemaDoc},
-		{Role: "user", Content: nl},
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(schemaDoc)}},
+		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart(nl)}},
 	}
-	resp, err := s.llm.Chat(ctx, messages)
+	resp, err := s.llm.GenerateContent(ctx, messages)
 	if err != nil {
 		return "", fmt.Errorf("nl query: %w", err)
 	}
-	return extractSQL(resp.Content), nil
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("nl query: no response")
+	}
+	return extractSQL(resp.Choices[0].Content), nil
 }
 
 func extractSQL(raw string) string {

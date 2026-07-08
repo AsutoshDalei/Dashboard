@@ -439,21 +439,29 @@
                                 — % of companies
                             </div>
                         </div>
-                        <div class="tracker-stat col-4">
+                        <div class="tracker-stat col-3">
                             <div class="label">Today</div>
                             <div class="value" id="statTodayCompanies">—</div>
                             <div class="sub" id="statTodaySub">
                                 Applications: —
                             </div>
                         </div>
-                        <div class="tracker-stat col-4">
+                        <div class="tracker-stat col-3">
                             <div class="label">This Week</div>
                             <div class="value" id="statWeekCompanies">—</div>
                             <div class="sub" id="statWeekSub">
                                 Applications: —
                             </div>
                         </div>
-                        <div class="tracker-stat col-4">
+                        <div class="tracker-stat col-3">
+                            <div class="label">In Progress</div>
+                            <div class="value" id="statInProgress">—</div>
+                            <div class="sub" id="statInProgressSub" style="color: #eab308;">
+                                — % of companies
+                            </div>
+                            <div class="tooltip-content" id="statInProgressTooltip" style="display: none; position: fixed; background: #27272a; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #a1a1aa; white-space: pre-line; z-index: 100; pointer-events: none;"></div>
+                        </div>
+                        <div class="tracker-stat col-3">
                             <div class="label">Avg/Company</div>
                             <div class="value" id="statAvg">—</div>
                             <div class="sub" id="statAvgSub">top: —</div>
@@ -930,6 +938,24 @@
                     $("statRejected").textContent = fmtNum(s.rejected);
                     $("statRejectedSub").textContent =
                         fmtPct(s.rejected_pct) + " of companies";
+                    $("statInProgress").textContent = fmtNum(s.in_progress);
+                    $("statInProgressSub").textContent =
+                        fmtPct(s.in_progress_pct) + " of companies";
+                    const inProgressTooltip = $("statInProgressTooltip");
+                    if (s.in_progress_details) {
+                        inProgressTooltip.textContent = s.in_progress_details;
+                        const inProgressBlock = inProgressTooltip.parentElement;
+                        inProgressBlock.addEventListener("mouseenter", () => {
+                            inProgressTooltip.style.display = "block";
+                        });
+                        inProgressBlock.addEventListener("mousemove", (e) => {
+                            inProgressTooltip.style.left = (e.clientX + 15) + "px";
+                            inProgressTooltip.style.top = (e.clientY - 10) + "px";
+                        });
+                        inProgressBlock.addEventListener("mouseleave", () => {
+                            inProgressTooltip.style.display = "none";
+                        });
+                    }
                     $("statTodayCompanies").textContent =
                         fmtNum(s.today_companies) + " companies";
                     $("statTodaySub").textContent =
@@ -1029,6 +1055,7 @@
                                         ? "accepted"
                                         : "";
                         lookupResult.classList.add("found");
+                        const remarks = data.remarks || "";
                         lookupResult.innerHTML =
                             "<strong>" +
                             escapeHtml(data.organization) +
@@ -1043,6 +1070,11 @@
                                   '">' +
                                   escapeHtml(status) +
                                   "</span>"
+                                : "") +
+                            (remarks
+                                ? '<div class="mt-2 text-sm text-on-surface-muted">' +
+                                  escapeHtml(remarks) +
+                                  "</div>"
                                 : "") +
                             '<div class="flex gap-2 mt-4 items-center flex-wrap">' +
                             '<select class="px-3 py-1.5 rounded-lg bg-surface-high text-on-surface border border-outline text-sm" id="lookupStatusSelect">' +

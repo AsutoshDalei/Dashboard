@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"pi_dashboard/pkg/llm"
-	"pi_dashboard/pkg/ollama"
-	"pi_dashboard/pkg/openrouter"
+	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/ollama"
+	"github.com/tmc/langchaingo/llms/openai"
 )
 
 type Config struct {
@@ -19,78 +19,61 @@ type Config struct {
 	OpenRouterModel  string
 }
 
-// fallbackProvider tries each client in order until one succeeds.
-type fallbackProvider struct {
-	clients []llm.Provider
+// fallbackLLM tries each client in order until one succeeds.
+type fallbackLLM struct {
+	clients []llms.Model
 }
 
-func (f *fallbackProvider) Chat(ctx context.Context, messages []llm.Message) (llm.Response, error) {
+func (f *fallbackLLM) Call(ctx context.Context, prompt string, options ...llms.CallOption) (string, error) {
 	var lastErr error
 	for i, c := range f.clients {
-		resp, err := c.Chat(ctx, messages)
+		resp, err := c.Call(ctx, prompt, options...)
 		if err == nil {
 			return resp, nil
 		}
-		slog.Warn("openrouter model failed, trying next", "index", i, "err", err)
-		lastErr = err
-	}
-	return llm.Response{}, lastErr
-}
-
-func (f *fallbackProvider) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
-	var lastErr error
-	for i, c := range f.clients {
-		ch, err := c.ChatStream(ctx, messages)
-		if err == nil {
-			return ch, nil
-		}
-		slog.Warn("openrouter stream model failed, trying next", "index", i, "err", err)
-		lastErr = err
-	}
-	return nil, lastErr
-}
-
-func (f *fallbackProvider) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
-	var lastErr error
-	for i, c := range f.clients {
-		resp, err := c.ChatWithSchema(ctx, messages, schema)
-		if err == nil {
-			return resp, nil
-		}
-		slog.Warn("openrouter schema model failed, trying next", "index", i, "err", err)
-		lastErr = err
-	}
-	return llm.Response{}, lastErr
-}
-
-func (f *fallbackProvider) Generate(ctx context.Context, prompt string) (string, error) {
-	var lastErr error
-	for i, c := range f.clients {
-		resp, err := c.Generate(ctx, prompt)
-		if err == nil {
-			return resp, nil
-		}
-		slog.Warn("openrouter generate model failed, trying next", "index", i, "err", err)
+		slog.Warn("fallback model failed, trying next", "index", i, "err", err)
 		lastErr = err
 	}
 	return "", lastErr
 }
 
-func NewProvider(cfg Config) (llm.Provider, error) {
+func (f *fallbackLLM) GenerateContent(ctx context.Context, messages []llms.MessageContent, options ...llms.CallOption) (*llms.ContentResponse, error) {
+	var lastErr error
+	for i, c := range f.clients {
+		resp, err := c.GenerateContent(ctx, messages, options...)
+		if err == nil {
+			return resp, nil
+		}
+		slog.Warn("fallback model failed, trying next", "index", i, "err", err)
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func (f *fallbackLLM) CreateEmbedding(ctx context.Context, inputTexts []string) ([][]float32, error) {
+	return nil, fmt.Errorf("embedding not supported by fallback provider")
+}
+
+func NewProvider(cfg Config) (llms.Model, error) {
 	switch cfg.ProviderType {
 	case "ollama":
 		if cfg.OllamaHost == "" {
-			cfg.OllamaHost = "172.16.7.112:11434"
-		} else if !strings.Contains(cfg.OllamaHost, ":") {
-			cfg.OllamaHost = cfg.OllamaHost + ":11434"
+			cfg.OllamaHost = "http://172.16.7.112:11434"
+		} else {
+			if !strings.HasPrefix(cfg.OllamaHost, "http") {
+				cfg.OllamaHost = "http://" + cfg.OllamaHost
+			}
+			if !strings.Contains(cfg.OllamaHost, ":") {
+				cfg.OllamaHost = cfg.OllamaHost + ":11434"
+			}
 		}
 		if cfg.OllamaModel == "" {
 			cfg.OllamaModel = "gemma4"
 		}
-		return ollama.New(ollama.Config{
-			Host:  cfg.OllamaHost,
-			Model: cfg.OllamaModel,
-		}), nil
+		return ollama.New(
+			ollama.WithModel(cfg.OllamaModel),
+			ollama.WithServerURL(cfg.OllamaHost),
+		)
 
 	case "openrouter":
 		if cfg.OpenRouterAPIKey == "" {
@@ -99,20 +82,43 @@ func NewProvider(cfg Config) (llm.Provider, error) {
 		if cfg.OpenRouterModel == "" {
 			return nil, fmt.Errorf("OPENROUTER_MODEL required")
 		}
-		models := openrouter.ResolveModels(cfg.OpenRouterModel, "")
+		models := ResolveModels(cfg.OpenRouterModel)
 		if len(models) == 0 {
 			return nil, fmt.Errorf("OPENROUTER_MODEL invalid")
 		}
-		clients := make([]llm.Provider, 0, len(models))
+		clients := make([]llms.Model, 0, len(models))
 		for _, m := range models {
-			clients = append(clients, openrouter.New(openrouter.Config{
-				APIKey: cfg.OpenRouterAPIKey,
-				Model:  m,
-			}))
+			client, err := openai.New(
+				openai.WithModel(m),
+				openai.WithBaseURL("https://openrouter.ai/api/v1"),
+				openai.WithToken(cfg.OpenRouterAPIKey),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("openrouter client %s: %w", m, err)
+			}
+			clients = append(clients, client)
 		}
-		return &fallbackProvider{clients: clients}, nil
+		if len(clients) == 1 {
+			return clients[0], nil
+		}
+		return &fallbackLLM{clients: clients}, nil
 
 	default:
 		return nil, fmt.Errorf("unknown LLM provider: %s", cfg.ProviderType)
 	}
+}
+
+func ResolveModels(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

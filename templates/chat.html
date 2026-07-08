@@ -56,9 +56,7 @@
     var promptsRow = document.getElementById('promptsRow');
     var promptsToggle = document.getElementById('promptsToggle');
     var chatHistory = JSON.parse(localStorage.getItem('chat_history') || '[]');
-    var pendingJobId = localStorage.getItem('chat_pending_job_id') || null;
-
-    function generateJobId(){return 'chat_'+Date.now()+'_'+Math.random().toString(36).substr(2,9)}
+    var currentAbortController = null;
 
     function saveChatHistory() {
         localStorage.setItem('chat_history', JSON.stringify(chatHistory));
@@ -72,45 +70,7 @@
         });
     }
 
-    function pollJobStatus(jobId) {
-        showLoader();
-        sendBtn.disabled = true;
-        var pollInterval = setInterval(function() {
-            fetch('/api/job/status?job_id=' + jobId).then(function(r) { return r.json(); }).then(function(data) {
-                if (!data.success || !data.data) return;
-                var job = data.data;
-                if (job.status === 'completed') {
-                    clearInterval(pollInterval);
-                    localStorage.removeItem('chat_pending_job_id');
-                    pendingJobId = null;
-                    removeLoader();
-                    sendBtn.disabled = false;
-                    stopBtn.classList.add('hidden');
-                    var response = job.result && job.result.response ? job.result.response : 'No response';
-                    chatHistory.push({role: 'assistant', content: response});
-                    saveChatHistory();
-                    addMessage('assistant', response);
-                } else if (job.status === 'failed') {
-                    clearInterval(pollInterval);
-                    localStorage.removeItem('chat_pending_job_id');
-                    pendingJobId = null;
-                    removeLoader();
-                    sendBtn.disabled = false;
-                    stopBtn.classList.add('hidden');
-                    var errMsg = job.error || 'Request failed';
-                    chatHistory.push({role: 'assistant', content: 'Error: ' + errMsg});
-                    saveChatHistory();
-                    addMessage('assistant', 'Error: ' + errMsg);
-                }
-            }).catch(function() {});
-        }, 2000);
-    }
-
     loadChatHistory();
-
-    if (pendingJobId) {
-        pollJobStatus(pendingJobId);
-    }
 
     // Auto-resize textarea
     chatInput.addEventListener('input', function() {
@@ -133,7 +93,6 @@
 
     function renderMarkdown(text) {
         var html = text;
-
         html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
         html = html.replace(/`(.+?)`/g, '<code>$1</code>');
         html = html.replace(/^#{6}(?=[^#])\s*(.+)$/gm, '<h6>$1</h6>');
@@ -145,7 +104,6 @@
         html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
         var lines = html.split('\n');
         var result = [];
         var i = 0;
@@ -174,7 +132,6 @@
             }
         }
         html = result.join('\n');
-
         html = html.split('\n\n').map(function(p) {
             return p.trim() ? '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>' : '';
         }).join('');
@@ -199,6 +156,14 @@
         chatMessages.appendChild(div);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         return div;
+    }
+
+    function updateMessageContent(div, content) {
+        var markdownDiv = div.querySelector('.markdown-content');
+        if (markdownDiv) {
+            markdownDiv.innerHTML = renderMarkdown(content);
+        }
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
     function showLoader() {
@@ -228,38 +193,107 @@
         sendBtn.disabled = true;
         stopBtn.classList.remove('hidden');
 
-        var jobId = generateJobId();
-        pendingJobId = jobId;
-        localStorage.setItem('chat_pending_job_id', jobId);
+        currentAbortController = new AbortController();
 
-        fetch('/api/chat/send-async', {
+        fetch('/api/chat/send?stream=true', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({job_id: jobId, message: text})
-        }).then(function(r) { return r.json(); }).then(function(data) {
-            if (!data.success) {
+            body: JSON.stringify({message: text}),
+            signal: currentAbortController.signal
+        }).then(function(response) {
+            var reader = response.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+            var currentEvent = '';
+            var messageDiv = null;
+            var fullResponse = '';
+
+            function processChunk() {
+                return reader.read().then(function(result) {
+                    if (result.done) {
+                        finishStream();
+                        return;
+                    }
+                    buffer += decoder.decode(result.value, {stream: true});
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    for (var i = 0; i < lines.length; i++) {
+                        var line = lines[i];
+                        if (line.startsWith('event: ')) {
+                            currentEvent = line.substring(7).trim();
+                        } else if (line.startsWith('data: ')) {
+                            var data = line.substring(6);
+                            handleEvent(currentEvent, data);
+                        }
+                    }
+                    return processChunk();
+                });
+            }
+
+            function handleEvent(event, data) {
+                if (event === 'thinking') {
+                    return;
+                }
+                if (event === 'message') {
+                    if (!messageDiv) {
+                        removeLoader();
+                        messageDiv = addMessage('assistant', '');
+                    }
+                    try {
+                        var parsed = JSON.parse(data);
+                        fullResponse += parsed;
+                        updateMessageContent(messageDiv, fullResponse);
+                    } catch(e) {
+                        fullResponse += data;
+                        updateMessageContent(messageDiv, fullResponse);
+                    }
+                }
+                if (event === 'error') {
+                    removeLoader();
+                    addMessage('assistant', 'Error: ' + data);
+                    sendBtn.disabled = false;
+                    stopBtn.classList.add('hidden');
+                    currentAbortController = null;
+                    return;
+                }
+                if (event === 'done') {
+                    finishStream();
+                }
+            }
+
+            function finishStream() {
                 removeLoader();
                 sendBtn.disabled = false;
                 stopBtn.classList.add('hidden');
-                addMessage('assistant', 'Error: Failed to start request');
-                localStorage.removeItem('chat_pending_job_id');
-                pendingJobId = null;
+                currentAbortController = null;
+                if (fullResponse) {
+                    chatHistory.push({role: 'assistant', content: fullResponse});
+                    saveChatHistory();
+                }
+            }
+
+            return processChunk();
+        }).catch(function(err) {
+            if (err.name === 'AbortError') {
+                removeLoader();
+                sendBtn.disabled = false;
+                stopBtn.classList.add('hidden');
+                currentAbortController = null;
                 return;
             }
-            pollJobStatus(jobId);
-        }).catch(function() {
             removeLoader();
             sendBtn.disabled = false;
             stopBtn.classList.add('hidden');
+            currentAbortController = null;
             addMessage('assistant', 'Error: Connection failed');
-            localStorage.removeItem('chat_pending_job_id');
-            pendingJobId = null;
         });
     }
 
     stopBtn.addEventListener('click', function() {
-        localStorage.removeItem('chat_pending_job_id');
-        pendingJobId = null;
+        if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+        }
         removeLoader();
         sendBtn.disabled = false;
         stopBtn.classList.add('hidden');
@@ -268,9 +302,7 @@
     document.getElementById('clearChatBtn').addEventListener('click', function() {
         fetch('/api/chat/clear', { method: 'POST' });
         localStorage.removeItem('chat_history');
-        localStorage.removeItem('chat_pending_job_id');
         chatHistory = [];
-        pendingJobId = null;
         chatMessages.innerHTML = '';
         chatMessages.appendChild(emptyState);
         emptyState.style.display = '';
