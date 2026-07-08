@@ -326,12 +326,15 @@ func (s *Service) GenerateResume(ctx context.Context, jobDescription string, ana
 		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(systemPrompt)}},
 		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Job Description: %s\n\nAnalysis: %s\n\nResume: %s", jobDescription, analysis, s.resumeText))}},
 	}
-	resp, err := s.llm.GenerateContent(ctx, messages)
+	resp, err := s.llm.GenerateContent(ctx, messages, llms.WithThinkingMode(llms.ThinkingModeAuto))
 	if err != nil {
 		return "", fmt.Errorf("resume generate: %w", err)
 	}
 	if len(resp.Choices) == 0 {
 		return "", fmt.Errorf("resume generate: no response")
+	}
+	if resp.Choices[0].ReasoningContent != "" {
+		slog.Debug("resume generate reasoning", "thinking_len", len(resp.Choices[0].ReasoningContent))
 	}
 	return resp.Choices[0].Content, nil
 }
