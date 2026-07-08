@@ -255,7 +255,7 @@ func (r *Repository) Stats(ctx context.Context, today string, weekStart string) 
 		}
 	}
 	if len(inProgressRows) > 0 {
-		s.InProgressDetails = strings.Join(inProgressRows, ", ")
+		s.InProgressDetails = strings.Join(inProgressRows, "\n")
 	}
 
 	if s.Companies > 0 {
