@@ -4,47 +4,46 @@ import (
 	"context"
 	"fmt"
 
-	"pi_dashboard/pkg/llm"
+	"github.com/tmc/langchaingo/llms"
 )
 
 type Service struct {
-	provider llm.Provider
+	llm llms.Model
 }
 
-func NewService(provider llm.Provider) *Service {
-	return &Service{provider: provider}
+func NewService(llm llms.Model) *Service {
+	return &Service{llm: llm}
 }
 
-func (s *Service) Chat(ctx context.Context, messages []llm.Message) (llm.Response, error) {
-	return s.provider.Chat(ctx, messages)
+func (s *Service) Chat(ctx context.Context, messages []llms.MessageContent) (string, error) {
+	resp, err := s.llm.GenerateContent(ctx, messages)
+	if err != nil {
+		return "", fmt.Errorf("chat: %w", err)
+	}
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("chat: no response")
+	}
+	return resp.Choices[0].Content, nil
 }
 
 func (s *Service) Generate(ctx context.Context, prompt string) (string, error) {
-	return s.provider.Generate(ctx, prompt)
+	return s.llm.Call(ctx, prompt)
 }
 
 func (s *Service) GenerateSQL(ctx context.Context, naturalLanguage string, schemaDoc string) (string, error) {
-	messages := []llm.Message{
-		{Role: "system", Content: schemaDoc},
-		{Role: "user", Content: naturalLanguage},
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(schemaDoc)}},
+		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart(naturalLanguage)}},
 	}
-	resp, err := s.provider.Chat(ctx, messages)
-	if err != nil {
-		return "", fmt.Errorf("sql generation: %w", err)
-	}
-	return resp.Content, nil
+	return s.Chat(ctx, messages)
 }
 
 func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, systemPrompt string) (string, error) {
-	messages := []llm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: jobDescription},
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(systemPrompt)}},
+		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart(jobDescription)}},
 	}
-	resp, err := s.provider.Chat(ctx, messages)
-	if err != nil {
-		return "", fmt.Errorf("resume analysis: %w", err)
-	}
-	return resp.Content, nil
+	return s.Chat(ctx, messages)
 }
 
 func (s *Service) GenerateCoverLetter(ctx context.Context, companyName string, resumeText string) (string, error) {
