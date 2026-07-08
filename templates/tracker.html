@@ -439,21 +439,29 @@
                                 — % of companies
                             </div>
                         </div>
-                        <div class="tracker-stat col-4">
+                        <div class="tracker-stat col-3">
                             <div class="label">Today</div>
                             <div class="value" id="statTodayCompanies">—</div>
                             <div class="sub" id="statTodaySub">
                                 Applications: —
                             </div>
                         </div>
-                        <div class="tracker-stat col-4">
+                        <div class="tracker-stat col-3">
                             <div class="label">This Week</div>
                             <div class="value" id="statWeekCompanies">—</div>
                             <div class="sub" id="statWeekSub">
                                 Applications: —
                             </div>
                         </div>
-                        <div class="tracker-stat col-4">
+                        <div class="tracker-stat col-3">
+                            <div class="label">In Progress</div>
+                            <div class="value" id="statInProgress">—</div>
+                            <div class="sub" id="statInProgressSub" style="color: #eab308;">
+                                — % of companies
+                            </div>
+                            <div class="tooltip-content" id="statInProgressTooltip" style="display: none; position: absolute; bottom: 100%; left: 0; background: #27272a; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #a1a1aa; white-space: nowrap; z-index: 10; margin-bottom: 4px;"></div>
+                        </div>
+                        <div class="tracker-stat col-3">
                             <div class="label">Avg/Company</div>
                             <div class="value" id="statAvg">—</div>
                             <div class="sub" id="statAvgSub">top: —</div>
@@ -930,6 +938,20 @@
                     $("statRejected").textContent = fmtNum(s.rejected);
                     $("statRejectedSub").textContent =
                         fmtPct(s.rejected_pct) + " of companies";
+                    $("statInProgress").textContent = fmtNum(s.in_progress);
+                    $("statInProgressSub").textContent =
+                        fmtPct(s.in_progress_pct) + " of companies";
+                    const inProgressTooltip = $("statInProgressTooltip");
+                    if (s.in_progress_details) {
+                        inProgressTooltip.textContent = s.in_progress_details;
+                        inProgressTooltip.parentElement.style.position = "relative";
+                        inProgressTooltip.parentElement.addEventListener("mouseenter", () => {
+                            inProgressTooltip.style.display = "block";
+                        });
+                        inProgressTooltip.parentElement.addEventListener("mouseleave", () => {
+                            inProgressTooltip.style.display = "none";
+                        });
+                    }
                     $("statTodayCompanies").textContent =
                         fmtNum(s.today_companies) + " companies";
                     $("statTodaySub").textContent =

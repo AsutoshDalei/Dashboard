@@ -32,6 +32,9 @@ type Stats struct {
 	AppliedPct        float64 `json:"applied_pct"`
 	Rejected          int     `json:"rejected"`
 	RejectedPct       float64 `json:"rejected_pct"`
+	InProgress        int     `json:"in_progress"`
+	InProgressPct     float64 `json:"in_progress_pct"`
+	InProgressDetails string  `json:"in_progress_details"`
 	TodayCompanies    int     `json:"today_companies"`
 	TodayApplications int     `json:"today_applications"`
 	WeekCompanies     int     `json:"week_companies"`

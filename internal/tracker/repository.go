@@ -238,9 +238,30 @@ func (r *Repository) Stats(ctx context.Context, today string, weekStart string) 
 		return nil, err
 	}
 
+	err = r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM applications WHERE status IS NOT NULL AND status != '' AND status NOT IN ('Applied', 'Rejected')`).Scan(&s.InProgress)
+	if err != nil {
+		return nil, err
+	}
+
+	var inProgressRows []string
+	rows, err := r.pool.Query(ctx, `SELECT organization, status FROM applications WHERE status IS NOT NULL AND status != '' AND status NOT IN ('Applied', 'Rejected') ORDER BY organization`)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var org, status string
+			if err := rows.Scan(&org, &status); err == nil {
+				inProgressRows = append(inProgressRows, org+": "+status)
+			}
+		}
+	}
+	if len(inProgressRows) > 0 {
+		s.InProgressDetails = strings.Join(inProgressRows, ", ")
+	}
+
 	if s.Companies > 0 {
 		s.AppliedPct = float64(s.Applied) / float64(s.Companies) * 100
 		s.RejectedPct = float64(s.Rejected) / float64(s.Companies) * 100
+		s.InProgressPct = float64(s.InProgress) / float64(s.Companies) * 100
 		s.AvgPerCompany = float64(s.Applications) / float64(s.Companies)
 	}
 
