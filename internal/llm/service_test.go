@@ -4,49 +4,45 @@ import (
 	"context"
 	"testing"
 
-	"pi_dashboard/pkg/llm"
+	"github.com/tmc/langchaingo/llms"
 )
 
-type mockProvider struct{}
+type mockModel struct{}
 
-func (m *mockProvider) Chat(ctx context.Context, messages []llm.Message) (llm.Response, error) {
-	return llm.Response{Content: "mock response", Done: true}, nil
-}
-
-func (m *mockProvider) ChatStream(ctx context.Context, messages []llm.Message) (<-chan string, error) {
-	ch := make(chan string)
-	close(ch)
-	return ch, nil
-}
-
-func (m *mockProvider) ChatWithSchema(ctx context.Context, messages []llm.Message, schema any) (llm.Response, error) {
-	return llm.Response{Content: "{}", Done: true}, nil
-}
-
-func (m *mockProvider) Generate(ctx context.Context, prompt string) (string, error) {
+func (m *mockModel) Call(ctx context.Context, prompt string, options ...llms.CallOption) (string, error) {
 	return "mock generated", nil
 }
 
+func (m *mockModel) GenerateContent(ctx context.Context, messages []llms.MessageContent, options ...llms.CallOption) (*llms.ContentResponse, error) {
+	return &llms.ContentResponse{
+		Choices: []*llms.ContentChoice{
+			{Content: "mock response"},
+		},
+	}, nil
+}
+
 func TestNewService(t *testing.T) {
-	svc := NewService(&mockProvider{})
+	svc := NewService(&mockModel{})
 	if svc == nil {
 		t.Fatal("NewService returned nil")
 	}
 }
 
 func TestChat(t *testing.T) {
-	svc := NewService(&mockProvider{})
-	resp, err := svc.Chat(context.Background(), []llm.Message{{Role: "user", Content: "hello"}})
+	svc := NewService(&mockModel{})
+	resp, err := svc.Chat(context.Background(), []llms.MessageContent{
+		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart("hello")}},
+	})
 	if err != nil {
 		t.Fatalf("Chat() error = %v", err)
 	}
-	if resp.Content != "mock response" {
-		t.Errorf("Content = %q, want %q", resp.Content, "mock response")
+	if resp != "mock response" {
+		t.Errorf("result = %q, want %q", resp, "mock response")
 	}
 }
 
 func TestGenerate(t *testing.T) {
-	svc := NewService(&mockProvider{})
+	svc := NewService(&mockModel{})
 	result, err := svc.Generate(context.Background(), "test prompt")
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
