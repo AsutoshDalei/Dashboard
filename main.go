@@ -26,9 +26,9 @@ import (
 	"pi_dashboard/internal/router"
 	"pi_dashboard/internal/tracker"
 	"pi_dashboard/internal/workspace"
-	pkgllm "pi_dashboard/pkg/llm"
 	"pi_dashboard/pkg/observability"
 
+	"github.com/tmc/langchaingo/llms"
 	"golang.ngrok.com/ngrok/v2"
 )
 
@@ -119,7 +119,7 @@ func main() {
 		OpenRouterAPIKey: cfg.OpenRouterAPIKey,
 		OpenRouterModel:  cfg.OpenRouterModel,
 	}
-	var llmProvider pkgllm.Provider
+	var llmProvider llms.Model
 	llmProvider, err = llm.NewProvider(llmCfg)
 	if err != nil {
 		slog.Warn("llm provider", "err", err)
