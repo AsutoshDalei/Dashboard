@@ -201,7 +201,7 @@ func (r *Repository) GetByOrganization(ctx context.Context, name string) (*Appli
 }
 
 func (r *Repository) Suggest(ctx context.Context, query string, limit int) ([]map[string]string, error) {
-	sql := `SELECT DISTINCT organization FROM applications WHERE organization ILIKE $1 ORDER BY organization LIMIT $2`
+	sql := `SELECT DISTINCT organization, COALESCE(MAX(remarks), '') as remarks FROM applications WHERE organization ILIKE $1 GROUP BY organization ORDER BY organization LIMIT $2`
 	rows, err := r.pool.Query(ctx, sql, "%"+query+"%", limit)
 	if err != nil {
 		return nil, fmt.Errorf("suggest: %w", err)
@@ -211,10 +211,11 @@ func (r *Repository) Suggest(ctx context.Context, query string, limit int) ([]ma
 	var results []map[string]string
 	for rows.Next() {
 		var org string
-		if err := rows.Scan(&org); err != nil {
+		var remarks string
+		if err := rows.Scan(&org, &remarks); err != nil {
 			return nil, err
 		}
-		results = append(results, map[string]string{"organization": org})
+		results = append(results, map[string]string{"organization": org, "remarks": remarks})
 	}
 	return results, nil
 }

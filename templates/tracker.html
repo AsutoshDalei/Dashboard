@@ -990,12 +990,16 @@
                     }
                     lookupSuggestions.innerHTML = list
                         .map(
-                            (s) =>
-                                '<button type="button" class="lookup-suggestion" data-company="' +
-                                escapeHtml(s.organization || s) +
+                            (s) => {
+                                const org = escapeHtml(s.organization || s);
+                                const remarks = s.remarks ? ' <span class="text-xs text-on-surface-muted ml-1">(' + escapeHtml(s.remarks) + ')</span>' : '';
+                                return '<button type="button" class="lookup-suggestion" data-company="' +
+                                org +
                                 '">' +
-                                escapeHtml(s.organization || s) +
-                                "</button>",
+                                org +
+                                remarks +
+                                "</button>";
+                            }
                         )
                         .join("");
                     lookupSuggestions.classList.add("show");
