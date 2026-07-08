@@ -201,7 +201,7 @@ func (r *Repository) GetByOrganization(ctx context.Context, name string) (*Appli
 }
 
 func (r *Repository) Suggest(ctx context.Context, query string, limit int) ([]map[string]string, error) {
-	sql := `SELECT DISTINCT organization, COALESCE(MAX(remarks), '') as remarks FROM applications WHERE organization ILIKE $1 GROUP BY organization ORDER BY organization LIMIT $2`
+	sql := `SELECT DISTINCT organization FROM applications WHERE organization ILIKE $1 ORDER BY organization LIMIT $2`
 	rows, err := r.pool.Query(ctx, sql, "%"+query+"%", limit)
 	if err != nil {
 		return nil, fmt.Errorf("suggest: %w", err)
@@ -211,11 +211,10 @@ func (r *Repository) Suggest(ctx context.Context, query string, limit int) ([]ma
 	var results []map[string]string
 	for rows.Next() {
 		var org string
-		var remarks string
-		if err := rows.Scan(&org, &remarks); err != nil {
+		if err := rows.Scan(&org); err != nil {
 			return nil, err
 		}
-		results = append(results, map[string]string{"organization": org, "remarks": remarks})
+		results = append(results, map[string]string{"organization": org})
 	}
 	return results, nil
 }
@@ -457,27 +456,31 @@ func (r *Repository) Query(ctx context.Context, sql string) (pgx.Rows, error) {
 	return r.pool.Query(ctx, sql)
 }
 
-func (r *Repository) CheckExists(ctx context.Context, name string) (string, bool, int, string, *string, error) {
+func (r *Repository) CheckExists(ctx context.Context, name string) (string, bool, int, string, *string, *string, error) {
 	matchedOrg, exists, err := r.exactMatchOrganization(ctx, name)
 	if err != nil {
-		return "", false, 0, "", nil, err
+		return "", false, 0, "", nil, nil, err
 	}
 	if !exists {
-		return "", false, 0, "", nil, nil
+		return "", false, 0, "", nil, nil, nil
 	}
 
 	var count int
 	var status string
 	var appliedDates *string
+	var remarks *string
 	err = r.pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(count), 0), COALESCE(MAX(status), ''), COALESCE(MAX(applied_dates::text), '') FROM applications WHERE organization = $1`,
+		`SELECT COALESCE(SUM(count), 0), COALESCE(MAX(status), ''), COALESCE(MAX(applied_dates::text), ''), COALESCE(MAX(remarks), '') FROM applications WHERE organization = $1`,
 		matchedOrg,
-	).Scan(&count, &status, &appliedDates)
+	).Scan(&count, &status, &appliedDates, &remarks)
 	if err != nil {
-		return "", false, 0, "", nil, err
+		return "", false, 0, "", nil, nil, err
 	}
 	if appliedDates != nil && *appliedDates == "" {
 		appliedDates = nil
 	}
-	return matchedOrg, true, count, status, appliedDates, nil
+	if remarks != nil && *remarks == "" {
+		remarks = nil
+	}
+	return matchedOrg, true, count, status, appliedDates, remarks, nil
 }

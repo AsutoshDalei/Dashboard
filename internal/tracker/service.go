@@ -51,7 +51,7 @@ func (s *Service) Upsert(ctx context.Context, app Application) (*UpsertResult, e
 	return result, nil
 }
 
-func (s *Service) Check(ctx context.Context, name string) (string, bool, int, string, *string, error) {
+func (s *Service) Check(ctx context.Context, name string) (string, bool, int, string, *string, *string, error) {
 	return s.repo.CheckExists(ctx, name)
 }
 
