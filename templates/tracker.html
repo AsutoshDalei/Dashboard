@@ -459,7 +459,7 @@
                             <div class="sub" id="statInProgressSub" style="color: #eab308;">
                                 — % of companies
                             </div>
-                            <div class="tooltip-content" id="statInProgressTooltip" style="display: none; position: absolute; bottom: 100%; left: 0; background: #27272a; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #a1a1aa; white-space: nowrap; z-index: 10; margin-bottom: 4px;"></div>
+                            <div class="tooltip-content" id="statInProgressTooltip" style="display: none; position: fixed; background: #27272a; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #a1a1aa; white-space: nowrap; z-index: 100; pointer-events: none;"></div>
                         </div>
                         <div class="tracker-stat col-3">
                             <div class="label">Avg/Company</div>
@@ -944,11 +944,15 @@
                     const inProgressTooltip = $("statInProgressTooltip");
                     if (s.in_progress_details) {
                         inProgressTooltip.textContent = s.in_progress_details;
-                        inProgressTooltip.parentElement.style.position = "relative";
-                        inProgressTooltip.parentElement.addEventListener("mouseenter", () => {
+                        const inProgressBlock = inProgressTooltip.parentElement;
+                        inProgressBlock.addEventListener("mouseenter", () => {
                             inProgressTooltip.style.display = "block";
                         });
-                        inProgressTooltip.parentElement.addEventListener("mouseleave", () => {
+                        inProgressBlock.addEventListener("mousemove", (e) => {
+                            inProgressTooltip.style.left = (e.clientX - inProgressBlock.getBoundingClientRect().left + 12) + "px";
+                            inProgressTooltip.style.top = (e.clientY - inProgressBlock.getBoundingClientRect().top - 30) + "px";
+                        });
+                        inProgressBlock.addEventListener("mouseleave", () => {
                             inProgressTooltip.style.display = "none";
                         });
                     }
