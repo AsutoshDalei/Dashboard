@@ -100,9 +100,14 @@ func (s *Service) getProvider(params *ProviderParams) (llms.Model, error) {
 			host = os.Getenv("OLLAMA_HOST")
 		}
 		if host == "" {
-			host = "172.16.7.112:11434"
-		} else if !strings.Contains(host, ":") {
-			host = host + ":11434"
+			host = "http://172.16.7.112:11434"
+		} else {
+			if !strings.HasPrefix(host, "http") {
+				host = "http://" + host
+			}
+			if !strings.Contains(host, ":") {
+				host = host + ":11434"
+			}
 		}
 		model := params.Model
 		if model == "" {

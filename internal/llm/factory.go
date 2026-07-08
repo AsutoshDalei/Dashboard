@@ -58,9 +58,14 @@ func NewProvider(cfg Config) (llms.Model, error) {
 	switch cfg.ProviderType {
 	case "ollama":
 		if cfg.OllamaHost == "" {
-			cfg.OllamaHost = "172.16.7.112:11434"
-		} else if !strings.Contains(cfg.OllamaHost, ":") {
-			cfg.OllamaHost = cfg.OllamaHost + ":11434"
+			cfg.OllamaHost = "http://172.16.7.112:11434"
+		} else {
+			if !strings.HasPrefix(cfg.OllamaHost, "http") {
+				cfg.OllamaHost = "http://" + cfg.OllamaHost
+			}
+			if !strings.Contains(cfg.OllamaHost, ":") {
+				cfg.OllamaHost = cfg.OllamaHost + ":11434"
+			}
 		}
 		if cfg.OllamaModel == "" {
 			cfg.OllamaModel = "gemma4"
