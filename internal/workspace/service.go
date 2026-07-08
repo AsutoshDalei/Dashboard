@@ -12,14 +12,16 @@ import (
 	"time"
 
 	llm "pi_dashboard/internal/llm"
-	pkgllm "pi_dashboard/pkg/llm"
-	"pi_dashboard/pkg/ollama"
-	"pi_dashboard/pkg/openrouter"
+
+	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/ollama"
+	"github.com/tmc/langchaingo/llms/openai"
+	"github.com/tmc/langchaingo/memory"
 )
 
 type Session struct {
 	ID        string
-	Messages  []pkgllm.Message
+	Memory    *memory.ConversationBuffer
 	CreatedAt time.Time
 }
 
@@ -34,27 +36,20 @@ func NewChatStore() *ChatStore {
 	}
 }
 
-func (s *ChatStore) GetOrCreate(sessionID string) *Session {
+func (s *ChatStore) GetOrCreate(sessionID string, llmModel llms.Model, systemPrompt string) *Session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if sess, ok := s.sessions[sessionID]; ok {
 		return sess
 	}
+	mem := memory.NewConversationBuffer()
 	sess := &Session{
 		ID:        sessionID,
-		Messages:  []pkgllm.Message{},
+		Memory:    mem,
 		CreatedAt: time.Now(),
 	}
 	s.sessions[sessionID] = sess
 	return sess
-}
-
-func (s *ChatStore) AddMessage(sessionID string, msg pkgllm.Message) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if sess, ok := s.sessions[sessionID]; ok {
-		sess.Messages = append(sess.Messages, msg)
-	}
 }
 
 func (s *ChatStore) Clear(sessionID string) {
@@ -74,78 +69,21 @@ func (s *ChatStore) Prune(validSessions map[string]bool) {
 }
 
 type Service struct {
-	provider       pkgllm.Provider
+	llm            llms.Model
 	chatStore      *ChatStore
 	resumeText     string
 	resumeMarkdown string
 	prompts        *llm.Prompts
 }
 
-func NewService(provider pkgllm.Provider, resumeText string, resumeMarkdown string, prompts *llm.Prompts) *Service {
+func NewService(llmModel llms.Model, resumeText string, resumeMarkdown string, prompts *llm.Prompts) *Service {
 	return &Service{
-		provider:       provider,
+		llm:            llmModel,
 		chatStore:      NewChatStore(),
 		resumeText:     resumeText,
 		resumeMarkdown: resumeMarkdown,
 		prompts:        prompts,
 	}
-}
-
-// fallbackProvider tries each client in order until one succeeds.
-type fallbackProvider struct {
-	clients []pkgllm.Provider
-}
-
-func (f *fallbackProvider) Chat(ctx context.Context, messages []pkgllm.Message) (pkgllm.Response, error) {
-	var lastErr error
-	for i, c := range f.clients {
-		resp, err := c.Chat(ctx, messages)
-		if err == nil {
-			return resp, nil
-		}
-		slog.Warn("openrouter model failed, trying next", "index", i, "err", err)
-		lastErr = err
-	}
-	return pkgllm.Response{}, lastErr
-}
-
-func (f *fallbackProvider) ChatStream(ctx context.Context, messages []pkgllm.Message) (<-chan string, error) {
-	var lastErr error
-	for i, c := range f.clients {
-		ch, err := c.ChatStream(ctx, messages)
-		if err == nil {
-			return ch, nil
-		}
-		slog.Warn("openrouter stream model failed, trying next", "index", i, "err", err)
-		lastErr = err
-	}
-	return nil, lastErr
-}
-
-func (f *fallbackProvider) ChatWithSchema(ctx context.Context, messages []pkgllm.Message, schema any) (pkgllm.Response, error) {
-	var lastErr error
-	for i, c := range f.clients {
-		resp, err := c.ChatWithSchema(ctx, messages, schema)
-		if err == nil {
-			return resp, nil
-		}
-		slog.Warn("openrouter schema model failed, trying next", "index", i, "err", err)
-		lastErr = err
-	}
-	return pkgllm.Response{}, lastErr
-}
-
-func (f *fallbackProvider) Generate(ctx context.Context, prompt string) (string, error) {
-	var lastErr error
-	for i, c := range f.clients {
-		resp, err := c.Generate(ctx, prompt)
-		if err == nil {
-			return resp, nil
-		}
-		slog.Warn("openrouter generate model failed, trying next", "index", i, "err", err)
-		lastErr = err
-	}
-	return "", lastErr
 }
 
 type ProviderParams struct {
@@ -154,7 +92,7 @@ type ProviderParams struct {
 	Host     string
 }
 
-func (s *Service) getProvider(params *ProviderParams) pkgllm.Provider {
+func (s *Service) getProvider(params *ProviderParams) (llms.Model, error) {
 	switch params.Provider {
 	case "ollama":
 		host := params.Host
@@ -173,7 +111,10 @@ func (s *Service) getProvider(params *ProviderParams) pkgllm.Provider {
 		if model == "" {
 			model = "gemma4"
 		}
-		return ollama.New(ollama.Config{Host: host, Model: model})
+		return ollama.New(
+			ollama.WithModel(model),
+			ollama.WithServerURL(host),
+		)
 	case "openrouter":
 		model := params.Model
 		if model == "" {
@@ -182,81 +123,120 @@ func (s *Service) getProvider(params *ProviderParams) pkgllm.Provider {
 		if model == "" {
 			model = "deepseek/deepseek-v4-flash"
 		}
-		models := openrouter.ResolveModels(model, "")
-		if len(models) == 0 {
-			models = []string{"deepseek/deepseek-v4-flash"}
-		}
 		apiKey := os.Getenv("OPENROUTER_API_KEY")
-		clients := make([]pkgllm.Provider, 0, len(models))
-		for _, m := range models {
-			clients = append(clients, openrouter.New(openrouter.Config{APIKey: apiKey, Model: m}))
-		}
-		return &fallbackProvider{clients: clients}
+		return openai.New(
+			openai.WithModel(model),
+			openai.WithBaseURL("https://openrouter.ai/api/v1"),
+			openai.WithToken(apiKey),
+		)
 	default:
-		return s.provider
+		return s.llm, nil
 	}
 }
 
 func (s *Service) Chat(ctx context.Context, sessionID string, message string, systemPrompt string) (string, error) {
-	session := s.chatStore.GetOrCreate(sessionID)
+	session := s.chatStore.GetOrCreate(sessionID, s.llm, systemPrompt)
 
 	fullSystemPrompt := systemPrompt
 	if s.resumeMarkdown != "" {
 		fullSystemPrompt = systemPrompt + "\n\nHere is the user's resume for reference:\n\n" + s.resumeMarkdown
 	}
 
-	messages := []pkgllm.Message{
-		{Role: "system", Content: fullSystemPrompt},
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(fullSystemPrompt)}},
 	}
-	messages = append(messages, session.Messages...)
-	messages = append(messages, pkgllm.Message{Role: "user", Content: message})
+
+	// Add history from memory
+	history, _ := session.Memory.LoadMemoryVariables(ctx, nil)
+	if hist, ok := history["history"]; ok {
+		if histStr, ok := hist.(string); ok && histStr != "" {
+			messages = append(messages, llms.MessageContent{
+				Role:  llms.ChatMessageTypeHuman,
+				Parts: []llms.ContentPart{llms.TextPart("Previous conversation:\n" + histStr)},
+			})
+		}
+	}
+
+	messages = append(messages, llms.MessageContent{
+		Role:  llms.ChatMessageTypeHuman,
+		Parts: []llms.ContentPart{llms.TextPart(message)},
+	})
 
 	slog.Debug("chat request", "session_id", sessionID, "message_count", len(messages), "user_message_len", len(message))
 
-	resp, err := s.provider.Chat(ctx, messages)
+	resp, err := s.llm.GenerateContent(ctx, messages)
 	if err != nil {
 		slog.Error("chat error", "session_id", sessionID, "err", err)
 		return "", fmt.Errorf("chat: %w", err)
 	}
 
-	s.chatStore.AddMessage(sessionID, pkgllm.Message{Role: "user", Content: message})
-	s.chatStore.AddMessage(sessionID, pkgllm.Message{Role: "assistant", Content: resp.Content})
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("chat: no response")
+	}
 
-	return resp.Content, nil
+	content := resp.Choices[0].Content
+
+	// Save to memory
+	session.Memory.SaveContext(ctx,
+		map[string]any{"input": message},
+		map[string]any{"output": content},
+	)
+
+	return content, nil
 }
 
 func (s *Service) ChatStream(ctx context.Context, sessionID string, message string, systemPrompt string) (<-chan string, error) {
-	session := s.chatStore.GetOrCreate(sessionID)
+	session := s.chatStore.GetOrCreate(sessionID, s.llm, systemPrompt)
 
 	fullSystemPrompt := systemPrompt
 	if s.resumeMarkdown != "" {
 		fullSystemPrompt = systemPrompt + "\n\nHere is the user's resume for reference:\n\n" + s.resumeMarkdown
 	}
 
-	messages := []pkgllm.Message{
-		{Role: "system", Content: fullSystemPrompt},
-	}
-	messages = append(messages, session.Messages...)
-	messages = append(messages, pkgllm.Message{Role: "user", Content: message})
-
-	ch, err := s.provider.ChatStream(ctx, messages)
-	if err != nil {
-		return nil, fmt.Errorf("chat stream: %w", err)
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(fullSystemPrompt)}},
 	}
 
-	wrapped := make(chan string)
-	go func() {
-		defer close(wrapped)
-		var full string
-		for chunk := range ch {
-			full += chunk
-			wrapped <- chunk
+	// Add history from memory
+	history, _ := session.Memory.LoadMemoryVariables(ctx, nil)
+	if hist, ok := history["history"]; ok {
+		if histStr, ok := hist.(string); ok && histStr != "" {
+			messages = append(messages, llms.MessageContent{
+				Role:  llms.ChatMessageTypeHuman,
+				Parts: []llms.ContentPart{llms.TextPart("Previous conversation:\n" + histStr)},
+			})
 		}
-		s.chatStore.AddMessage(sessionID, pkgllm.Message{Role: "user", Content: message})
-		s.chatStore.AddMessage(sessionID, pkgllm.Message{Role: "assistant", Content: full})
+	}
+
+	messages = append(messages, llms.MessageContent{
+		Role:  llms.ChatMessageTypeHuman,
+		Parts: []llms.ContentPart{llms.TextPart(message)},
+	})
+
+	ch := make(chan string)
+	go func() {
+		defer close(ch)
+		var full string
+		_, err := s.llm.GenerateContent(ctx, messages,
+			llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+				full += string(chunk)
+				ch <- string(chunk)
+				return nil
+			}),
+		)
+		if err != nil {
+			slog.Error("chat stream error", "session_id", sessionID, "err", err)
+			return
+		}
+
+		// Save to memory after streaming completes
+		session.Memory.SaveContext(ctx,
+			map[string]any{"input": message},
+			map[string]any{"output": full},
+		)
 	}()
 
-	return wrapped, nil
+	return ch, nil
 }
 
 func (s *Service) ClearChat(sessionID string) {
@@ -302,68 +282,76 @@ var resumeAnalysisSchema = map[string]any{
 }
 
 func (s *Service) AnalyzeResume(ctx context.Context, jobDescription string, systemPrompt string, params *ProviderParams) (string, error) {
-	provider := s.getProvider(params)
-	messages := []pkgllm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: fmt.Sprintf("Resume:\n%s\n\nJob Description:\n%s", s.resumeMarkdown, jobDescription)},
+	provider, err := s.getProvider(params)
+	if err != nil {
+		return "", fmt.Errorf("get provider: %w", err)
 	}
-	resp, err := provider.ChatWithSchema(ctx, messages, resumeAnalysisSchema)
+
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(systemPrompt)}},
+		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Resume:\n%s\n\nJob Description:\n%s", s.resumeMarkdown, jobDescription))}},
+	}
+
+	var options []llms.CallOption
+	if params.Provider == "openrouter" {
+		// OpenRouter supports response_format via OpenAI API
+		options = append(options, llms.WithJSONMode())
+	}
+
+	resp, err := provider.GenerateContent(ctx, messages, options...)
 	if err != nil {
 		return "", fmt.Errorf("resume analyze: %w", err)
 	}
-	return resp.Content, nil
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("resume analyze: no response")
+	}
+	return resp.Choices[0].Content, nil
 }
 
 func (s *Service) GenerateResume(ctx context.Context, jobDescription string, analysis string, systemPrompt string) (string, error) {
-	messages := []pkgllm.Message{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: fmt.Sprintf("Job Description: %s\n\nAnalysis: %s\n\nResume: %s", jobDescription, analysis, s.resumeText)},
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(systemPrompt)}},
+		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Job Description: %s\n\nAnalysis: %s\n\nResume: %s", jobDescription, analysis, s.resumeText))}},
 	}
-	resp, err := s.provider.Chat(ctx, messages)
+	resp, err := s.llm.GenerateContent(ctx, messages)
 	if err != nil {
 		return "", fmt.Errorf("resume generate: %w", err)
 	}
-	return resp.Content, nil
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("resume generate: no response")
+	}
+	return resp.Choices[0].Content, nil
 }
 
 func (s *Service) GenerateSQL(ctx context.Context, naturalLanguage string, schemaDoc string) (string, error) {
-	messages := []pkgllm.Message{
-		{Role: "system", Content: schemaDoc},
-		{Role: "user", Content: naturalLanguage},
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(schemaDoc)}},
+		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart(naturalLanguage)}},
 	}
-	resp, err := s.provider.Chat(ctx, messages)
+	resp, err := s.llm.GenerateContent(ctx, messages)
 	if err != nil {
 		return "", fmt.Errorf("sql: %w", err)
 	}
-	return resp.Content, nil
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("sql: no response")
+	}
+	return resp.Choices[0].Content, nil
 }
 
 func (s *Service) DraftEmail(ctx context.Context, name, company string) (string, error) {
 	template := s.prompts.Format("email_draft", map[string]string{"company": company, "name": name})
-	resp, err := s.provider.Generate(ctx, template)
-	if err != nil {
-		return "", fmt.Errorf("email draft: %w", err)
-	}
-	return resp, nil
+	return s.llm.Call(ctx, template)
 }
 
 func (s *Service) DraftCoverLetter(ctx context.Context, company string) (string, error) {
 	template := s.prompts.Format("coverletter_draft", map[string]string{"company": company})
 	prompt := fmt.Sprintf("%s\n\nResume context:\n%s", template, s.resumeText)
-	resp, err := s.provider.Generate(ctx, prompt)
-	if err != nil {
-		return "", fmt.Errorf("cover letter draft: %w", err)
-	}
-	return resp, nil
+	return s.llm.Call(ctx, prompt)
 }
 
 func (s *Service) AnalyzeJobMatch(ctx context.Context, jobDescription string) (string, error) {
 	prompt := fmt.Sprintf("%s\n\nResume:\n%s\n\nJob Description:\n%s", s.prompts.Get("job_match"), s.resumeText, jobDescription)
-	resp, err := s.provider.Generate(ctx, prompt)
-	if err != nil {
-		return "", fmt.Errorf("job match: %w", err)
-	}
-	return resp, nil
+	return s.llm.Call(ctx, prompt)
 }
 
 type SkillsResponse struct {
@@ -377,52 +365,31 @@ type SkillCategory struct {
 
 func (s *Service) GenerateSkills(ctx context.Context, jobDescription string, params *ProviderParams) (string, error) {
 	currentSkills := extractSkills(s.resumeText)
-	provider := s.getProvider(params)
-
-	schema := map[string]any{
-		"type": "json_schema",
-		"json_schema": map[string]any{
-			"name":   "skills_update",
-			"strict": true,
-			"schema": map[string]any{
-				"type":       "object",
-				"properties": map[string]any{
-					"skills": map[string]any{
-						"type": "array",
-						"items": map[string]any{
-							"type":       "object",
-							"properties": map[string]any{
-								"category": map[string]any{
-									"type":        "string",
-									"description": "Skill category name (e.g. ML & AI, Languages)",
-								},
-								"items": map[string]any{
-									"type":        "string",
-									"description": "Comma-separated skill items for this category",
-								},
-							},
-							"required":             []string{"category", "items"},
-							"additionalProperties": false,
-						},
-					},
-				},
-				"required":             []string{"skills"},
-				"additionalProperties": false,
-			},
-		},
+	provider, err := s.getProvider(params)
+	if err != nil {
+		return "", fmt.Errorf("get provider: %w", err)
 	}
 
-	messages := []pkgllm.Message{
-		{Role: "system", Content: s.prompts.Get("resume_generate")},
-		{Role: "user", Content: fmt.Sprintf("Job Description:\n%s\n\nCurrent Skills Section:\n%s\n\nUpdate the skills to better match the job description. Add relevant keywords that are genuinely applicable. Remove irrelevant skills. Return the complete updated skills list.", jobDescription, currentSkills)},
+	messages := []llms.MessageContent{
+		{Role: llms.ChatMessageTypeSystem, Parts: []llms.ContentPart{llms.TextPart(s.prompts.Get("resume_generate"))}},
+		{Role: llms.ChatMessageTypeHuman, Parts: []llms.ContentPart{llms.TextPart(fmt.Sprintf("Job Description:\n%s\n\nCurrent Skills Section:\n%s\n\nUpdate the skills to better match the job description. Add relevant keywords that are genuinely applicable. Remove irrelevant skills. Return the complete updated skills list.", jobDescription, currentSkills))}},
 	}
 
-	resp, err := provider.ChatWithSchema(ctx, messages, schema)
+	var options []llms.CallOption
+	if params.Provider == "openrouter" {
+		options = append(options, llms.WithJSONMode())
+	}
+
+	resp, err := provider.GenerateContent(ctx, messages, options...)
 	if err != nil {
 		return "", fmt.Errorf("generate skills: %w", err)
 	}
 
-	return rebuildResume(s.resumeText, resp.Content)
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("generate skills: no response")
+	}
+
+	return rebuildResume(s.resumeText, resp.Choices[0].Content)
 }
 
 func extractSkills(resume string) string {
